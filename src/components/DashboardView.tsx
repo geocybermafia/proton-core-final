@@ -16,6 +16,7 @@ import {
   Target
 } from 'lucide-react';
 import { safeStorage } from '../lib/safeStorage';
+import { createDefaultListingFormData, saveUnifiedListingDraft } from '../lib/listingDrafts';
 import { View, Task } from '../types';
 import { SystemHealthState } from '../hooks/useSystemHealth';
 import { useSeller } from '../contexts/SellerContext';
@@ -107,29 +108,38 @@ export const DashboardView: React.FC<DashboardViewProps> = React.memo(({
         if (copyRecord) {
           const title = (copyRecord.title || copyRecord.hook || '').trim();
           const fullDesc = `${copyRecord.body || ''}\n\n${copyRecord.cta || ''}`.trim();
-          safeStorage.set('proton_markethub_draft_form_data', JSON.stringify({
-            mode: 'create',
-            editingId: null,
-            data: {
-              title: isKa ? '' : title,
-              titleGe: isKa ? title : '',
-              primaryLanguage: isKa ? 'ka' : 'en',
-              description: fullDesc,
-              descriptionGe: fullDesc,
-              price: '',
-              currency: isKa ? 'GEL' : 'USD',
-              category: 'service',
-              country: isKa ? 'GEO' : 'USA',
-              city: '',
-              location: '',
-              images: [],
-              condition: 'new',
-              isNegotiable: false,
-              listingType: 'service',
-              serviceDuration: '',
-              serviceTerms: ''
-            }
-          }));
+          saveUnifiedListingDraft(
+            user?.uid,
+            {
+              mode: 'create',
+              editingId: null,
+              formStep: 1,
+              source: 'creative_ad',
+              formData: {
+                ...createDefaultListingFormData(language),
+                title: isKa ? '' : title,
+                titleGe: isKa ? title : '',
+                primaryLanguage: isKa ? 'ka' : 'en',
+                description: fullDesc,
+                descriptionGe: fullDesc,
+                price: '',
+                currency: isKa ? 'GEL' : 'USD',
+                category: 'service',
+                country: isKa ? 'GEO' : 'USA',
+                city: '',
+                location: '',
+                images: [],
+                condition: 'new',
+                isNegotiable: false,
+                listingType: 'service',
+                isRemote: true,
+                attributes: {},
+                serviceDuration: '',
+                serviceTerms: '',
+              },
+            },
+            language
+          );
         }
       } catch (err) {
         console.warn("[DashboardView] Failed to populate market draft form data:", err);

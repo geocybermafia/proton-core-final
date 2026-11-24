@@ -4,8 +4,8 @@
       "/usr/local/bin/node",
       "/app/applet/node_modules/.bin/playwright",
       "test",
-      "tests/e2e/clips-commerce.spec.ts",
-      "--project=Mobile Chrome"
+      "tests/e2e/stage3-wizard-marketplace.spec.ts",
+      "--project=chromium"
     ],
     "configFile": "/app/applet/playwright.config.ts",
     "rootDir": "/app/applet/tests/e2e",
@@ -127,101 +127,494 @@
   },
   "suites": [
     {
-      "title": "clips-commerce.spec.ts",
-      "file": "clips-commerce.spec.ts",
+      "title": "stage3-wizard-marketplace.spec.ts",
+      "file": "stage3-wizard-marketplace.spec.ts",
       "column": 0,
       "line": 0,
       "specs": [],
       "suites": [
         {
-          "title": "Shoppable Clips Commerce Flow",
-          "file": "clips-commerce.spec.ts",
-          "line": 3,
+          "title": "Stage 3 Finalization — Marketplace Direction & Category Separation",
+          "file": "stage3-wizard-marketplace.spec.ts",
+          "line": 32,
           "column": 6,
           "specs": [
             {
-              "title": "Clips Feed: Navigate to Clips, open store drawer, and verify quantity stepper limits",
-              "ok": false,
+              "title": "Desktop (1280x800): enforces strict 3-direction separation in tabs, category dropdown, and filter sidebar",
+              "ok": true,
               "tags": [],
               "tests": [
                 {
                   "timeout": 35000,
                   "annotations": [],
                   "expectedStatus": "passed",
-                  "projectId": "Mobile Chrome",
-                  "projectName": "Mobile Chrome",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
                   "results": [
                     {
                       "workerIndex": 0,
                       "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 6,
-                      "error": {
-                        "message": "Error: browserType.launch: Executable doesn't exist at /ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-linux64/chrome-headless-shell\n╔════════════════════════════════════════════════════════════╗\n║ Looks like Playwright was just installed or updated.       ║\n║ Please run the following command to download new browsers: ║\n║                                                            ║\n║     npx playwright install                                 ║\n║                                                            ║\n║ <3 Playwright Team                                         ║\n╚════════════════════════════════════════════════════════════╝",
-                        "stack": "Error: browserType.launch: Executable doesn't exist at /ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-linux64/chrome-headless-shell\n╔════════════════════════════════════════════════════════════╗\n║ Looks like Playwright was just installed or updated.       ║\n║ Please run the following command to download new browsers: ║\n║                                                            ║\n║     npx playwright install                                 ║\n║                                                            ║\n║ <3 Playwright Team                                         ║\n╚════════════════════════════════════════════════════════════╝"
-                      },
-                      "errors": [
-                        {
-                          "message": "Error: browserType.launch: Executable doesn't exist at /ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-linux64/chrome-headless-shell\n╔════════════════════════════════════════════════════════════╗\n║ Looks like Playwright was just installed or updated.       ║\n║ Please run the following command to download new browsers: ║\n║                                                            ║\n║     npx playwright install                                 ║\n║                                                            ║\n║ <3 Playwright Team                                         ║\n╚════════════════════════════════════════════════════════════╝"
-                        }
-                      ],
+                      "status": "passed",
+                      "duration": 27536,
+                      "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-11-18T08:36:37.203Z",
+                      "startTime": "2026-11-24T08:56:13.731Z",
                       "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "error-context",
-                          "contentType": "text/markdown",
-                          "path": "/app/applet/test-results/clips-commerce-Shoppable-C-61bc8-ify-quantity-stepper-limits-Mobile-Chrome/error-context.md"
-                        },
-                        {
-                          "name": "trace",
-                          "contentType": "application/zip",
-                          "path": "/app/applet/test-results/clips-commerce-Shoppable-C-61bc8-ify-quantity-stepper-limits-Mobile-Chrome/trace.zip"
-                        }
-                      ]
-                    },
-                    {
-                      "workerIndex": 1,
-                      "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 5,
-                      "error": {
-                        "message": "Error: browserType.launch: Executable doesn't exist at /ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-linux64/chrome-headless-shell\n╔════════════════════════════════════════════════════════════╗\n║ Looks like Playwright was just installed or updated.       ║\n║ Please run the following command to download new browsers: ║\n║                                                            ║\n║     npx playwright install                                 ║\n║                                                            ║\n║ <3 Playwright Team                                         ║\n╚════════════════════════════════════════════════════════════╝",
-                        "stack": "Error: browserType.launch: Executable doesn't exist at /ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-linux64/chrome-headless-shell\n╔════════════════════════════════════════════════════════════╗\n║ Looks like Playwright was just installed or updated.       ║\n║ Please run the following command to download new browsers: ║\n║                                                            ║\n║     npx playwright install                                 ║\n║                                                            ║\n║ <3 Playwright Team                                         ║\n╚════════════════════════════════════════════════════════════╝"
-                      },
-                      "errors": [
-                        {
-                          "message": "Error: browserType.launch: Executable doesn't exist at /ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-linux64/chrome-headless-shell\n╔════════════════════════════════════════════════════════════╗\n║ Looks like Playwright was just installed or updated.       ║\n║ Please run the following command to download new browsers: ║\n║                                                            ║\n║     npx playwright install                                 ║\n║                                                            ║\n║ <3 Playwright Team                                         ║\n╚════════════════════════════════════════════════════════════╝"
-                        }
-                      ],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 1,
-                      "startTime": "2026-11-18T08:36:38.180Z",
-                      "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "error-context",
-                          "contentType": "text/markdown",
-                          "path": "/app/applet/test-results/clips-commerce-Shoppable-C-61bc8-ify-quantity-stepper-limits-Mobile-Chrome-retry1/error-context.md"
-                        },
-                        {
-                          "name": "trace",
-                          "contentType": "application/zip",
-                          "path": "/app/applet/test-results/clips-commerce-Shoppable-C-61bc8-ify-quantity-stepper-limits-Mobile-Chrome-retry1/trace.zip"
-                        }
-                      ]
+                      "attachments": []
                     }
                   ],
-                  "status": "unexpected"
+                  "status": "expected"
                 }
               ],
-              "id": "46faaf85ec7d84c92492-90ddccb06d4bcee6baf1",
-              "file": "clips-commerce.spec.ts",
-              "line": 8,
+              "id": "ae7146a5d69298d0121c-ef39d270ecc1167148be",
+              "file": "stage3-wizard-marketplace.spec.ts",
+              "line": 33,
+              "column": 3
+            },
+            {
+              "title": "Mobile (390x844): enforces strict direction separation in mobile toolbar & filter bottom sheet",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 35000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 17221,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-24T08:56:41.572Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "ae7146a5d69298d0121c-e87935f8673e185b42b3",
+              "file": "stage3-wizard-marketplace.spec.ts",
+              "line": 111,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "Stage 3 Finalization — 10-Viewport Responsive Layout Verification",
+          "file": "stage3-wizard-marketplace.spec.ts",
+          "line": 160,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Viewport 320x740: zero horizontal overflow and no overlapping direction controls",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 35000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 6666,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-24T08:56:58.813Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "ae7146a5d69298d0121c-1e0d60f5a9277a4cc763",
+              "file": "stage3-wizard-marketplace.spec.ts",
+              "line": 162,
+              "column": 5
+            },
+            {
+              "title": "Viewport 360x800: zero horizontal overflow and no overlapping direction controls",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 35000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 7101,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-24T08:57:05.504Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "ae7146a5d69298d0121c-f568faad58930f8c3173",
+              "file": "stage3-wizard-marketplace.spec.ts",
+              "line": 162,
+              "column": 5
+            },
+            {
+              "title": "Viewport 390x844: zero horizontal overflow and no overlapping direction controls",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 35000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 7006,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-24T08:57:12.681Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "ae7146a5d69298d0121c-741a250ac0aedb180517",
+              "file": "stage3-wizard-marketplace.spec.ts",
+              "line": 162,
+              "column": 5
+            },
+            {
+              "title": "Viewport 430x932: zero horizontal overflow and no overlapping direction controls",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 35000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 7687,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-24T08:57:19.711Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "ae7146a5d69298d0121c-68a3098e01b27a895c10",
+              "file": "stage3-wizard-marketplace.spec.ts",
+              "line": 162,
+              "column": 5
+            },
+            {
+              "title": "Viewport 768x1024: zero horizontal overflow and no overlapping direction controls",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 35000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 8103,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-24T08:57:27.464Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "ae7146a5d69298d0121c-f71a646c50a837edc2dc",
+              "file": "stage3-wizard-marketplace.spec.ts",
+              "line": 162,
+              "column": 5
+            },
+            {
+              "title": "Viewport 820x1180: zero horizontal overflow and no overlapping direction controls",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 35000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 8072,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-24T08:57:35.596Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "ae7146a5d69298d0121c-03a3b9ef763bbd34df0c",
+              "file": "stage3-wizard-marketplace.spec.ts",
+              "line": 162,
+              "column": 5
+            },
+            {
+              "title": "Viewport 1024x768: zero horizontal overflow and no overlapping direction controls",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 35000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 8212,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-24T08:57:43.692Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "ae7146a5d69298d0121c-78a31babba3728ffead5",
+              "file": "stage3-wizard-marketplace.spec.ts",
+              "line": 162,
+              "column": 5
+            },
+            {
+              "title": "Viewport 1280x800: zero horizontal overflow and no overlapping direction controls",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 35000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 8238,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-24T08:57:51.965Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "ae7146a5d69298d0121c-24d023a913e39356a3d4",
+              "file": "stage3-wizard-marketplace.spec.ts",
+              "line": 162,
+              "column": 5
+            },
+            {
+              "title": "Viewport 1440x900: zero horizontal overflow and no overlapping direction controls",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 35000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 8528,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-24T08:58:00.264Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "ae7146a5d69298d0121c-b631c4155c2a31c36698",
+              "file": "stage3-wizard-marketplace.spec.ts",
+              "line": 162,
+              "column": 5
+            },
+            {
+              "title": "Viewport 1920x1080: zero horizontal overflow and no overlapping direction controls",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 35000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 7799,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-24T08:58:08.813Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "ae7146a5d69298d0121c-79cb092e93590ecf8ab9",
+              "file": "stage3-wizard-marketplace.spec.ts",
+              "line": 162,
+              "column": 5
+            }
+          ]
+        },
+        {
+          "title": "Stage 3 Finalization — Authenticated Create Listing Wizard E2E (Requires Test Account)",
+          "file": "stage3-wizard-marketplace.spec.ts",
+          "line": 224,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Wizard Step 1 direction separation, photo management, and draft reload persistence",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 35000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Live Firebase Auth credentials (E2E_TEST_EMAIL / E2E_TEST_PASSWORD) not provided in environment",
+                      "location": {
+                        "file": "/app/applet/tests/e2e/stage3-wizard-marketplace.spec.ts",
+                        "line": 225,
+                        "column": 8
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-24T08:58:16.687Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "description": "Live Firebase Auth credentials (E2E_TEST_EMAIL / E2E_TEST_PASSWORD) not provided in environment",
+                          "location": {
+                            "file": "/app/applet/tests/e2e/stage3-wizard-marketplace.spec.ts",
+                            "line": 225,
+                            "column": 8
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "ae7146a5d69298d0121c-da1a18941608cabd872d",
+              "file": "stage3-wizard-marketplace.spec.ts",
+              "line": 230,
               "column": 3
             }
           ]
@@ -231,11 +624,11 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-11-18T08:36:36.150Z",
-    "duration": 2197.012,
-    "expected": 0,
-    "skipped": 0,
-    "unexpected": 1,
+    "startTime": "2026-11-24T08:56:12.388Z",
+    "duration": 124446.05,
+    "expected": 12,
+    "skipped": 1,
+    "unexpected": 0,
     "flaky": 0
   }
 }

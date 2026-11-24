@@ -114,6 +114,8 @@ import {
   canCancelOrder,
   getListingTitle,
   getCategoriesForListingType,
+  getGroupedCategoriesForListingType,
+  getListingDirectionsMeta,
   getCategoryLabel,
   getDefaultCategoryForType,
   inferListingType,
@@ -153,7 +155,25 @@ import { ChatThreadHeader } from './market-hub/chat/ChatThreadHeader';
 import { ChatMessageList } from './market-hub/chat/ChatMessageList';
 import { ChatComposer } from './market-hub/chat/ChatComposer';
 import { VendorReviewsModal } from './market-hub/VendorReviewsModal';
-import { CreateListingWizard, ListingFormData } from './market-hub/CreateListingWizard';
+import { CreateListingWizard } from './market-hub/CreateListingWizard';
+import {
+  ListingFormData,
+  clearUnifiedListingDraft,
+  createDefaultListingFormData,
+} from '../lib/listingDrafts';
+import {
+  MAX_LISTING_PHOTOS,
+  MAX_LISTING_PHOTO_BYTES,
+  ListingPhotoUploadTask,
+  appendUploadedPhotoUrl,
+  getAvailablePhotoSlots,
+  normalizePhotoUrlList,
+  removePhotoAtIndex,
+  reorderPhotosByIndex,
+  resolveListingPrimaryAndGalleryImages,
+  setPrimaryPhotoAtIndex,
+  validateExternalPhotoUrl,
+} from '../lib/listingPhotos';
 import {
   getCategoryFormSchema,
   getDefaultIsRemoteForSchema,
@@ -1154,150 +1174,51 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
   const [editingListing, setEditingListing] = useState<Listing | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formStep, setFormStep] = useState<number>(1);
+  const [photoUploadTasks, setPhotoUploadTasks] = useState<ListingPhotoUploadTask[]>([]);
+  const photoUploadTasksRef = useRef<ListingPhotoUploadTask[]>([]);
+  const sessionUploadedUrlsRef = useRef<Set<string>>(new Set());
+  const uploadSessionEpochRef = useRef<number>(0);
+  const currentUserUidRef = useRef<string | null>(user?.uid ?? null);
+  currentUserUidRef.current = user?.uid ?? null;
+  const prevAuthUidForWizardRef = useRef<string | null | undefined>(undefined);
+
+  useEffect(() => {
+    photoUploadTasksRef.current = photoUploadTasks;
+  }, [photoUploadTasks]);
+
+  // Form State
+  const [formData, setFormData] = useState<ListingFormData>(() => createDefaultListingFormData(language));
 
   const resetListingForm = useCallback(() => {
+    uploadSessionEpochRef.current += 1;
     setEditingListing(null);
     setFormStep(1);
-    setFormData({
-      title: '',
-      titleGe: '',
-      primaryLanguage: language === 'ka' ? 'ka' : 'en',
-      description: '',
-      descriptionGe: '',
-      price: '',
-      currency: language === 'ka' ? 'GEL' : 'USD',
-      category: 'technics',
-      country: 'GEO',
-      city: '',
-      location: '',
-      images: [],
-      lat: undefined,
-      lng: undefined,
-      condition: 'new',
-      isNegotiable: false,
-      listingType: 'product',
-      isRemote: false,
-      attributes: {},
-      serviceDuration: '',
-      serviceTerms: ''
-    });
+    setPhotoUploadTasks([]);
+    sessionUploadedUrlsRef.current.clear();
+    setFormData(createDefaultListingFormData(language));
   }, [language]);
 
+  // Isolate wizard/edit session completely across same-session logout/login or account switches
   useEffect(() => {
-    if (viewMode === 'create' || viewMode === 'edit') {
-      setFormStep(1);
+    if (authLoading) return;
+    const nextUid = user?.uid ?? null;
+    if (prevAuthUidForWizardRef.current === undefined) {
+      prevAuthUidForWizardRef.current = nextUid;
+      return;
     }
-  }, [viewMode]);
-  // Form State
-  const [formData, setFormData] = useState<ListingFormData>({
-    title: '',
-    titleGe: '',
-    primaryLanguage: language === 'ka' ? 'ka' : 'en',
-    description: '',
-    descriptionGe: '',
-    price: '',
-    currency: language === 'ka' ? 'GEL' : 'USD',
-    category: 'technics',
-    country: 'GEO',
-    city: '',
-    location: '',
-    images: [],
-    lat: undefined,
-    lng: undefined,
-    condition: 'new',
-    isNegotiable: false,
-    listingType: 'product',
-    isRemote: false,
-    attributes: {},
-    serviceDuration: '',
-    serviceTerms: ''
-  });
-
-  // Synchronize listing draft with localStorage to prevent data loss on tab switches
-  useEffect(() => {
-    if (viewMode === 'create' || viewMode === 'edit') {
-      const timer = setTimeout(() => {
-        const hasDynamicAttributes = Boolean(formData.attributes && Object.keys(formData.attributes).length > 0);
-        const hasContent = formData.title || formData.titleGe || formData.description || formData.descriptionGe || formData.price || formData.city || formData.location || formData.isRemote || hasDynamicAttributes || (formData.images && formData.images.length > 0);
-        if (hasContent) {
-          // Preserve safe HTTP/HTTPS uploaded URLs in localStorage draft;
-          // strictly strip raw base64 data URIs to prevent QuotaExceededError and main thread lag
-          const safeImageUrls = (formData.images || []).filter(
-            (img): img is string => typeof img === 'string' && (img.startsWith('http://') || img.startsWith('https://'))
-          );
-
-          localStorage.setItem('proton_markethub_draft_form_data', JSON.stringify({
-            mode: viewMode,
-            editingId: editingListing?.id || null,
-            data: {
-              ...formData,
-              images: safeImageUrls
-            }
-          }));
-        } else {
-          localStorage.removeItem('proton_markethub_draft_form_data');
-        }
-      }, 500);
-
-      return () => clearTimeout(timer);
+    if (prevAuthUidForWizardRef.current === nextUid) {
+      return;
     }
-  }, [formData, viewMode, editingListing]);
-
-  // Restore draft when returning to create/edit view modes
-  useEffect(() => {
-    if (viewMode === 'create' || viewMode === 'edit') {
-      try {
-        const savedRaw = localStorage.getItem('proton_markethub_draft_form_data');
-        if (savedRaw) {
-          const parsed = JSON.parse(savedRaw);
-          if (parsed && parsed.data) {
-            if (parsed.mode === viewMode) {
-              if (viewMode === 'create' || (viewMode === 'edit' && editingListing && parsed.editingId === editingListing.id)) {
-                setFormData(prev => {
-                  const restoredImages = Array.isArray(parsed.data.images)
-                    ? parsed.data.images.filter((img: any): img is string => typeof img === 'string' && (img.startsWith('http://') || img.startsWith('https://')))
-                    : [];
-                  const restoredType = inferListingType(parsed.data.category, parsed.data.listingType);
-                  const restoredCategory =
-                    viewMode === 'create' && !isCategoryValidForType(parsed.data.category, restoredType)
-                      ? getDefaultCategoryForType(restoredType)
-                      : (parsed.data.category || getDefaultCategoryForType(restoredType));
-                  const restoredSchema = getCategoryFormSchema(restoredType, restoredCategory);
-                  const restoredAttributes =
-                    parsed.data.attributes && typeof parsed.data.attributes === 'object'
-                      ? filterAttributesForSchema(restoredSchema, parsed.data.attributes)
-                      : {};
-                  const restoredIsRemote =
-                    restoredSchema.locationMode === 'physical'
-                      ? false
-                      : restoredSchema.locationMode === 'remote'
-                      ? true
-                      : (typeof parsed.data.isRemote === 'boolean'
-                        ? parsed.data.isRemote
-                        : getDefaultIsRemoteForSchema(restoredSchema));
-
-                  return {
-                    ...prev,
-                    ...parsed.data,
-                    listingType: restoredType,
-                    category: restoredCategory,
-                    isRemote: restoredIsRemote,
-                    attributes: restoredAttributes,
-                    // If the draft contains saved safe image URLs, restore them;
-                    // if draft images array is explicitly empty, restore empty array;
-                    // preserve prev.images only if parsed.data has no images field defined
-                    images: Array.isArray(parsed.data.images) ? restoredImages : prev.images
-                  };
-                });
-              }
-            }
-          }
-        }
-      } catch (err) {
-        console.warn("Failed to load form draft from localStorage:", err);
-      }
-    }
-  }, [viewMode, editingListing]);
+    prevAuthUidForWizardRef.current = nextUid;
+    resetListingForm();
+    setPublishSuccessModal(null);
+    setSelectedListing(null);
+    setViewMode(prev => {
+      if (prev === 'edit' || prev === 'my-listings') return 'browse';
+      if (prev === 'create' && !nextUid) return 'browse';
+      return prev;
+    });
+  }, [authLoading, user?.uid, resetListingForm]);
 
   // Trust & Reviews States
   const [reviews, setReviews] = useState<any[]>([]);
@@ -3465,90 +3386,538 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
     }
   };
 
-  const [isResizing, setIsResizing] = useState(false);
+  const isResizing = photoUploadTasks.some(
+    t => t.status === 'resizing' || t.status === 'uploading'
+  );
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    const targetInput = e.target;
-    if (file) {
-      if (!file.type.startsWith('image/')) {
-        showToast(language === 'ka' ? "გთხოვთ აირჩიოთ ფოტოს ფაილი." : "Please select an image file.", 'warning');
-        if (targetInput) targetInput.value = '';
+  const updatePhotoTask = useCallback(
+    (taskId: string, updater: (task: ListingPhotoUploadTask) => ListingPhotoUploadTask) => {
+      setPhotoUploadTasks(prev => prev.map(t => (t.id === taskId ? updater(t) : t)));
+    },
+    []
+  );
+
+  const resizeImageFileToDataUri = useCallback(
+    (file: File): Promise<string> =>
+      new Promise((resolve, reject) => {
+        if (!file.type || !file.type.startsWith('image/')) {
+          reject(
+            new Error(
+              language === 'ka'
+                ? 'ფაილი არ არის სურათი (PNG, JPG, WEBP).'
+                : 'File is not a supported image (PNG, JPG, WEBP).'
+            )
+          );
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = event => {
+          const img = new Image();
+          img.onload = () => {
+            try {
+              const canvas = document.createElement('canvas');
+              let width = img.width;
+              let height = img.height;
+              const MAX_WIDTH = 1280;
+              const MAX_HEIGHT = 1280;
+
+              if (width > height) {
+                if (width > MAX_WIDTH) {
+                  height = Math.round(height * (MAX_WIDTH / width));
+                  width = MAX_WIDTH;
+                }
+              } else if (height > MAX_HEIGHT) {
+                width = Math.round(width * (MAX_HEIGHT / height));
+                height = MAX_HEIGHT;
+              }
+
+              canvas.width = Math.max(1, Math.round(width));
+              canvas.height = Math.max(1, Math.round(height));
+              const ctx = canvas.getContext('2d');
+              if (ctx) {
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+              }
+
+              let dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+              const estimateBytes = (uri: string) => Math.ceil((uri.length * 3) / 4);
+              if (estimateBytes(dataUrl) > MAX_LISTING_PHOTO_BYTES) {
+                dataUrl = canvas.toDataURL('image/jpeg', 0.64);
+              }
+              if (estimateBytes(dataUrl) > MAX_LISTING_PHOTO_BYTES) {
+                reject(
+                  new Error(
+                    language === 'ka'
+                      ? 'ფოტოს ზომა აღემატება 5MB ლიმიტს.'
+                      : 'Photo exceeds the 5MB limit after compression.'
+                  )
+                );
+                return;
+              }
+
+              resolve(dataUrl);
+            } catch {
+              reject(
+                new Error(
+                  language === 'ka'
+                    ? 'ფოტოს დამუშავებისას მოხდა შეცდომა.'
+                    : 'Failed to process image.'
+                )
+              );
+            }
+          };
+          img.onerror = () => {
+            reject(
+              new Error(
+                language === 'ka'
+                  ? 'ფოტოს ჩატვირთვა ვერ მოხერხდა.'
+                  : 'Could not decode image file.'
+              )
+            );
+          };
+          img.src = (event.target?.result as string) || '';
+        };
+        reader.onerror = () => {
+          reject(
+            new Error(
+              language === 'ka'
+                ? 'ფაილის წაკითხვა ვერ მოხერხდა.'
+                : 'Error reading file.'
+            )
+          );
+        };
+        reader.readAsDataURL(file);
+      }),
+    [language]
+  );
+
+  const executeSinglePhotoUpload = useCallback(
+    async (taskId: string, dataUri: string) => {
+      const requestEpoch = uploadSessionEpochRef.current;
+      const expectedUid = user?.uid ?? null;
+
+      updatePhotoTask(taskId, task => ({
+        ...task,
+        previewUrl: task.previewUrl || dataUri,
+        resizedDataUri: dataUri,
+        status: 'uploading',
+        progress: 55,
+        errorMessage: undefined,
+      }));
+
+      if (!expectedUid) {
+        updatePhotoTask(taskId, task => ({
+          ...task,
+          status: 'error',
+          progress: 0,
+          errorMessage:
+            language === 'ka'
+              ? 'ფოტოს ასატვირთად გაიარეთ ავტორიზაცია.'
+              : 'Sign in required to upload photos.',
+        }));
         return;
       }
 
-      setIsResizing(true);
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const img = new Image();
-        img.onload = async () => {
-          // Canvas resizing logic
-          const canvas = document.createElement('canvas');
-          let width = img.width;
-          let height = img.height;
+      try {
+        const uploadedUrl = await uploadProductImage(
+          expectedUid,
+          dataUri,
+          `prod_${Date.now()}_${taskId.replace(/[^a-zA-Z0-9]/g, '').slice(-6)}`
+        );
 
-          // Max dimensions
-          const MAX_WIDTH = 1280;
-          const MAX_HEIGHT = 1280;
+        // Guard against stale async upload completions after user sign-out / account switch / reset
+        if (
+          uploadSessionEpochRef.current !== requestEpoch ||
+          currentUserUidRef.current !== expectedUid
+        ) {
+          void deleteListingImagesFromStorage([uploadedUrl], expectedUid).catch(() => {});
+          return;
+        }
 
-          if (width > height) {
-            if (width > MAX_WIDTH) {
-              height = Math.round(height * (MAX_WIDTH / width));
-              width = MAX_WIDTH;
-            }
-          } else {
-            if (height > MAX_HEIGHT) {
-              width = Math.round(width * (MAX_HEIGHT / height));
-              height = MAX_HEIGHT;
+        sessionUploadedUrlsRef.current.add(uploadedUrl);
+        setFormData(prev => ({
+          ...prev,
+          images: appendUploadedPhotoUrl(prev.images || [], uploadedUrl, MAX_LISTING_PHOTOS),
+        }));
+
+        updatePhotoTask(taskId, task => ({
+          ...task,
+          status: 'success',
+          progress: 100,
+          uploadedUrl,
+          errorMessage: undefined,
+        }));
+
+        setTimeout(() => {
+          if (uploadSessionEpochRef.current !== requestEpoch) return;
+          setPhotoUploadTasks(prev => prev.filter(t => t.id !== taskId));
+        }, 1800);
+      } catch (uploadErr: any) {
+        if (
+          uploadSessionEpochRef.current !== requestEpoch ||
+          currentUserUidRef.current !== expectedUid
+        ) {
+          return;
+        }
+        const rawMessage = String(uploadErr?.message || '');
+        let friendlyError =
+          language === 'ka'
+            ? 'ფოტოს ატვირთვა ვერ მოხერხდა.'
+            : 'Photo upload failed.';
+        if (rawMessage.toLowerCase().includes('unauthorized') || uploadErr?.statusCode === 401) {
+          friendlyError =
+            language === 'ka'
+              ? 'სესია არ დადასტურდა. სცადეთ თავიდან.'
+              : 'Session verification failed. Please retry.';
+        } else if (rawMessage.toLowerCase().includes('timed out')) {
+          friendlyError =
+            language === 'ka'
+              ? 'ატვირთვის დრო ამოიწურა. სცადეთ თავიდან.'
+              : 'Upload timed out. Please retry.';
+        } else if (rawMessage.toLowerCase().includes('5 mb') || uploadErr?.statusCode === 400) {
+          friendlyError =
+            language === 'ka'
+              ? 'ფოტოს ფორმატი ან ზომა არასწორია.'
+              : 'Invalid image format or file too large.';
+        }
+
+        updatePhotoTask(taskId, task => ({
+          ...task,
+          status: 'error',
+          progress: 0,
+          errorMessage: friendlyError,
+        }));
+      }
+    },
+    [language, updatePhotoTask, user?.uid]
+  );
+
+  const handlePhotoFilesUpload = useCallback(
+    async (filesInput: FileList | File[]) => {
+      const requestEpoch = uploadSessionEpochRef.current;
+      const incomingFiles = Array.from(filesInput || []);
+      if (incomingFiles.length === 0) return;
+
+      const inFlightCount = photoUploadTasksRef.current.filter(
+        t => t.status === 'resizing' || t.status === 'uploading'
+      ).length;
+      const availableSlots = getAvailablePhotoSlots(
+        formData.images || [],
+        inFlightCount,
+        MAX_LISTING_PHOTOS
+      );
+
+      if (availableSlots <= 0) {
+        showToast(
+          language === 'ka'
+            ? `მაქსიმუმ ${MAX_LISTING_PHOTOS} ფოტოს დამატებაა შესაძლებელი.`
+            : `Maximum ${MAX_LISTING_PHOTOS} photos allowed per listing.`,
+          'warning'
+        );
+        return;
+      }
+
+      const acceptedFiles = incomingFiles.slice(0, availableSlots);
+      const skippedCount = incomingFiles.length - acceptedFiles.length;
+      if (skippedCount > 0) {
+        showToast(
+          language === 'ka'
+            ? `მაქსიმუმ ${MAX_LISTING_PHOTOS} ფოტო: ${skippedCount} ზედმეტი ფაილი გამოტოვებულია.`
+            : `Max ${MAX_LISTING_PHOTOS} photos allowed: ${skippedCount} extra file(s) skipped.`,
+          'warning'
+        );
+      }
+
+      const createdTasks: ListingPhotoUploadTask[] = acceptedFiles.map((file, idx) => ({
+        id: `photo_${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 7)}`,
+        fileName: file.name || `photo-${idx + 1}.jpg`,
+        previewUrl: '',
+        status: 'resizing',
+        progress: 15,
+        file,
+      }));
+
+      setPhotoUploadTasks(prev => [...prev, ...createdTasks]);
+
+      await Promise.allSettled(
+        createdTasks.map(async task => {
+          try {
+            const dataUri = await resizeImageFileToDataUri(task.file!);
+            if (uploadSessionEpochRef.current !== requestEpoch) return;
+            await executeSinglePhotoUpload(task.id, dataUri);
+          } catch (err: any) {
+            if (uploadSessionEpochRef.current !== requestEpoch) return;
+            updatePhotoTask(task.id, current => ({
+              ...current,
+              status: 'error',
+              progress: 0,
+              errorMessage:
+                err?.message ||
+                (language === 'ka'
+                  ? 'ფოტოს დამუშავება ვერ მოხერხდა.'
+                  : 'Failed to process image.'),
+            }));
+          }
+        })
+      );
+    },
+    [executeSinglePhotoUpload, formData.images, language, resizeImageFileToDataUri, showToast, updatePhotoTask]
+  );
+
+  const handleFileUpload = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const targetInput = e.target;
+      const selectedFiles = targetInput?.files ? Array.from(targetInput.files) : [];
+      if (targetInput) targetInput.value = '';
+      if (selectedFiles.length > 0) {
+        void handlePhotoFilesUpload(selectedFiles);
+      }
+    },
+    [handlePhotoFilesUpload]
+  );
+
+  const handleRetryPhotoUpload = useCallback(
+    async (taskId: string) => {
+      const target = photoUploadTasksRef.current.find(t => t.id === taskId);
+      if (!target) return;
+
+      const availableSlots = getAvailablePhotoSlots(
+        formData.images || [],
+        photoUploadTasksRef.current.filter(
+          t => t.id !== taskId && (t.status === 'resizing' || t.status === 'uploading')
+        ).length,
+        MAX_LISTING_PHOTOS
+      );
+      if (availableSlots <= 0) {
+        showToast(
+          language === 'ka'
+            ? `მაქსიმუმ ${MAX_LISTING_PHOTOS} ფოტოს დამატებაა შესაძლებელი.`
+            : `Maximum ${MAX_LISTING_PHOTOS} photos allowed per listing.`,
+          'warning'
+        );
+        return;
+      }
+
+      if (target.resizedDataUri) {
+        await executeSinglePhotoUpload(taskId, target.resizedDataUri);
+        return;
+      }
+
+      if (target.file) {
+        updatePhotoTask(taskId, t => ({
+          ...t,
+          status: 'resizing',
+          progress: 15,
+          errorMessage: undefined,
+        }));
+        try {
+          const dataUri = await resizeImageFileToDataUri(target.file);
+          await executeSinglePhotoUpload(taskId, dataUri);
+        } catch (err: any) {
+          updatePhotoTask(taskId, t => ({
+            ...t,
+            status: 'error',
+            progress: 0,
+            errorMessage:
+              err?.message ||
+              (language === 'ka'
+                ? 'ფოტოს დამუშავება ვერ მოხერხდა.'
+                : 'Failed to process image.'),
+          }));
+        }
+      }
+    },
+    [executeSinglePhotoUpload, formData.images, language, resizeImageFileToDataUri, showToast, updatePhotoTask]
+  );
+
+  const handleDismissPhotoTask = useCallback((taskId: string) => {
+    setPhotoUploadTasks(prev => prev.filter(t => t.id !== taskId));
+  }, []);
+
+  const isUrlProtectedByListing = useCallback(
+    (candidateUrl: string): boolean => {
+      const trimmed = candidateUrl.trim();
+      if (!trimmed) return true;
+      if (editingListing) {
+        if (editingListing.image?.trim() === trimmed) return true;
+        if (Array.isArray(editingListing.images) && editingListing.images.some(u => u?.trim() === trimmed)) {
+          return true;
+        }
+      }
+      return listings.some(item => {
+        if (!item) return false;
+        if (item.image?.trim() === trimmed) return true;
+        return Array.isArray(item.images) && item.images.some(u => u?.trim() === trimmed);
+      });
+    },
+    [editingListing, listings]
+  );
+
+  // Authoritative Firestore reference check across all listings of seller (fail-closed: returns null on query error)
+  const fetchSellerProtectedPhotoUrls = useCallback(
+    async (sellerUid: string): Promise<Set<string> | null> => {
+      try {
+        const snap = await getDocs(
+          query(collection(db, 'listings'), where('sellerId', '==', sellerUid))
+        );
+        const protectedUrls = new Set<string>();
+        snap.forEach(d => {
+          const data = d.data();
+          if (typeof data?.image === 'string' && data.image.trim()) {
+            protectedUrls.add(data.image.trim());
+          }
+          if (Array.isArray(data?.images)) {
+            for (const img of data.images) {
+              if (typeof img === 'string' && img.trim()) {
+                protectedUrls.add(img.trim());
+              }
             }
           }
-
-          canvas.width = Math.max(1, Math.round(width));
-          canvas.height = Math.max(1, Math.round(height));
-          const ctx = canvas.getContext('2d');
-          if (ctx) {
-            ctx.imageSmoothingEnabled = true;
-            ctx.imageSmoothingQuality = 'high';
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          }
-
-          // Get base64 with balanced quality reduction
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-
-          // If user is authenticated, upload directly to permanent storage so draft retains the HTTPS URL
-          if (user?.uid) {
-            try {
-              const uploadedUrl = await uploadProductImage(user.uid, dataUrl, `prod_${Date.now()}_0`);
-              setFormData(prev => ({
-                ...prev,
-                images: [uploadedUrl, ...(prev.images || []).filter(u => u !== uploadedUrl && !u.startsWith('data:'))]
-              }));
-            } catch (uploadErr) {
-              console.warn('[MarketHub] Direct draft image upload failed, falling back to local session preview:', uploadErr);
-              setFormData(prev => ({ ...prev, images: [dataUrl, ...(prev.images || [])] }));
+        });
+        if (editingListing) {
+          if (editingListing.image?.trim()) protectedUrls.add(editingListing.image.trim());
+          if (Array.isArray(editingListing.images)) {
+            for (const img of editingListing.images) {
+              if (typeof img === 'string' && img.trim()) protectedUrls.add(img.trim());
             }
-          } else {
-            setFormData(prev => ({ ...prev, images: [dataUrl, ...(prev.images || [])] }));
           }
+        }
+        return protectedUrls;
+      } catch (err) {
+        console.warn('[MarketHub] Cross-listing Storage reference check failed; preserving files safely:', err);
+        return null;
+      }
+    },
+    [editingListing]
+  );
 
-          setIsResizing(false);
-          if (targetInput) targetInput.value = '';
-        };
-        img.onerror = () => {
-          setIsResizing(false);
-          if (targetInput) targetInput.value = '';
-          showToast(language === 'ka' ? "ფოტოს დამუშავებისას მოხდა შეცდომა." : "Error processing image.", 'error');
-        };
-        img.src = event.target?.result as string;
-      };
-      reader.onerror = () => {
-        setIsResizing(false);
-        if (targetInput) targetInput.value = '';
-        showToast(language === 'ka' ? "ფაილის წაკითხვისას მოხდა შეცდომა." : "Error reading file.", 'error');
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+  const handleRemovePhotoAt = useCallback(
+    (index: number) => {
+      const targetUrl = (formData.images || [])[index];
+      setFormData(prev => ({
+        ...prev,
+        images: removePhotoAtIndex(prev.images || [], index),
+      }));
+
+      const activeUid = user?.uid;
+      if (
+        targetUrl &&
+        activeUid &&
+        sessionUploadedUrlsRef.current.has(targetUrl) &&
+        !isUrlProtectedByListing(targetUrl)
+      ) {
+        sessionUploadedUrlsRef.current.delete(targetUrl);
+        void (async () => {
+          const protectedUrls = await fetchSellerProtectedPhotoUrls(activeUid);
+          if (!protectedUrls) return; // Fail-safe: do not delete if Firestore check failed
+          if (protectedUrls.has(targetUrl.trim())) return;
+          await deleteListingImagesFromStorage([targetUrl], activeUid);
+        })().catch(err => {
+          console.warn('[MarketHub] Non-blocking orphan photo cleanup notice:', err);
+        });
+      }
+    },
+    [fetchSellerProtectedPhotoUrls, formData.images, isUrlProtectedByListing, user?.uid]
+  );
+
+  const handleSetPrimaryPhoto = useCallback((index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      images: setPrimaryPhotoAtIndex(prev.images || [], index),
+    }));
+  }, []);
+
+  const handleReorderPhotos = useCallback((fromIndex: number, toIndex: number) => {
+    setFormData(prev => ({
+      ...prev,
+      images: reorderPhotosByIndex(prev.images || [], fromIndex, toIndex),
+    }));
+  }, []);
+
+  const handleAddPhotoUrl = useCallback(
+    (rawUrl: string): boolean => {
+      const check = validateExternalPhotoUrl(rawUrl, formData.images || [], MAX_LISTING_PHOTOS);
+      if (!check.valid || !check.normalizedUrl) {
+        const msg =
+          check.reason === 'limit_reached'
+            ? language === 'ka'
+              ? `მაქსიმუმ ${MAX_LISTING_PHOTOS} ფოტოს დამატებაა შესაძლებელი.`
+              : `Maximum ${MAX_LISTING_PHOTOS} photos allowed per listing.`
+            : check.reason === 'duplicate'
+            ? language === 'ka'
+              ? 'ეს ფოტო უკვე დამატებულია.'
+              : 'This photo is already added.'
+            : language === 'ka'
+            ? 'გთხოვთ შეიყვანოთ სწორი http:// ან https:// სურათის ბმული.'
+            : 'Please enter a valid http:// or https:// image URL.';
+        showToast(msg, 'warning');
+        return false;
+      }
+
+      if (user?.uid) {
+        const securityCheck = validateListingImageUrl(check.normalizedUrl, user.uid);
+        if (!securityCheck.isAllowed) {
+          const msg =
+            securityCheck.reason === 'ownership_mismatch'
+              ? language === 'ka'
+                ? 'სხვა მომხმარებლის პირადი სურათის გამოყენება დაუშვებელია.'
+                : 'Using images belonging to other users is not permitted.'
+              : securityCheck.reason === 'not_a_listing_path'
+              ? language === 'ka'
+                ? 'ავატარის ან ვიდეოს მისამართის გამოყენება განცხადების სურათად დაუშვებელია.'
+                : 'Avatar or video storage paths cannot be used as listing images.'
+              : language === 'ka'
+              ? 'სურათის მისამართი დაუშვებელია.'
+              : 'Invalid or unauthorized image URL.';
+          showToast(msg, 'error');
+          return false;
+        }
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        images: appendUploadedPhotoUrl(prev.images || [], check.normalizedUrl!, MAX_LISTING_PHOTOS),
+      }));
+      return true;
+    },
+    [formData.images, language, showToast, user?.uid]
+  );
+
+  const handleDiscardSessionPhotos = useCallback(
+    async (explicitUrls?: string[]) => {
+      const activeUid = user?.uid;
+      if (!activeUid) {
+        sessionUploadedUrlsRef.current.clear();
+        return;
+      }
+      const candidates = Array.from(
+        new Set([...Array.from(sessionUploadedUrlsRef.current), ...(explicitUrls || [])])
+      )
+        .map(url => url.trim())
+        .filter(Boolean)
+        .filter(url => !isUrlProtectedByListing(url));
+
+      sessionUploadedUrlsRef.current.clear();
+      if (candidates.length === 0) return;
+
+      const protectedUrls = await fetchSellerProtectedPhotoUrls(activeUid);
+      if (!protectedUrls) {
+        // Fail-safe: preserve Storage files if authoritative Firestore verification failed
+        return;
+      }
+      const safeCandidates = candidates.filter(url => !protectedUrls.has(url));
+      if (safeCandidates.length > 0) {
+        try {
+          await deleteListingImagesFromStorage(safeCandidates, activeUid);
+        } catch (err) {
+          console.warn('[MarketHub] Non-blocking discarded draft photo cleanup notice:', err);
+        }
+      }
+    },
+    [fetchSellerProtectedPhotoUrls, isUrlProtectedByListing, user?.uid]
+  );
 
   const [isAiGenerating, setIsAiGenerating] = useState(false);
 
@@ -3859,8 +4228,20 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
           ? null
           : ((typeof formData.lng === 'number' && !isNaN(formData.lng)) ? formData.lng : null);
 
-      // Upload any local base64 images to Firebase Storage first to ensure HTTPS URLs in Firestore
-      let finalImages = formData.images || [];
+      if (photoUploadTasksRef.current.some(t => t.status === 'resizing' || t.status === 'uploading')) {
+        showToast(
+          language === 'ka'
+            ? "გთხოვთ დაელოდოთ ფოტოების ატვირთვის დასრულებას."
+            : "Please wait for active photo uploads to finish.",
+          'warning'
+        );
+        setFormStep(3);
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Upload any stray local base64 images to Storage first to ensure HTTPS URLs in Firestore
+      let finalImages = normalizePhotoUrlList(formData.images || [], MAX_LISTING_PHOTOS);
       if (finalImages.length > 0) {
         try {
           const uploadPromises = finalImages.map(async (img, idx) => {
@@ -3870,7 +4251,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
             }
             return img;
           });
-          finalImages = await Promise.all(uploadPromises);
+          finalImages = normalizePhotoUrlList(await Promise.all(uploadPromises), MAX_LISTING_PHOTOS);
         } catch (uploadErr: any) {
           console.error("[MarketHub] Storage upload error:", uploadErr);
           const rawMessage = uploadErr?.message || '';
@@ -3955,6 +4336,9 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
         ? resolvePreservedListingStatus(latestEditingListing)
         : 'active';
 
+      const { image: primaryListingImage, images: normalizedGalleryImages } =
+        resolveListingPrimaryAndGalleryImages(finalImages, MAX_LISTING_PHOTOS);
+
       const listingData = {
         title: resolvedFirestoreTitle,
         titleGe: finalTitleGe,
@@ -3970,8 +4354,8 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
         location: finalLocation,
         country: finalCountry,
         city: finalCity,
-        image: (finalImages && finalImages[0]) || '',
-        images: finalImages,
+        image: primaryListingImage,
+        images: normalizedGalleryImages,
         createdAt: serverTimestamp(),
         status: resolvedListingStatus,
         lat: sanitizedLat,
@@ -4045,7 +4429,9 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
         await addDoc(collection(db, 'listings'), listingData);
       }
 
-      localStorage.removeItem('proton_markethub_draft_form_data');
+      if (!isEdit) {
+        clearUnifiedListingDraft(user.uid);
+      }
       setViewMode('browse');
       resetListingForm();
       setPublishSuccessModal({
@@ -4223,6 +4609,18 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
               (listing.city || '').trim().toLowerCase() === 'online'))
         : false;
 
+    setFormStep(1);
+    setPhotoUploadTasks([]);
+    sessionUploadedUrlsRef.current.clear();
+
+    const normalizedEditImages = normalizePhotoUrlList(
+      [
+        ...(Array.isArray(listing.images) ? listing.images : []),
+        ...(listing.image ? [listing.image] : []),
+      ],
+      MAX_LISTING_PHOTOS
+    );
+
     setFormData({
       title: editTitleEn,
       titleGe: editTitleGe,
@@ -4235,7 +4633,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
       country: (listing as any).country || (inferredRemote ? 'GLOBAL' : 'GEO'),
       city: (listing as any).city || '',
       location: listing.location || '',
-      images: listing.images || (listing.image ? [listing.image] : []),
+      images: normalizedEditImages,
       lat: listing.lat,
       lng: listing.lng,
       condition: listing.condition || 'new',
@@ -4834,10 +5232,16 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                   </span>
                 </div>
                 {viewMode === 'browse' && (
-                  <div className={cn("flex items-center gap-1.5 px-2 py-0.5 rounded-md border", currentTheme.cardAlt)}>
+                  <div className={cn("flex items-center gap-1.5 px-2 py-0.5 rounded-md border", currentTheme.cardAlt)} data-testid="header-listings-count-badge">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                     <span className={cn("font-black tracking-widest uppercase text-[8px] font-mono", currentTheme.muted)}>
-                      {language === 'ka' ? `აქტიური განცხადებები: ${activeListingsCount}` : `Active Listings: ${activeListingsCount}`}
+                      {isFilteredMode
+                        ? (language === 'ka'
+                            ? `ნაპოვნი განცხადებები: ${filteredListings.length}`
+                            : `Matching Listings: ${filteredListings.length}`)
+                        : (language === 'ka'
+                            ? `აქტიური განცხადებები: ${activeListingsCount}`
+                            : `Active Listings: ${activeListingsCount}`)}
                     </span>
                   </div>
                 )}
@@ -4976,7 +5380,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                         <span>{language === 'ka' ? 'აირჩიეთ კატეგორია' : 'Select Category'}</span>
                         <span className="text-proton-accent text-[8px] tracking-widest">★ PROTON</span>
                       </div>
-                      <div className="max-h-60 overflow-y-auto pr-1 space-y-0.5 custom-scrollbar">
+                      <div className="max-h-72 overflow-y-auto pr-1 space-y-2 custom-scrollbar">
                         <button
                           type="button"
                           onClick={() => {
@@ -4996,32 +5400,47 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                           </div>
                           {activeCategory === 'all' && <span className="w-1.5 h-1.5 rounded-full bg-proton-accent" />}
                         </button>
-                        
-                        {getCategoriesForListingType(activeListingType, t, language).map(cat => {
-                          const isSelected = activeCategory === cat.id;
-                          return (
-                            <button
-                              key={cat.id}
-                              type="button"
-                              onClick={() => {
-                                setActiveCategory(cat.id);
-                                setIsCategoryDropdownOpen(false);
-                              }}
-                              className={cn(
-                                "w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border text-left cursor-pointer",
-                                isSelected
-                                  ? "bg-proton-accent/15 border-proton-accent/35 text-proton-accent"
-                                  : "bg-transparent border-transparent text-proton-muted hover:bg-proton-bg hover:text-proton-text"
-                              )}
-                            >
-                              <div className="flex items-center gap-2 min-w-0">
-                                <span className="text-xs shrink-0">{cat.emoji}</span>
-                                <span className="truncate">{cat.label}</span>
-                              </div>
-                              {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-proton-accent" />}
-                            </button>
-                          );
-                        })}
+
+                        {(activeListingType === 'all'
+                          ? getListingDirectionsMeta(language).map((dir) => ({
+                              groupId: dir.id,
+                              title: `${dir.emoji} ${dir.title}`,
+                              categories: getCategoriesForListingType(dir.id, t, language),
+                            }))
+                          : getGroupedCategoriesForListingType(activeListingType, t, language)
+                        ).map(group => (
+                          <div key={group.groupId} className="pt-1.5 border-t border-proton-border/60 space-y-0.5">
+                            <div className="px-3 py-1 text-[9px] font-black uppercase tracking-widest text-proton-accent/90">
+                              {group.title}
+                            </div>
+                            {group.categories.map(cat => {
+                              const isSelected = activeCategory === cat.id;
+                              return (
+                                <button
+                                  key={cat.id}
+                                  type="button"
+                                  data-testid={`desktop-cat-item-${cat.id}`}
+                                  onClick={() => {
+                                    setActiveCategory(cat.id);
+                                    setIsCategoryDropdownOpen(false);
+                                  }}
+                                  className={cn(
+                                    "w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border text-left cursor-pointer",
+                                    isSelected
+                                      ? "bg-proton-accent/15 border-proton-accent/35 text-proton-accent"
+                                      : "bg-transparent border-transparent text-proton-muted hover:bg-proton-bg hover:text-proton-text"
+                                  )}
+                                >
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <span className="text-xs shrink-0">{cat.emoji}</span>
+                                    <span className="truncate">{cat.label}</span>
+                                  </div>
+                                  {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-proton-accent" />}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ))}
                       </div>
                     </div>
                   </>
@@ -5132,7 +5551,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                         <div className="text-[9px] font-black tracking-wider text-proton-muted uppercase px-3 py-1.5 border-b border-proton-border w-full flex justify-between items-center mb-1.5">
                           <span>{language === 'ka' ? 'აირჩიეთ კატეგორია' : 'Select Category'}</span>
                         </div>
-                        <div className="max-h-60 overflow-y-auto pr-1 space-y-0.5 custom-scrollbar">
+                        <div className="max-h-72 overflow-y-auto pr-1 space-y-2 custom-scrollbar">
                           <button
                             type="button"
                             onClick={() => {
@@ -5152,32 +5571,47 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                             </div>
                             {activeCategory === 'all' && <span className="w-1.5 h-1.5 rounded-full bg-proton-accent" />}
                           </button>
-                          
-                          {getCategoriesForListingType(activeListingType, t, language).map(cat => {
-                            const isSelected = activeCategory === cat.id;
-                            return (
-                              <button
-                                key={cat.id}
-                                type="button"
-                                onClick={() => {
-                                  setActiveCategory(cat.id);
-                                  setIsCategoryDropdownOpen(false);
-                                }}
-                                className={cn(
-                                  "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border text-left cursor-pointer",
-                                  isSelected
-                                    ? "bg-proton-accent/15 border-proton-accent/35 text-proton-accent"
-                                    : "bg-transparent border-transparent text-proton-muted hover:bg-proton-bg hover:text-proton-text"
-                                )}
-                              >
-                                <div className="flex items-center gap-2 min-w-0 font-bold">
-                                  <span className="text-xs shrink-0">{cat.emoji}</span>
-                                  <span className="truncate">{cat.label}</span>
-                                </div>
-                                {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-proton-accent" />}
-                              </button>
-                            );
-                          })}
+
+                          {(activeListingType === 'all'
+                            ? getListingDirectionsMeta(language).map((dir) => ({
+                                groupId: dir.id,
+                                title: `${dir.emoji} ${dir.title}`,
+                                categories: getCategoriesForListingType(dir.id, t, language),
+                              }))
+                            : getGroupedCategoriesForListingType(activeListingType, t, language)
+                          ).map(group => (
+                            <div key={group.groupId} className="pt-1.5 border-t border-proton-border/60 space-y-0.5">
+                              <div className="px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-proton-accent/90">
+                                {group.title}
+                              </div>
+                              {group.categories.map(cat => {
+                                const isSelected = activeCategory === cat.id;
+                                return (
+                                  <button
+                                    key={cat.id}
+                                    type="button"
+                                    data-testid={`mobile-cat-item-${cat.id}`}
+                                    onClick={() => {
+                                      setActiveCategory(cat.id);
+                                      setIsCategoryDropdownOpen(false);
+                                    }}
+                                    className={cn(
+                                      "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border text-left cursor-pointer",
+                                      isSelected
+                                        ? "bg-proton-accent/15 border-proton-accent/35 text-proton-accent"
+                                        : "bg-transparent border-transparent text-proton-muted hover:bg-proton-bg hover:text-proton-text"
+                                    )}
+                                  >
+                                    <div className="flex items-center gap-2 min-w-0 font-bold">
+                                      <span className="text-xs shrink-0">{cat.emoji}</span>
+                                      <span className="truncate">{cat.label}</span>
+                                    </div>
+                                    {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-proton-accent" />}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          ))}
                         </div>
                       </div>
                     </>
@@ -6294,6 +6728,16 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
           setViewMode={setViewMode}
           isResizing={isResizing}
           handleFileUpload={handleFileUpload}
+          handlePhotoFilesUpload={handlePhotoFilesUpload}
+          photoUploadTasks={photoUploadTasks}
+          onRetryPhotoUpload={handleRetryPhotoUpload}
+          onDismissPhotoTask={handleDismissPhotoTask}
+          onRemovePhotoAt={handleRemovePhotoAt}
+          onSetPrimaryPhoto={handleSetPrimaryPhoto}
+          onReorderPhotos={handleReorderPhotos}
+          onAddPhotoUrl={handleAddPhotoUrl}
+          onDiscardSessionPhotos={handleDiscardSessionPhotos}
+          userId={user?.uid || null}
           isAiGenerating={isAiGenerating}
           handleAiDescription={handleAiDescription}
           displayCurrency={displayCurrency}
@@ -6679,7 +7123,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
         transition={{ type: "spring", damping: 30, stiffness: 300 }}
         className="fixed inset-0 bg-proton-bg/98 backdrop-blur-lg z-[120] overflow-y-auto px-6 pt-[calc(1.25rem+env(safe-area-inset-top,0px))] pb-[calc(1.5rem+env(safe-area-inset-bottom,16px))]"
       >
-        <div className="max-w-md mx-auto space-y-8">
+        <div className="max-w-md mx-auto space-y-5">
           <div className="flex items-center justify-between border-b border-proton-border pb-4">
             <h2 className="text-sm font-black uppercase tracking-wider text-proton-accent flex items-center gap-2 font-sans">
               <span>📂</span> {language === 'ka' ? 'კატეგორიები' : 'Browse Categories'}
@@ -6693,45 +7137,73 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 pb-6">
-            <button
-              type="button"
-              onClick={() => {
-                setActiveCategory('all');
-                setActiveBottomTab('home');
-                setViewMode('browse');
-              }}
-              className={cn(
-                "w-full flex flex-col justify-between p-3.5 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all border text-left min-h-[72px] relative overflow-hidden group/cat cursor-pointer",
-                activeCategory === 'all'
-                  ? "bg-proton-accent text-proton-on-accent border-proton-accent shadow-md"
-                  : "bg-proton-card text-proton-text border-proton-border hover:border-proton-accent/40 hover:bg-proton-accent/10"
-              )}
-            >
-              <span className="text-xl">🌍</span>
-              <span className="mt-2 text-[9px] font-bold tracking-wider leading-none">{language === 'ka' ? 'ყველა' : 'All Goods'}</span>
-              {activeCategory === 'all' && <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 rounded-full bg-current opacity-80" />}
-            </button>
-            {getCategoriesForListingType(activeListingType, t, language).map(cat => (
-              <button
-                key={cat.id}
-                type="button"
-                onClick={() => {
-                  setActiveCategory(cat.id);
-                  setActiveBottomTab('home');
-                  setViewMode('browse');
-                }}
-                className={cn(
-                  "w-full flex flex-col justify-between p-3.5 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all border text-left min-h-[72px] relative overflow-hidden group/cat cursor-pointer",
-                  activeCategory === cat.id
-                    ? "bg-proton-accent text-proton-on-accent border-proton-accent shadow-md"
-                    : "bg-proton-card text-proton-text border-proton-border hover:border-proton-accent/40 hover:bg-proton-accent/10"
-                )}
-              >
-                <span className="text-xl shrink-0">{cat.emoji}</span>
-                <span className="mt-2 text-[9px] font-bold tracking-wider leading-none truncate w-full" title={cat.label}>{cat.label}</span>
-                {activeCategory === cat.id && <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 rounded-full bg-current opacity-80" />}
-              </button>
+          <div className="overflow-x-auto scrollbar-none pb-1">
+            <ListingTypeTabs
+              activeType={activeListingType}
+              onSelectType={handleSelectListingType}
+              language={language}
+              theme={currentTheme}
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setActiveCategory('all');
+              setActiveBottomTab('home');
+              setViewMode('browse');
+            }}
+            className={cn(
+              "w-full flex items-center justify-between p-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border text-left cursor-pointer",
+              activeCategory === 'all'
+                ? "bg-proton-accent text-proton-on-accent border-proton-accent shadow-md"
+                : "bg-proton-card text-proton-text border-proton-border hover:border-proton-accent/40 hover:bg-proton-accent/10"
+            )}
+          >
+            <div className="flex items-center gap-2.5">
+              <span className="text-lg">🌍</span>
+              <span>{t.market.all_categories}</span>
+            </div>
+            {activeCategory === 'all' && <span className="w-2 h-2 rounded-full bg-current opacity-85" />}
+          </button>
+
+          <div className="space-y-5 pb-6">
+            {(activeListingType === 'all'
+              ? getListingDirectionsMeta(language).map((dir) => ({
+                  groupId: dir.id,
+                  title: `${dir.emoji} ${dir.title}`,
+                  categories: getCategoriesForListingType(dir.id, t, language),
+                }))
+              : getGroupedCategoriesForListingType(activeListingType, t, language)
+            ).map(group => (
+              <div key={group.groupId} className="space-y-2.5">
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-proton-accent px-1">
+                  {group.title}
+                </h3>
+                <div className="grid grid-cols-2 gap-2.5">
+                  {group.categories.map(cat => (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => {
+                        setActiveCategory(cat.id);
+                        setActiveBottomTab('home');
+                        setViewMode('browse');
+                      }}
+                      className={cn(
+                        "w-full flex flex-col justify-between p-3.5 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all border text-left min-h-[72px] relative overflow-hidden group/cat cursor-pointer",
+                        activeCategory === cat.id
+                          ? "bg-proton-accent text-proton-on-accent border-proton-accent shadow-md"
+                          : "bg-proton-card text-proton-text border-proton-border hover:border-proton-accent/40 hover:bg-proton-accent/10"
+                      )}
+                    >
+                      <span className="text-xl shrink-0">{cat.emoji}</span>
+                      <span className="mt-2 text-[9px] font-bold tracking-wider leading-none truncate w-full" title={cat.label}>{cat.label}</span>
+                      {activeCategory === cat.id && <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 rounded-full bg-current opacity-80" />}
+                    </button>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         </div>

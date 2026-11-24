@@ -15,6 +15,8 @@ import {
   CATEGORY_EMOJIS, 
   MarketTheme,
   getCategoryLabel,
+  getGroupedCategoriesForListingType,
+  getListingDirectionsMeta,
   formatCurrencyAmount,
   getCurrencyPricePresets,
   parsePriceFilterInput
@@ -115,7 +117,10 @@ export const MarketFilterPanel = React.memo(function MarketFilterPanel({
                 onClick={() => setActiveListingType('all')}
                 className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-proton-accent/10 border border-proton-accent/25 text-[10px] font-bold text-proton-accent hover:bg-proton-accent/20 transition-all cursor-pointer"
               >
-                <span>Type: {activeListingType}</span>
+                <span>
+                  {getListingDirectionsMeta(language).find(d => d.id === activeListingType)?.emoji}{' '}
+                  {getListingDirectionsMeta(language).find(d => d.id === activeListingType)?.title || activeListingType}
+                </span>
                 <X size={10} className="shrink-0" />
               </button>
             )}
@@ -166,6 +171,90 @@ export const MarketFilterPanel = React.memo(function MarketFilterPanel({
       )}
 
       <div className="space-y-5">
+        {/* Marketplace Direction Selector (3 strict directions + All) */}
+        <div className="space-y-2">
+          <label className="text-xs font-black uppercase tracking-widest text-proton-accent ml-1 block">
+            {language === 'ka' ? 'მიმართულება' : 'Direction'}
+          </label>
+          <div className="grid grid-cols-2 gap-1.5" data-testid="filter-direction-group">
+            <button
+              type="button"
+              onClick={() => setActiveListingType('all')}
+              aria-pressed={activeListingType === 'all'}
+              className={cn(
+                "px-2.5 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider border transition-all flex items-center gap-1.5 cursor-pointer",
+                activeListingType === 'all'
+                  ? "bg-proton-accent text-proton-on-accent border-proton-accent shadow-sm"
+                  : "bg-proton-bg/70 border-proton-border text-proton-muted hover:text-proton-text hover:border-proton-accent/40"
+              )}
+            >
+              <span>🌍</span>
+              <span className="truncate">{language === 'ka' ? 'ყველა' : 'All'}</span>
+            </button>
+            {getListingDirectionsMeta(language).map((dir) => (
+              <button
+                key={dir.id}
+                type="button"
+                onClick={() => setActiveListingType(dir.id)}
+                aria-pressed={activeListingType === dir.id}
+                data-testid={`filter-direction-${dir.id}`}
+                className={cn(
+                  "px-2.5 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider border transition-all flex items-center gap-1.5 cursor-pointer",
+                  activeListingType === dir.id
+                    ? "bg-proton-accent text-proton-on-accent border-proton-accent shadow-sm"
+                    : "bg-proton-bg/70 border-proton-border text-proton-muted hover:text-proton-text hover:border-proton-accent/40"
+                )}
+              >
+                <span className="shrink-0">{dir.emoji}</span>
+                <span className="truncate">{dir.shortLabel}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Category Selector scoped strictly by chosen direction */}
+        <div className="space-y-2">
+          <label className="text-xs font-black uppercase tracking-widest text-proton-accent ml-1 block">
+            {t.market.form.category}
+          </label>
+          <div className="relative group">
+            <select
+              data-testid="filter-category-select"
+              value={activeCategory}
+              onChange={(e) => setActiveCategory(e.target.value)}
+              className={cn("w-full pl-3.5 pr-9 py-2.5 rounded-xl text-base md:text-xs font-bold transition-all appearance-none cursor-pointer", inputSurface)}
+            >
+              <option value="all" className="bg-proton-card text-proton-text">
+                🌍 {t.market.all_categories}
+              </option>
+              {activeListingType === 'all' ? (
+                getListingDirectionsMeta(language).map((dir) => (
+                  <optgroup key={dir.id} label={`${dir.emoji} ${dir.title}`}>
+                    {getGroupedCategoriesForListingType(dir.id, t, language)
+                      .flatMap((g) => g.categories)
+                      .map((cat) => (
+                        <option key={cat.id} value={cat.id} className="bg-proton-card text-proton-text">
+                          {cat.emoji} {cat.label}
+                        </option>
+                      ))}
+                  </optgroup>
+                ))
+              ) : (
+                getGroupedCategoriesForListingType(activeListingType, t, language).map((group) => (
+                  <optgroup key={group.groupId} label={group.title}>
+                    {group.categories.map((cat) => (
+                      <option key={cat.id} value={cat.id} className="bg-proton-card text-proton-text">
+                        {cat.emoji} {cat.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))
+              )}
+            </select>
+            <ChevronRight size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 rotate-90 opacity-60 pointer-events-none text-proton-muted" />
+          </div>
+        </div>
+
         {/* Sorting Dropdown */}
         {sortBy && setSortBy && (
           <div className="space-y-2">

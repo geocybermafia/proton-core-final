@@ -340,14 +340,14 @@ export const CATEGORY_EMOJIS: Record<string, string> = {
   business: "💼",
   book: "📚",
   art: "🎨",
-  // Service (2)
+  // Service (3)
   service: "⚡",
   rent: "🔑",
-  // Project (6)
+  "audience-growth": "📈",
+  // Project (5)
   "project-jobs": "🧑‍💻",
   "social-accounts": "📣",
   "youtube-channels": "▶️",
-  "audience-growth": "📈",
   collaboration: "🤝",
   "digital-projects": "🚀",
   // Legacy categories (read-only compatibility)
@@ -360,6 +360,60 @@ export const CATEGORY_EMOJIS: Record<string, string> = {
 };
 
 // Pure classification helpers imported and re-exported from ../../lib/listingClassification above.
+
+export interface ListingDirectionMeta {
+  id: ListingType;
+  emoji: string;
+  title: string;
+  description: string;
+  shortLabel: string;
+}
+
+export const getListingDirectionsMeta = (language: string = 'en'): ListingDirectionMeta[] => {
+  const isKa = language === 'ka';
+  return [
+    {
+      id: 'product',
+      emoji: '📦',
+      title: isKa ? 'პროდუქტი' : 'Product',
+      shortLabel: isKa ? 'პროდუქტი' : 'Product',
+      description: isKa
+        ? 'ფიზიკური ნივთები, ტექნიკა, სახლი, მოდა და სხვა'
+        : 'Physical goods, tech, home, fashion & equipment',
+    },
+    {
+      id: 'service',
+      emoji: '⚡',
+      title: isKa ? 'მომსახურება' : 'Service',
+      shortLabel: isKa ? 'მომსახურება' : 'Service',
+      description: isKa
+        ? 'სერვისები, გაქირავება და აუდიტორიის ზრდა'
+        : 'Professional services, rentals & audience growth',
+    },
+    {
+      id: 'project',
+      emoji: '🚀',
+      title: isKa ? 'პროექტი' : 'Project',
+      shortLabel: isKa ? 'პროექტი' : 'Project',
+      description: isKa
+        ? 'ციფრული აქტივები, ვაკანსიები და თანამშრომლობა'
+        : 'Digital assets, jobs & partnership opportunities',
+    },
+  ];
+};
+
+export interface CategoryOptionItem {
+  id: string;
+  label: string;
+  emoji: string;
+}
+
+export interface CategorySubgroup {
+  groupId: string;
+  title: string;
+  subtitle?: string;
+  categories: CategoryOptionItem[];
+}
 
 export const getCategoryLabel = (
   categoryId?: string | null,
@@ -396,7 +450,7 @@ export const getCategoriesForListingType = (
   listingType: 'all' | ListingType,
   t?: any,
   language?: string
-): Array<{ id: string; label: string; emoji: string }> => {
+): CategoryOptionItem[] => {
   const ids: readonly string[] =
     listingType === 'all'
       ? ALL_ACTIVE_CATEGORY_IDS
@@ -407,6 +461,69 @@ export const getCategoriesForListingType = (
     label: getCategoryLabel(id, t, language),
     emoji: CATEGORY_EMOJIS[id] || '🏷️',
   }));
+};
+
+export const getGroupedCategoriesForListingType = (
+  listingType: ListingType,
+  t?: any,
+  language: string = 'en'
+): CategorySubgroup[] => {
+  const isKa = language === 'ka';
+  const toItems = (ids: readonly string[]): CategoryOptionItem[] =>
+    ids.map((id) => ({
+      id,
+      label: getCategoryLabel(id, t, language),
+      emoji: CATEGORY_EMOJIS[id] || '🏷️',
+    }));
+
+  if (listingType === 'service') {
+    return [
+      {
+        groupId: 'services',
+        title: isKa ? 'მომსახურების კატეგორიები' : 'Service Categories',
+        categories: toItems(SERVICE_CATEGORY_IDS),
+      },
+    ];
+  }
+
+  if (listingType === 'project') {
+    return [
+      {
+        groupId: 'digital_assets',
+        title: isKa ? 'ციფრული აქტივები და პროექტები' : 'Digital Assets & Online Projects',
+        subtitle: isKa
+          ? 'უნიკალური არხები, ანგარიშები და ონლაინ პროექტები'
+          : 'Unique channels, accounts & online businesses',
+        categories: toItems(PROJECT_ASSET_CATEGORY_IDS),
+      },
+      {
+        groupId: 'jobs_collaboration',
+        title: isKa ? 'ვაკანსიები და თანამშრომლობა' : 'Jobs & Collaboration',
+        subtitle: isKa
+          ? 'პირდაპირი კომუნიკაცია და განაცხადები (კალათის გარეშე)'
+          : 'Direct chat & proposals (non-cart flow)',
+        categories: toItems([...JOB_CATEGORY_IDS, ...COLLABORATION_CATEGORY_IDS]),
+      },
+    ];
+  }
+
+  return [
+    {
+      groupId: 'tech',
+      title: isKa ? 'ტექნიკა და ელექტრონიკა' : 'Tech & Electronics',
+      categories: toItems(['phones', 'technics', 'family-technic']),
+    },
+    {
+      groupId: 'home_living',
+      title: isKa ? 'სახლი, მოდა და ოჯახი' : 'Home, Style & Family',
+      categories: toItems(['furniture', 'garden', 'building', 'fashion', 'kids', 'newyear']),
+    },
+    {
+      groupId: 'hobby_business',
+      title: isKa ? 'ჰობი, სპორტი და ბიზნესი' : 'Hobby, Outdoor & Business',
+      categories: toItems(['sport', 'hunting', 'music', 'book', 'art', 'animals', 'village', 'business']),
+    },
+  ];
 };
 
 export const getCurrencySymbol = (currency?: string): string => {

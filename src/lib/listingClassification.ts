@@ -110,7 +110,11 @@ export const classifyListing = (item?: ListingClassificationInput): ListingClass
   if (SERVICE_CATEGORY_SET.has(cat) || cat === 'services') {
     return 'service';
   }
-  if (PROJECT_ASSET_CATEGORY_SET.has(cat)) {
+  if (
+    PROJECT_ASSET_CATEGORY_SET.has(cat) ||
+    cat === 'digital' ||
+    normalizeCategoryId(item.listingType) === 'digital'
+  ) {
     return 'project_asset';
   }
   if (JOB_CATEGORY_SET.has(cat)) {

@@ -4,6 +4,7 @@ import {
   Plus,
   ShieldCheck,
   ChevronDown,
+  ChevronLeft,
   Coins,
   Tag,
   MapPin,
@@ -18,7 +19,10 @@ import {
   Edit3,
   AlertCircle,
   Globe,
-  Check
+  Check,
+  Star,
+  RefreshCw,
+  X
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import {
@@ -30,6 +34,8 @@ import {
   getCategoriesForListingType,
   getCategoryLabel,
   getDefaultCategoryForType,
+  getGroupedCategoriesForListingType,
+  getListingDirectionsMeta,
   inferListingType,
   isCategoryValidForType,
   roundPriceForDisplayCurrency
@@ -49,32 +55,29 @@ import { FastInput, FastTextarea } from './FastInputs';
 import { MapPicker } from '../MapPicker';
 import { useToast } from '../Toast';
 import { auth } from '../../firebase';
+import {
+  ListingFormData,
+  UnifiedListingDraft,
+  clearUnifiedListingDraft,
+  hasMeaningfulDraftContent,
+  normalizeDraftOwnerUid,
+  readAndMigrateListingDraft,
+  saveUnifiedListingDraft,
+} from '../../lib/listingDrafts';
+import {
+  MAX_LISTING_PHOTOS,
+  ListingPhotoUploadTask,
+  appendUploadedPhotoUrl,
+  getAvailablePhotoSlots,
+  removePhotoAtIndex,
+  reorderPhotosByIndex,
+  setPrimaryPhotoAtIndex,
+  validateExternalPhotoUrl,
+} from '../../lib/listingPhotos';
+
+export type { ListingFormData };
 
 const AVAILABLE_COUNTRY_OPTIONS = WORLD_COUNTRIES.filter(c => c.code !== 'GLOBAL');
-
-export interface ListingFormData {
-  title: string;
-  titleGe: string;
-  primaryLanguage?: 'ka' | 'en';
-  description: string;
-  descriptionGe: string;
-  price: string;
-  currency: string;
-  category: string;
-  country: string;
-  city: string;
-  location: string;
-  images: string[];
-  lat?: number;
-  lng?: number;
-  condition: string;
-  isNegotiable: boolean;
-  listingType: 'product' | 'service' | 'project';
-  isRemote: boolean;
-  attributes: Record<string, string | number | boolean>;
-  serviceDuration: string;
-  serviceTerms: string;
-}
 
 export interface CreateListingWizardProps {
   viewMode: 'create' | 'edit' | string;
@@ -91,6 +94,16 @@ export interface CreateListingWizardProps {
   setViewMode: (mode: any) => void;
   isResizing: boolean;
   handleFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handlePhotoFilesUpload?: (files: FileList | File[]) => void | Promise<void>;
+  photoUploadTasks?: ListingPhotoUploadTask[];
+  onRetryPhotoUpload?: (taskId: string) => void | Promise<void>;
+  onDismissPhotoTask?: (taskId: string) => void;
+  onRemovePhotoAt?: (index: number) => void;
+  onSetPrimaryPhoto?: (index: number) => void;
+  onReorderPhotos?: (fromIndex: number, toIndex: number) => void;
+  onAddPhotoUrl?: (url: string) => boolean;
+  onDiscardSessionPhotos?: (urls?: string[]) => void;
+  userId?: string | null;
   isAiGenerating: boolean;
   handleAiDescription: () => void;
   displayCurrency?: string;
@@ -114,6 +127,16 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
   setViewMode,
   isResizing,
   handleFileUpload,
+  handlePhotoFilesUpload,
+  photoUploadTasks = [],
+  onRetryPhotoUpload,
+  onDismissPhotoTask,
+  onRemovePhotoAt,
+  onSetPrimaryPhoto,
+  onReorderPhotos,
+  onAddPhotoUrl,
+  onDiscardSessionPhotos,
+  userId: propUserId,
   isAiGenerating,
   handleAiDescription,
   displayCurrency,
@@ -123,117 +146,208 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
 }) => {
   const { showToast } = useToast();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const previewImgRef = React.useRef<HTMLImageElement | null>(null);
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
   const [showSecondaryTitle, setShowSecondaryTitle] = React.useState(false);
   const [showAdditionalTerms, setShowAdditionalTerms] = React.useState(false);
   const [showExactLocation, setShowExactLocation] = React.useState(false);
-  
-  // Draft Save & Recovery State
+  const [photoUrlInput, setPhotoUrlInput] = React.useState('');
+  const [isDragOverDropzone, setIsDragOverDropzone] = React.useState(false);
+  const [draggingPhotoIdx, setDraggingPhotoIdx] = React.useState<number | null>(null);
+  const [dragTargetPhotoIdx, setDragTargetPhotoIdx] = React.useState<number | null>(null);
+  const [showCancelModal, setShowCancelModal] = React.useState(false);
+
+  // Unified Draft Save & Recovery State
   const [draftStatus, setDraftStatus] = React.useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-  const [hasCheckedDraft, setHasCheckedDraft] = React.useState(false);
-  const [savedDraftData, setSavedDraftData] = React.useState<{ formStep: number; formData: ListingFormData; updatedAt: number } | null>(null);
+  const [savedDraftData, setSavedDraftData] = React.useState<UnifiedListingDraft | null>(null);
+  const [restoredDraftNotice, setRestoredDraftNotice] = React.useState<{ updatedAt: number; formStep: number } | null>(null);
 
-  const userId = auth.currentUser?.uid || 'guest';
-  const draftStorageKey = `proton_markethub_draft_v1_${userId}`;
+  const effectiveUserId = React.useMemo(
+    () => normalizeDraftOwnerUid(propUserId !== undefined ? propUserId : auth.currentUser?.uid),
+    [propUserId]
+  );
+
+  // Explicit 3-direction choice before displaying category selector on fresh Create flow
+  const [hasSelectedDirection, setHasSelectedDirection] = React.useState<boolean>(() =>
+    viewMode === 'edit' || hasMeaningfulDraftContent(formData)
+  );
+  const prevEffectiveUserIdRef = React.useRef<string>(effectiveUserId);
+
+  const checkedDraftScopeRef = React.useRef<string>('');
+  const skipNextAutoSaveRef = React.useRef<boolean>(false);
+  const skipUnmountFlushRef = React.useRef<boolean>(false);
+  const latestDraftStateRef = React.useRef<{
+    viewMode: string;
+    userId: string;
+    formStep: number;
+    formData: ListingFormData;
+    language: string;
+    hasBlockingBanner: boolean;
+  }>({
+    viewMode,
+    userId: effectiveUserId,
+    formStep,
+    formData,
+    language,
+    hasBlockingBanner: false,
+  });
+
+  latestDraftStateRef.current = {
+    viewMode,
+    userId: effectiveUserId,
+    formStep,
+    formData,
+    language,
+    hasBlockingBanner: Boolean(savedDraftData),
+  };
+
+  const applyDraftToForm = React.useCallback(
+    (draft: UnifiedListingDraft) => {
+      const restored = draft.formData;
+      const restoredType = inferListingType(restored.category, restored.listingType);
+      const restoredCategory = isCategoryValidForType(restored.category, restoredType)
+        ? restored.category
+        : getDefaultCategoryForType(restoredType);
+      const restoredSchema = getCategoryFormSchema(restoredType, restoredCategory);
+      const normalizedRemote =
+        restoredSchema.locationMode === 'remote'
+          ? true
+          : restoredSchema.locationMode === 'physical'
+          ? false
+          : Boolean(restored.isRemote);
+
+      skipNextAutoSaveRef.current = true;
+      setHasSelectedDirection(true);
+      setFormData({
+        ...restored,
+        listingType: restoredType,
+        category: restoredCategory,
+        isRemote: normalizedRemote,
+        attributes: filterAttributesForSchema(restoredSchema, restored.attributes),
+      });
+      setFormStep(draft.formStep || 1);
+    },
+    [setFormData, setFormStep]
+  );
 
   React.useEffect(() => {
-    if (viewMode === 'create' && !hasCheckedDraft) {
-      setHasCheckedDraft(true);
-      try {
-        const raw = localStorage.getItem(draftStorageKey);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (parsed && parsed.version === 1 && parsed.formData) {
-            const hasData = Boolean(
-              (parsed.formData.title && parsed.formData.title.trim()) ||
-              (parsed.formData.titleGe && parsed.formData.titleGe.trim()) ||
-              (parsed.formData.description && parsed.formData.description.trim()) ||
-              (parsed.formData.price && Number(parsed.formData.price) > 0)
-            );
-            if (hasData) {
-              setSavedDraftData(parsed);
-            }
-          }
-        }
-      } catch (e) {
-        console.error('Failed to load listing draft', e);
-      }
+    if (prevEffectiveUserIdRef.current !== effectiveUserId) {
+      prevEffectiveUserIdRef.current = effectiveUserId;
+      checkedDraftScopeRef.current = '';
+      setFieldErrors({});
+      setPhotoUrlInput('');
+      setShowCancelModal(false);
+      setShowSecondaryTitle(false);
+      setShowAdditionalTerms(false);
+      setShowExactLocation(false);
+      setSavedDraftData(null);
+      setRestoredDraftNotice(null);
+      setDraftStatus('idle');
+      setHasSelectedDirection(viewMode === 'edit');
     }
-  }, [viewMode, draftStorageKey, hasCheckedDraft]);
+  }, [effectiveUserId, viewMode]);
 
-  const isInitialMount = React.useRef(true);
   React.useEffect(() => {
-    if (viewMode !== 'create') return;
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
+    const scopeKey = `${viewMode}:${effectiveUserId}`;
+    if (viewMode !== 'create') {
+      checkedDraftScopeRef.current = scopeKey;
+      setSavedDraftData(null);
+      setRestoredDraftNotice(null);
+      setHasSelectedDirection(true);
       return;
     }
 
-    const hasData = Boolean(
-      (formData.title && formData.title.trim()) ||
-      (formData.titleGe && formData.titleGe.trim()) ||
-      (formData.description && formData.description.trim()) ||
-      (formData.price && Number(formData.price) > 0) ||
-      (formData.images && formData.images.length > 0)
-    );
+    if (checkedDraftScopeRef.current === scopeKey) return;
+    checkedDraftScopeRef.current = scopeKey;
+    skipUnmountFlushRef.current = false;
 
-    if (!hasData) return;
-
-    setDraftStatus('saving');
-    const timer = setTimeout(() => {
-      try {
-        const payload = {
-          version: 1,
-          updatedAt: Date.now(),
-          formStep,
-          formData,
-        };
-        localStorage.setItem(draftStorageKey, JSON.stringify(payload));
-        setDraftStatus('saved');
-        const resetTimer = setTimeout(() => setDraftStatus('idle'), 3000);
-        return () => clearTimeout(resetTimer);
-      } catch (e) {
-        console.error('Failed to save listing draft', e);
-        setDraftStatus('error');
+    const existingDraft = readAndMigrateListingDraft(effectiveUserId, language);
+    if (!existingDraft || existingDraft.mode !== 'create') {
+      setSavedDraftData(null);
+      setRestoredDraftNotice(null);
+      if (!hasMeaningfulDraftContent(formData)) {
+        setHasSelectedDirection(false);
       }
-    }, 700);
-
-    return () => clearTimeout(timer);
-  }, [formData, formStep, viewMode, draftStorageKey]);
-
-  const previewImageUrl = formData.images?.[0] || '';
-  const [isPreviewLoaded, setIsPreviewLoaded] = React.useState(false);
-  const [previewHasError, setPreviewHasError] = React.useState(false);
-  const [previewNeedsBackdrop, setPreviewNeedsBackdrop] = React.useState(false);
-
-  const handlePreviewImageReady = React.useCallback((img: HTMLImageElement) => {
-    const w = img.naturalWidth;
-    const h = img.naturalHeight;
-    if (w > 0 && h > 0) {
-      const naturalRatio = w / h;
-      const boxW = img.clientWidth;
-      const boxH = img.clientHeight;
-      const boxRatio = boxW > 0 && boxH > 0 ? boxW / boxH : 4 / 3;
-      const fillRatio = Math.min(naturalRatio / boxRatio, boxRatio / naturalRatio);
-      setPreviewNeedsBackdrop(1 - fillRatio > 0.06);
-    } else {
-      setPreviewNeedsBackdrop(false);
+      return;
     }
-    setPreviewHasError(false);
-    setIsPreviewLoaded(true);
-  }, []);
+
+    // Automatically restore draft seamlessly if current form is fresh/empty;
+    // otherwise show non-destructive Restore / Start Fresh banner.
+    if (!hasMeaningfulDraftContent(formData)) {
+      applyDraftToForm(existingDraft);
+      setSavedDraftData(null);
+      setRestoredDraftNotice({
+        updatedAt: existingDraft.updatedAt,
+        formStep: existingDraft.formStep,
+      });
+    } else {
+      setSavedDraftData(existingDraft);
+    }
+  }, [viewMode, effectiveUserId, language, applyDraftToForm, formData]);
 
   React.useEffect(() => {
-    setIsPreviewLoaded(false);
-    setPreviewHasError(false);
-    setPreviewNeedsBackdrop(false);
-
-    const img = previewImgRef.current;
-    if (previewImageUrl && img && img.complete && img.naturalWidth > 0) {
-      handlePreviewImageReady(img);
+    if (viewMode !== 'create') return;
+    if (savedDraftData) return; // Don't clobber pending draft choice before user restores or discards
+    if (skipNextAutoSaveRef.current) {
+      skipNextAutoSaveRef.current = false;
+      return;
     }
-  }, [previewImageUrl, handlePreviewImageReady]);
+
+    if (!hasMeaningfulDraftContent(formData)) {
+      return;
+    }
+
+    setDraftStatus('saving');
+    let resetTimer: ReturnType<typeof setTimeout> | null = null;
+    const timer = setTimeout(() => {
+      const result = saveUnifiedListingDraft(
+        effectiveUserId,
+        {
+          mode: 'create',
+          editingId: null,
+          formStep,
+          formData,
+        },
+        language
+      );
+      if (result.ok) {
+        setDraftStatus('saved');
+        resetTimer = setTimeout(() => setDraftStatus('idle'), 2500);
+      } else {
+        setDraftStatus('error');
+      }
+    }, 500);
+
+    return () => {
+      clearTimeout(timer);
+      if (resetTimer) clearTimeout(resetTimer);
+    };
+  }, [formData, formStep, viewMode, effectiveUserId, language, savedDraftData]);
+
+  // Flush pending draft changes synchronously on page unload or wizard unmount
+  React.useEffect(() => {
+    const flushPendingDraft = () => {
+      const state = latestDraftStateRef.current;
+      if (skipUnmountFlushRef.current) return;
+      if (state.viewMode !== 'create' || state.hasBlockingBanner) return;
+      if (!hasMeaningfulDraftContent(state.formData)) return;
+      saveUnifiedListingDraft(
+        state.userId,
+        {
+          mode: 'create',
+          editingId: null,
+          formStep: state.formStep,
+          formData: state.formData,
+        },
+        state.language
+      );
+    };
+
+    window.addEventListener('beforeunload', flushPendingDraft);
+    return () => {
+      window.removeEventListener('beforeunload', flushPendingDraft);
+      flushPendingDraft();
+    };
+  }, []);
 
   const activeSchema = React.useMemo(
     () => getCategoryFormSchema(formData.listingType, formData.category),
@@ -292,23 +406,96 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
     [activeSchema.locationMode, setFormData]
   );
 
-  const handleRemovePhoto = (e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
+  const handleRemovePhotoAtIndex = React.useCallback(
+    (index: number) => {
+      if (onRemovePhotoAt) {
+        onRemovePhotoAt(index);
+      } else {
+        setFormData(prev => ({
+          ...prev,
+          images: removePhotoAtIndex(prev.images || [], index),
+        }));
+      }
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      showToast(language === 'ka' ? 'ფოტო წაიშალა' : 'Photo removed', 'info');
+    },
+    [language, onRemovePhotoAt, setFormData, showToast]
+  );
+
+  const handleSetPrimaryPhotoAtIndex = React.useCallback(
+    (index: number) => {
+      if (onSetPrimaryPhoto) {
+        onSetPrimaryPhoto(index);
+      } else {
+        setFormData(prev => ({
+          ...prev,
+          images: setPrimaryPhotoAtIndex(prev.images || [], index),
+        }));
+      }
+      showToast(language === 'ka' ? 'მთავარი ფოტო განახლდა' : 'Primary photo updated', 'success');
+    },
+    [language, onSetPrimaryPhoto, setFormData, showToast]
+  );
+
+  const handleMovePhoto = React.useCallback(
+    (fromIndex: number, toIndex: number) => {
+      if (onReorderPhotos) {
+        onReorderPhotos(fromIndex, toIndex);
+      } else {
+        setFormData(prev => ({
+          ...prev,
+          images: reorderPhotosByIndex(prev.images || [], fromIndex, toIndex),
+        }));
+      }
+    },
+    [onReorderPhotos, setFormData]
+  );
+
+  const handleAddExternalPhotoUrl = React.useCallback(() => {
+    if (onAddPhotoUrl) {
+      if (onAddPhotoUrl(photoUrlInput)) {
+        setPhotoUrlInput('');
+      }
+      return;
     }
+
+    const check = validateExternalPhotoUrl(photoUrlInput, formData.images || [], MAX_LISTING_PHOTOS);
+    if (!check.valid || !check.normalizedUrl) {
+      showToast(
+        check.reason === 'limit_reached'
+          ? language === 'ka'
+            ? `მაქსიმუმ ${MAX_LISTING_PHOTOS} ფოტოს დამატებაა შესაძლებელი.`
+            : `Maximum ${MAX_LISTING_PHOTOS} photos allowed.`
+          : language === 'ka'
+          ? 'შეიყვანეთ სწორი სურათის ბმული.'
+          : 'Enter a valid image URL.',
+        'warning'
+      );
+      return;
+    }
+
     setFormData(prev => ({
       ...prev,
-      images: []
+      images: appendUploadedPhotoUrl(prev.images || [], check.normalizedUrl!, MAX_LISTING_PHOTOS),
     }));
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-    showToast(
-      language === 'ka' ? 'სურათი წაიშალა' : 'Photo removed',
-      'info'
-    );
-  };
+    setPhotoUrlInput('');
+  }, [formData.images, language, onAddPhotoUrl, photoUrlInput, setFormData, showToast]);
+
+  const handleStartFreshDraft = React.useCallback(() => {
+    skipUnmountFlushRef.current = true;
+    clearUnifiedListingDraft(effectiveUserId);
+    onDiscardSessionPhotos?.(formData.images);
+    setSavedDraftData(null);
+    setRestoredDraftNotice(null);
+    setHasSelectedDirection(false);
+    setShowSecondaryTitle(false);
+    setShowAdditionalTerms(false);
+    setShowExactLocation(false);
+    resetListingForm();
+    showToast(language === 'ka' ? 'მონახაზი წაიშალა' : 'Draft discarded', 'info');
+  }, [effectiveUserId, formData.images, language, onDiscardSessionPhotos, resetListingForm, showToast]);
 
   const resolvedLocationForPreview = React.useMemo(() => {
     const rawCity = (formData.city || '').trim();
@@ -567,7 +754,47 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
         </div>
 
         <form onSubmit={handleFormSubmit} onKeyDown={handleFormKeyDown} className="space-y-6 sm:space-y-8 relative z-10 min-w-0">
-          {/* Draft Restore Banner */}
+          {/* Restored Draft Notice Banner (non-blocking, preserves fields & photos, allows Start Fresh) */}
+          {restoredDraftNotice && !savedDraftData && viewMode === 'create' && (
+            <div
+              data-testid="draft-restored-banner"
+              className="p-3.5 sm:p-4 rounded-2xl bg-proton-accent/10 border border-proton-accent/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm"
+            >
+              <div className="min-w-0 space-y-0.5">
+                <p className={cn("text-xs sm:text-[13px] font-bold flex items-center gap-2", currentTheme.text)}>
+                  <span className="w-2 h-2 rounded-full bg-proton-accent shrink-0" />
+                  <span>
+                    {language === 'ka' ? 'დაუმთავრებელი მონახაზი აღდგენილია' : 'Unfinished draft restored'}
+                  </span>
+                </p>
+                <p className={cn("text-xs font-medium", currentTheme.muted)}>
+                  {language === 'ka'
+                    ? `ბოლოს შენახული: ${new Date(restoredDraftNotice.updatedAt).toLocaleTimeString()} · ნაბიჯი ${restoredDraftNotice.formStep}`
+                    : `Last saved: ${new Date(restoredDraftNotice.updatedAt).toLocaleTimeString()} · Step ${restoredDraftNotice.formStep}`}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  data-testid="draft-start-fresh-btn"
+                  onClick={handleStartFreshDraft}
+                  className="min-h-[40px] px-3.5 py-1.5 rounded-xl bg-proton-card border border-proton-border text-proton-muted hover:text-rose-500 hover:border-rose-500/40 text-xs font-bold transition-all cursor-pointer"
+                >
+                  {language === 'ka' ? 'ახლის დაწყება' : 'Start Fresh'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRestoredDraftNotice(null)}
+                  aria-label={language === 'ka' ? 'შეტყობინების დახურვა' : 'Dismiss notice'}
+                  className="min-h-[40px] min-w-[40px] rounded-xl bg-proton-card/70 border border-proton-border text-proton-muted hover:text-proton-text flex items-center justify-center cursor-pointer"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Non-destructive Draft Restore Banner (when form already contains unsaved data) */}
           {savedDraftData && viewMode === 'create' && (
             <div className="p-4 sm:p-5 rounded-2xl bg-proton-accent/10 border border-proton-accent/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 shadow-md animate-fade-in">
               <div className="space-y-1 min-w-0">
@@ -587,23 +814,12 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                 <button
                   type="button"
                   onClick={() => {
-                    const restored = savedDraftData.formData;
-                    const restoredType = inferListingType(restored.category, restored.listingType);
-                    const restoredSchema = getCategoryFormSchema(restoredType, restored.category);
-                    const normalizedRemote =
-                      restoredSchema.locationMode === 'remote'
-                        ? true
-                        : restoredSchema.locationMode === 'physical'
-                        ? false
-                        : Boolean(restored.isRemote);
-                    setFormData({
-                      ...restored,
-                      listingType: restoredType,
-                      isRemote: normalizedRemote,
-                      attributes: filterAttributesForSchema(restoredSchema, restored.attributes),
-                    });
-                    setFormStep(savedDraftData.formStep);
+                    applyDraftToForm(savedDraftData);
                     setSavedDraftData(null);
+                    setRestoredDraftNotice({
+                      updatedAt: savedDraftData.updatedAt,
+                      formStep: savedDraftData.formStep,
+                    });
                     showToast(
                       language === 'ka' ? 'მონახაზი აღდგენილია' : 'Draft restored successfully',
                       'success'
@@ -615,17 +831,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    localStorage.removeItem(draftStorageKey);
-                    setSavedDraftData(null);
-                    setShowSecondaryTitle(false);
-                    setShowAdditionalTerms(false);
-                    setShowExactLocation(false);
-                    showToast(
-                      language === 'ka' ? 'მონახაზი წაიშალა' : 'Draft discarded',
-                      'info'
-                    );
-                  }}
+                  onClick={handleStartFreshDraft}
                   className="min-h-[44px] px-4 py-2 rounded-xl bg-proton-card border border-proton-border text-proton-muted hover:text-proton-text text-xs sm:text-[13px] font-bold transition-all cursor-pointer text-center flex items-center justify-center"
                 >
                   {language === 'ka' ? 'ახლის დაწყება' : 'Start Fresh'}
@@ -709,6 +915,14 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                       type="button"
                       onClick={() => {
                         if (step > 1) {
+                          if (viewMode === 'create' && !hasSelectedDirection) {
+                            const msg = language === 'ka'
+                              ? 'გთხოვთ ჯერ აირჩიოთ განცხადების მიმართულება (პროდუქტი, მომსახურება ან პროექტი).'
+                              : 'Please choose a marketplace direction first (Product, Service, or Project).';
+                            setFieldErrors(prev => ({ ...prev, direction: msg }));
+                            showToast(msg, 'warning');
+                            return;
+                          }
                           const currentPrimary = activeFormPrimaryLang;
                           const tEn = (formData.title || '').trim();
                           const tGe = (formData.titleGe || '').trim();
@@ -810,145 +1024,213 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
               transition={{ duration: 0.25 }}
               className="space-y-6 sm:space-y-7 animate-in fade-in min-w-0"
             >
-              {/* Grouped Listing Category Selection (Automatically infers ListingType) */}
+              {/* Step 1A: Explicit 3 Marketplace Directions First, then Strictly Separated Categories */}
               {(() => {
-                const productCategories = getCategoriesForListingType('product', t, language);
-                const serviceCategories = getCategoriesForListingType('service', t, language);
-                const projectCategories = getCategoriesForListingType('project', t, language);
-                const allGroupedIds = new Set([
-                  ...productCategories.map(c => c.id),
-                  ...serviceCategories.map(c => c.id),
-                  ...projectCategories.map(c => c.id),
-                ]);
-                const isUnmatchedLegacyCategory =
-                  Boolean(formData.category) && !allGroupedIds.has(formData.category);
+                const directions = getListingDirectionsMeta(language);
+                const activeDirectionsReady = hasSelectedDirection || viewMode === 'edit';
                 const canAutoInferType = canInferListingTypeFromCategory(formData.category);
-                const resolvedTypeDisplay =
-                  formData.listingType === 'service'
-                    ? (language === 'ka' ? '⚡ სერვისი' : '⚡ Service')
-                    : formData.listingType === 'project'
-                    ? (language === 'ka' ? '🚀 პროექტი' : '🚀 Project')
-                    : (language === 'ka' ? '📦 პროდუქტი' : '📦 Product');
+                const isUnmatchedLegacyCategory =
+                  Boolean(formData.category) && !canAutoInferType;
+                const categoryGroups = getGroupedCategoriesForListingType(
+                  formData.listingType,
+                  t,
+                  language
+                );
+                const currentDirectionMeta =
+                  directions.find(d => d.id === formData.listingType) || directions[0];
+
+                const handleSelectDirection = (nextType: 'product' | 'service' | 'project') => {
+                  setHasSelectedDirection(true);
+                  clearFieldError('direction');
+                  setFormData(prev => {
+                    const keepLegacyCategory =
+                      Boolean(prev.category) && !canInferListingTypeFromCategory(prev.category);
+                    const nextCategory = keepLegacyCategory
+                      ? prev.category
+                      : isCategoryValidForType(prev.category, nextType)
+                      ? prev.category
+                      : getDefaultCategoryForType(nextType);
+                    const nextSchema = getCategoryFormSchema(nextType, nextCategory);
+                    return {
+                      ...prev,
+                      listingType: nextType,
+                      category: nextCategory,
+                      isRemote: getDefaultIsRemoteForSchema(nextSchema),
+                      attributes: filterAttributesForSchema(nextSchema, prev.attributes),
+                    };
+                  });
+                };
+
+                const handleSelectCategory = (nextCategory: string) => {
+                  setHasSelectedDirection(true);
+                  const nextType = canInferListingTypeFromCategory(nextCategory)
+                    ? inferListingType(nextCategory, formData.listingType)
+                    : formData.listingType;
+                  const nextSchema = getCategoryFormSchema(nextType, nextCategory);
+                  setFormData(prev => ({
+                    ...prev,
+                    listingType: nextType,
+                    category: nextCategory,
+                    isRemote: getDefaultIsRemoteForSchema(nextSchema),
+                    attributes: filterAttributesForSchema(nextSchema, prev.attributes),
+                  }));
+                };
 
                 return (
-                  <div className="space-y-4">
-                    <div className="space-y-2.5">
+                  <div className="space-y-6">
+                    {/* Screen / Section 1: Choose 1 of 3 Main Marketplace Directions */}
+                    <div className="space-y-3" data-testid="direction-selector-section">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <label className={cn("text-[13px] sm:text-sm font-bold flex items-center gap-1.5", currentTheme.accent)}>
-                          <span>📁</span> {t.market.form.category}
+                          <span>🧭</span>
+                          <span>{language === 'ka' ? 'აირჩიეთ მიმართულება' : 'Choose Marketplace Direction'}</span>
                           <span className="text-rose-500">*</span>
                         </label>
-                        {canAutoInferType && (
+                        {activeDirectionsReady && (
                           <span
                             data-testid="auto-inferred-listing-type"
                             className={cn("text-xs font-semibold flex items-center gap-1.5", currentTheme.muted)}
                           >
-                            <span>{language === 'ka' ? 'ტიპი:' : 'Type:'}</span>
-                            <span className={cn("font-bold", currentTheme.text)}>{resolvedTypeDisplay}</span>
+                            <span>{language === 'ka' ? 'არჩეული:' : 'Selected:'}</span>
+                            <span className={cn("font-bold", currentTheme.text)}>
+                              {currentDirectionMeta.emoji} {currentDirectionMeta.title}
+                            </span>
                           </span>
                         )}
                       </div>
 
-                      <div className="relative group">
-                        <select
-                          data-testid="category-select"
-                          value={formData.category || getDefaultCategoryForType(formData.listingType)}
-                          onChange={e => {
-                            const nextCategory = e.target.value;
-                            const nextType = canInferListingTypeFromCategory(nextCategory)
-                              ? inferListingType(nextCategory, formData.listingType)
-                              : formData.listingType;
-                            const nextSchema = getCategoryFormSchema(nextType, nextCategory);
-                            setFormData(prev => ({
-                              ...prev,
-                              listingType: nextType,
-                              category: nextCategory,
-                              isRemote: getDefaultIsRemoteForSchema(nextSchema),
-                              attributes: filterAttributesForSchema(nextSchema, prev.attributes),
-                            }));
-                          }}
-                          className={cn(
-                            "w-full min-h-[48px] pl-4 pr-10 py-3 rounded-2xl border appearance-none text-base md:text-sm font-semibold shadow-inner transition-all cursor-pointer",
-                            currentTheme.input
-                          )}
-                        >
-                          {isUnmatchedLegacyCategory && (
-                            <option value={formData.category} className="bg-proton-card text-proton-text font-semibold py-2">
-                              {CATEGORY_EMOJIS[formData.category] || '🏷️'} {getCategoryLabel(formData.category, t, language)}
-                            </option>
-                          )}
-                          <optgroup label={language === 'ka' ? '📦 პროდუქტები' : '📦 Products'}>
-                            {productCategories.map(cat => (
-                              <option key={cat.id} value={cat.id} className="bg-proton-card text-proton-text font-semibold py-2">
-                                {cat.emoji} {cat.label}
-                              </option>
-                            ))}
-                          </optgroup>
-                          <optgroup label={language === 'ka' ? '⚡ სერვისები და გაქირავება' : '⚡ Services & Rentals'}>
-                            {serviceCategories.map(cat => (
-                              <option key={cat.id} value={cat.id} className="bg-proton-card text-proton-text font-semibold py-2">
-                                {cat.emoji} {cat.label}
-                              </option>
-                            ))}
-                          </optgroup>
-                          <optgroup label={language === 'ka' ? '🚀 პროექტები და ციფრული აქტივები' : '🚀 Projects & Digital Assets'}>
-                            {projectCategories.map(cat => (
-                              <option key={cat.id} value={cat.id} className="bg-proton-card text-proton-text font-semibold py-2">
-                                {cat.emoji} {cat.label}
-                              </option>
-                            ))}
-                          </optgroup>
-                        </select>
-                        <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-proton-muted pointer-events-none group-hover:text-proton-text transition-colors" />
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        {directions.map((dir) => {
+                          const isSelected = activeDirectionsReady && formData.listingType === dir.id;
+                          return (
+                            <button
+                              key={dir.id}
+                              type="button"
+                              data-testid={`direction-card-${dir.id}`}
+                              aria-pressed={isSelected}
+                              onClick={() => handleSelectDirection(dir.id)}
+                              className={cn(
+                                "min-h-[96px] p-4 rounded-2xl border text-left transition-all duration-200 flex flex-col justify-between gap-2.5 cursor-pointer relative group",
+                                isSelected
+                                  ? "bg-proton-accent/12 border-proton-accent ring-2 ring-proton-accent/25 shadow-md"
+                                  : "bg-proton-bg/75 border-proton-border hover:border-proton-accent/45 hover:bg-proton-bg"
+                              )}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <span className="w-10 h-10 rounded-xl bg-proton-card border border-proton-border flex items-center justify-center text-xl shrink-0">
+                                  {dir.emoji}
+                                </span>
+                                {isSelected && (
+                                  <span className="w-6 h-6 rounded-full bg-proton-accent text-proton-on-accent flex items-center justify-center shrink-0">
+                                    <Check size={13} className="stroke-[2.5]" />
+                                  </span>
+                                )}
+                              </div>
+                              <div className="min-w-0 space-y-1">
+                                <div className={cn("text-sm font-bold leading-snug", isSelected ? "text-proton-accent" : currentTheme.text)}>
+                                  {dir.title}
+                                </div>
+                                <p className={cn("text-xs font-medium leading-relaxed break-words", currentTheme.muted)}>
+                                  {dir.description}
+                                </p>
+                              </div>
+                            </button>
+                          );
+                        })}
                       </div>
+
+                      {fieldErrors.direction && (
+                        <p className="text-xs sm:text-[13px] font-semibold text-rose-500 flex items-center gap-1.5 ml-1">
+                          <AlertCircle size={14} className="shrink-0" />
+                          <span>{fieldErrors.direction}</span>
+                        </p>
+                      )}
                     </div>
 
-                    {/* Fallback Listing Type Selector ONLY for legacy/ambiguous categories */}
-                    {!canAutoInferType && (
-                      <div data-testid="legacy-listing-type-selector" className="space-y-3 p-4 rounded-2xl bg-proton-bg/70 border border-proton-border">
+                    {/* Screen / Section 2: Strictly Filtered Categories for Selected Direction ONLY */}
+                    {activeDirectionsReady && (
+                      <div className="space-y-4 pt-2 border-t border-proton-border/70 animate-in fade-in duration-200" data-testid="separated-category-section">
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <label className={cn("text-[13px] sm:text-sm font-bold flex items-center gap-1.5", currentTheme.accent)}>
-                            <span>⚡</span> {language === 'ka' ? 'განცხადების ტიპი' : 'Listing Type'}
+                            <span>📁</span>
+                            <span>
+                              {language === 'ka'
+                                ? `${currentDirectionMeta.title} — აირჩიეთ კატეგორია`
+                                : `${currentDirectionMeta.title} — Select Category`}
+                            </span>
+                            <span className="text-rose-500">*</span>
                           </label>
                           <span className={cn("text-xs font-medium", currentTheme.muted)}>
-                            {language === 'ka' ? 'მიუთითეთ ძველი კატეგორიის ტიპი' : 'Specify type for legacy category'}
+                            {language === 'ka'
+                              ? `ნაჩვენებია მხოლოდ „${currentDirectionMeta.title}“-ის კატეგორიები`
+                              : `Showing ${currentDirectionMeta.title} categories only`}
                           </span>
                         </div>
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-                          {[
-                            { type: 'service', emoji: '⚡', labelEn: 'Service', labelKa: 'სერვისი' },
-                            { type: 'product', emoji: '📦', labelEn: 'Product', labelKa: 'პროდუქტი' },
-                            { type: 'project', emoji: '🚀', labelEn: 'Project', labelKa: 'პროექტი' }
-                          ].map(item => {
-                            const isSelected = formData.listingType === item.type;
-                            return (
-                              <button
-                                key={item.type}
-                                type="button"
-                                onClick={() => {
-                                  const nextType = item.type as 'product' | 'service' | 'project';
-                                  setFormData(prev => {
-                                    const nextSchema = getCategoryFormSchema(nextType, prev.category);
-                                    return {
-                                      ...prev,
-                                      listingType: nextType,
-                                      isRemote: getDefaultIsRemoteForSchema(nextSchema),
-                                      attributes: filterAttributesForSchema(nextSchema, prev.attributes),
-                                    };
-                                  });
-                                }}
-                                className={cn(
-                                  "min-h-[48px] px-4 py-2.5 rounded-xl border transition-all duration-200 flex items-center justify-center gap-2 text-sm font-bold cursor-pointer",
-                                  isSelected
-                                    ? "bg-proton-accent/10 border-proton-accent text-proton-accent ring-1 ring-proton-accent/30"
-                                    : "bg-proton-card border-proton-border text-proton-muted hover:text-proton-text"
-                                )}
-                              >
-                                <span>{item.emoji}</span>
-                                <span>{language === 'ka' ? item.labelKa : item.labelEn}</span>
-                              </button>
-                            );
-                          })}
+
+                        {isUnmatchedLegacyCategory && (
+                          <div
+                            data-testid="legacy-listing-type-selector"
+                            className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-wrap items-center justify-between gap-2"
+                          >
+                            <div className="text-xs font-semibold text-proton-text">
+                              <span className="font-bold text-amber-500 mr-1.5">
+                                {language === 'ka' ? 'ძველი კატეგორია შენარჩუნებულია:' : 'Legacy category preserved:'}
+                              </span>
+                              <span>
+                                {CATEGORY_EMOJIS[formData.category] || '🏷️'} {getCategoryLabel(formData.category, t, language)}
+                              </span>
+                            </div>
+                            <span className={cn("text-xs", currentTheme.muted)}>
+                              {language === 'ka'
+                                ? 'შეგიძლიათ დატოვოთ ან აირჩიოთ ახალი კატეგორია ქვემოთ'
+                                : 'Keep it as-is or select a new category below'}
+                            </span>
+                          </div>
+                        )}
+
+                        <div className="space-y-4" data-testid="category-select">
+                          {categoryGroups.map((group) => (
+                            <div key={group.groupId} className="space-y-2.5">
+                              {(categoryGroups.length > 1 || group.subtitle) && (
+                                <div className="flex flex-wrap items-baseline justify-between gap-1.5 px-0.5">
+                                  <h4 className={cn("text-xs font-bold uppercase tracking-wider", currentTheme.muted)}>
+                                    {group.title}
+                                  </h4>
+                                  {group.subtitle && (
+                                    <span className={cn("text-[11px] font-medium", currentTheme.muted)}>
+                                      {group.subtitle}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                              <div className="grid grid-cols-1 min-[420px]:grid-cols-2 lg:grid-cols-3 gap-2">
+                                {group.categories.map((cat) => {
+                                  const isSelected = formData.category === cat.id;
+                                  return (
+                                    <button
+                                      key={cat.id}
+                                      type="button"
+                                      data-testid={`category-option-${cat.id}`}
+                                      aria-pressed={isSelected}
+                                      onClick={() => handleSelectCategory(cat.id)}
+                                      className={cn(
+                                        "min-h-[46px] px-3.5 py-2.5 rounded-xl border text-left transition-all flex items-center justify-between gap-2 cursor-pointer",
+                                        isSelected
+                                          ? "bg-proton-accent/12 border-proton-accent text-proton-accent ring-1 ring-proton-accent/30 shadow-sm font-bold"
+                                          : "bg-proton-bg/70 border-proton-border text-proton-text hover:border-proton-accent/40 hover:bg-proton-bg font-semibold"
+                                      )}
+                                    >
+                                      <span className="flex items-center gap-2 min-w-0">
+                                        <span className="text-base shrink-0">{cat.emoji}</span>
+                                        <span className="text-xs sm:text-[13px] truncate">{cat.label}</span>
+                                      </span>
+                                      {isSelected && <Check size={14} className="shrink-0 stroke-[2.5]" />}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     )}
@@ -956,8 +1238,8 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                 );
               })()}
 
-              {/* Single Primary Title + Collapsible Optional Translation */}
-              {(() => {
+              {/* Single Primary Title + Collapsible Optional Translation (revealed once direction is picked) */}
+              {(hasSelectedDirection || viewMode === 'edit') && (() => {
                 const isKaPrimary = activeFormPrimaryLang === 'ka';
                 const resolvedTitleLabel = language === 'ka'
                   ? (activeSchema.titleLabelKa || t.market.form.title)
@@ -978,7 +1260,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                   : (language === 'ka' ? 'ქართული სათაური (GE · არასავალდებულო)' : 'Georgian Title (Optional)');
 
                 return (
-                  <div className="space-y-4">
+                  <div className="space-y-4 pt-2 border-t border-proton-border/70">
                     <div className="space-y-2 min-w-0">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <label className={cn("text-[13px] sm:text-sm font-bold flex items-center gap-1.5 leading-snug", currentTheme.accent)}>
@@ -1647,168 +1929,395 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                 )}
               </div>
 
-              {/* Graphic/Image upload box */}
-              <div className="space-y-3 min-w-0">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <label className={cn("text-[13px] sm:text-sm font-bold flex items-center gap-1.5", currentTheme.text)}>
-                    <span>🖼️</span> {t.market.form.image_url}
-                  </label>
-                  {formData.images?.[0] && !isResizing && (
-                    <button
-                      type="button"
-                      onClick={handleRemovePhoto}
-                      className="min-h-[38px] text-xs sm:text-[13px] font-bold text-rose-500 hover:text-rose-400 flex items-center gap-1.5 transition-colors cursor-pointer px-3 py-1.5 rounded-xl hover:bg-rose-500/10"
-                    >
-                      <Trash2 size={14} />
-                      <span>{language === 'ka' ? 'ფოტოს წაშლა' : 'Remove Photo'}</span>
-                    </button>
-                  )}
-                </div>
-                
-                <div 
-                  className={cn(
-                    "w-full rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-3 transition-all overflow-hidden relative",
-                    formData.images?.[0] && !isResizing
-                      ? "aspect-[4/3] max-h-80 sm:max-h-96 min-h-[200px] border-proton-border bg-proton-bg shadow-lg"
-                      : isResizing
-                      ? "min-h-[190px] border-proton-border bg-proton-bg shadow-lg"
-                      : "min-h-[190px] sm:min-h-[210px] bg-proton-bg/60 border-proton-border hover:border-proton-accent/50 hover:bg-proton-bg group cursor-pointer"
-                  )}
-                >
-                  {!formData.images?.[0] && !isResizing && (
-                    <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-proton-accent/40 to-transparent pointer-events-none" />
-                  )}
-                  
-                  <input 
-                    ref={fileInputRef}
-                    id="listing-photo-upload-input"
-                    type="file" 
-                    onChange={handleFileUpload}
-                    accept="image/*"
-                    className="hidden"
-                  />
-                  
-                  {isResizing ? (
-                    <div className="flex flex-col items-center gap-2.5 p-6">
-                      <Loader2 className={cn("w-8 h-8 animate-spin", currentTheme.accent)} />
-                      <span className={cn("text-xs sm:text-[13px] font-bold", currentTheme.accent)}>
-                        {language === 'ka' ? 'ფოტო მუშავდება...' : 'Processing Photo...'}
-                      </span>
+              {/* Multi-Photo Upload & Management UI (Up to 10 photos) */}
+              {(() => {
+                const inFlightTasks = photoUploadTasks.filter(
+                  t => t.status === 'resizing' || t.status === 'uploading'
+                );
+                const remainingSlots = getAvailablePhotoSlots(
+                  validImages,
+                  inFlightTasks.length,
+                  MAX_LISTING_PHOTOS
+                );
+                const isAtLimit = remainingSlots <= 0;
+
+                return (
+                  <div className="space-y-4 min-w-0" data-testid="multi-photo-manager">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <label className={cn("text-[13px] sm:text-sm font-bold flex items-center gap-1.5", currentTheme.text)}>
+                        <span>🖼️</span>
+                        <span>{language === 'ka' ? 'ფოტოები' : 'Photos'}</span>
+                        <span className={cn("text-xs font-mono tabular-nums ml-1", currentTheme.muted)} data-testid="photo-count-indicator">
+                          ({validImages.length} / {MAX_LISTING_PHOTOS})
+                        </span>
+                      </label>
+                      {validImages.length > 1 && (
+                        <span className={cn("text-xs font-medium", currentTheme.muted)}>
+                          {language === 'ka'
+                            ? 'გადააადგილეთ ან დააყენეთ მთავარი ფოტო'
+                            : 'Drag, reorder, or choose primary photo'}
+                        </span>
+                      )}
                     </div>
-                  ) : formData.images?.[0] ? (
-                    <div className="relative w-full h-full p-2.5 flex items-center justify-center overflow-hidden">
-                      {!isPreviewLoaded && !previewHasError && (
-                        <div className="absolute inset-0 z-0 animate-pulse bg-proton-border/30 flex items-center justify-center pointer-events-none">
-                          <Loader2 className={cn("w-6 h-6 animate-spin opacity-60", currentTheme.accent)} />
-                        </div>
-                      )}
 
-                      {isPreviewLoaded && previewNeedsBackdrop && !previewHasError && (
-                        <div
-                          aria-hidden="true"
-                          className="absolute inset-0 z-0 overflow-hidden pointer-events-none select-none"
-                        >
-                          <img
-                            src={formData.images[0]}
-                            alt=""
-                            referrerPolicy="no-referrer"
-                            className="w-full h-full object-cover object-center blur-xl scale-110 opacity-35"
-                          />
-                          <div className="absolute inset-0 bg-proton-bg/30" />
-                        </div>
+                    {/* Multi-file Input + Drag & Drop Upload Box */}
+                    <div
+                      onDragOver={e => {
+                        if (isAtLimit) return;
+                        e.preventDefault();
+                        setIsDragOverDropzone(true);
+                      }}
+                      onDragLeave={() => setIsDragOverDropzone(false)}
+                      onDrop={e => {
+                        e.preventDefault();
+                        setIsDragOverDropzone(false);
+                        if (isAtLimit) {
+                          showToast(
+                            language === 'ka'
+                              ? `მაქსიმუმ ${MAX_LISTING_PHOTOS} ფოტოს დამატებაა შესაძლებელი.`
+                              : `Maximum ${MAX_LISTING_PHOTOS} photos allowed per listing.`,
+                            'warning'
+                          );
+                          return;
+                        }
+                        if (e.dataTransfer?.files?.length) {
+                          if (handlePhotoFilesUpload) {
+                            void handlePhotoFilesUpload(e.dataTransfer.files);
+                          }
+                        }
+                      }}
+                      className={cn(
+                        "w-full rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2.5 transition-all relative overflow-hidden",
+                        isAtLimit
+                          ? "min-h-[120px] bg-proton-bg/40 border-proton-border/60 opacity-75 cursor-not-allowed"
+                          : isDragOverDropzone
+                          ? "min-h-[145px] sm:min-h-[160px] bg-proton-accent/10 border-proton-accent"
+                          : "min-h-[145px] sm:min-h-[160px] bg-proton-bg/60 border-proton-border hover:border-proton-accent/50 hover:bg-proton-bg group cursor-pointer"
                       )}
+                    >
+                      <input
+                        ref={fileInputRef}
+                        id="listing-photo-upload-input"
+                        data-testid="photo-file-input"
+                        type="file"
+                        multiple
+                        disabled={isAtLimit}
+                        onChange={handleFileUpload}
+                        accept="image/*"
+                        className="hidden"
+                      />
 
-                      {!previewHasError ? (
-                        <img 
-                          ref={previewImgRef}
-                          src={formData.images[0]} 
-                          onLoad={(e) => handlePreviewImageReady(e.currentTarget)}
-                          onError={() => {
-                            setPreviewHasError(true);
-                            setIsPreviewLoaded(true);
-                            setPreviewNeedsBackdrop(false);
-                          }}
-                          className={cn(
-                            "relative z-[1] w-full h-full object-contain object-center rounded-xl transition-opacity duration-200",
-                            isPreviewLoaded ? "opacity-100" : "opacity-0"
+                      <label
+                        htmlFor={isAtLimit ? undefined : 'listing-photo-upload-input'}
+                        className={cn(
+                          "w-full h-full min-h-[120px] flex flex-col items-center justify-center gap-2.5 select-none text-center px-4 py-5",
+                          isAtLimit ? "cursor-not-allowed" : "cursor-pointer"
+                        )}
+                      >
+                        <div className="p-3 rounded-2xl bg-proton-card border border-proton-border text-proton-muted group-hover:text-proton-accent group-hover:border-proton-accent/40 transition-colors">
+                          {isResizing ? (
+                            <Loader2 size={22} className="animate-spin text-proton-accent" />
+                          ) : (
+                            <Camera size={22} />
                           )}
-                          alt={formData.title || formData.titleGe || 'Listing'} 
-                          referrerPolicy="no-referrer"
-                        />
-                      ) : (
-                        <div className="relative z-[1] flex flex-col items-center justify-center gap-2 text-proton-muted">
-                          <Camera size={28} className="opacity-40" />
                         </div>
-                      )}
-                      
-                      <div className="absolute bottom-4 left-4 z-10 bg-proton-card/92 border border-proton-border px-3 py-1.5 rounded-xl backdrop-blur-md select-none pointer-events-none">
-                        <div className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-proton-accent" />
-                          <span className={cn("text-xs font-bold", currentTheme.text)}>
-                            {language === 'ka' ? 'ფოტო მზადაა' : 'Photo Ready'}
+                        <div className="space-y-0.5">
+                          <span className={cn("text-sm font-bold block transition-colors", !isAtLimit && "group-hover:text-proton-accent", currentTheme.text)}>
+                            {isAtLimit
+                              ? language === 'ka'
+                                ? `მიღწეულია მაქსიმუმი (${MAX_LISTING_PHOTOS}/${MAX_LISTING_PHOTOS})`
+                                : `Maximum reached (${MAX_LISTING_PHOTOS}/${MAX_LISTING_PHOTOS})`
+                              : validImages.length > 0
+                              ? language === 'ka'
+                                ? `დამატებითი ფოტოების ატვირთვა (დარჩა ${remainingSlots})`
+                                : `Add more photos (${remainingSlots} left)`
+                              : t.market.form.upload_button}
+                          </span>
+                          <span className={cn("text-xs font-medium block", currentTheme.muted)}>
+                            {language === 'ka'
+                              ? `PNG, JPG ან WEBP · მაქს. ${MAX_LISTING_PHOTOS} ფოტო (თითო 5MB-მდე)`
+                              : `PNG, JPG or WEBP · Up to ${MAX_LISTING_PHOTOS} photos (5MB max each)`}
                           </span>
                         </div>
-                      </div>
-
-                      {/* Action Controls: Replace and Remove */}
-                      <div className="absolute top-3 right-3 flex items-center gap-2 z-10">
-                        <label 
-                          htmlFor="listing-photo-upload-input"
-                          className="min-h-[40px] bg-proton-card/95 hover:bg-proton-card border border-proton-border hover:border-proton-accent px-3 py-2 rounded-xl backdrop-blur-md cursor-pointer shadow-lg flex items-center gap-1.5 transition-all text-proton-accent active:scale-95 select-none"
-                        >
-                          <Camera size={14} />
-                          <span className="text-xs font-bold">
-                            {language === 'ka' ? 'შეცვლა' : 'Replace'}
-                          </span>
-                        </label>
-
-                        <button
-                          type="button"
-                          onClick={handleRemovePhoto}
-                          className="min-h-[40px] bg-proton-card/95 hover:bg-rose-600 border border-rose-500/40 px-3 py-2 rounded-xl backdrop-blur-md cursor-pointer shadow-lg flex items-center gap-1.5 transition-all text-rose-500 hover:text-white active:scale-95 select-none"
-                          title={language === 'ka' ? 'ფოტოს წაშლა' : 'Remove photo'}
-                        >
-                          <Trash2 size={14} />
-                          <span className="text-xs font-bold">
-                            {language === 'ka' ? 'წაშლა' : 'Remove'}
-                          </span>
-                        </button>
-                      </div>
+                      </label>
                     </div>
-                  ) : (
-                    <label 
-                      htmlFor="listing-photo-upload-input"
-                      className="w-full min-h-[190px] sm:min-h-[210px] flex flex-col items-center justify-center gap-3 select-none text-center px-5 py-6 cursor-pointer"
-                    >
-                      <div className="p-3.5 rounded-2xl bg-proton-card border border-proton-border group-hover:scale-105 transition-transform text-proton-muted group-hover:text-proton-accent group-hover:border-proton-accent/40 duration-200">
-                        <Camera size={24} />
-                      </div>
-                      <div className="space-y-1">
-                        <span className={cn("text-sm font-bold block group-hover:text-proton-accent transition-colors", currentTheme.text)}>
-                          {t.market.form.upload_button}
-                        </span>
-                        <span className={cn("text-xs font-medium block", currentTheme.muted)}>
-                          {language === 'ka' ? 'PNG, JPG ან WEBP (მაქს. 5MB)' : 'PNG, JPG or WEBP (Max 5MB)'}
-                        </span>
-                      </div>
-                    </label>
-                  )}
-                </div>
 
-                <div className="relative mt-2.5 group">
-                  <Link size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-proton-muted group-focus-within:text-proton-accent transition-colors" />
-                  <input 
-                    type="url"
-                    value={formData.images?.[0] || ''}
-                    onChange={e => setFormData({...formData, images: e.target.value ? [e.target.value] : []})}
-                    placeholder={language === 'ka' ? '...ან ჩასვით სურათის გარე ბმული (URL)' : '...or paste external image link URL'}
-                    className={cn(
-                      "w-full min-h-[46px] pl-10.5 pr-4 py-3 rounded-2xl border text-base md:text-sm font-medium shadow-inner transition-all scroll-mb-24",
-                      currentTheme.input
+                    {/* Per-Photo Upload Status Queue (Progress / Error / Retry) */}
+                    {photoUploadTasks.length > 0 && (
+                      <div className="space-y-2" data-testid="photo-upload-queue">
+                        {photoUploadTasks.map(task => (
+                          <div
+                            key={task.id}
+                            data-testid={`photo-task-${task.status}`}
+                            className={cn(
+                              "p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-proton-bg/80",
+                              task.status === 'error'
+                                ? "border-rose-500/40 bg-rose-500/5"
+                                : task.status === 'success'
+                                ? "border-emerald-500/40 bg-emerald-500/5"
+                                : "border-proton-border"
+                            )}
+                          >
+                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                              {task.previewUrl ? (
+                                <img
+                                  src={task.previewUrl}
+                                  alt={task.fileName}
+                                  className="w-11 h-11 rounded-lg object-cover shrink-0 border border-proton-border"
+                                />
+                              ) : (
+                                <div className="w-11 h-11 rounded-lg bg-proton-card border border-proton-border flex items-center justify-center shrink-0">
+                                  <Camera size={16} className={currentTheme.muted} />
+                                </div>
+                              )}
+                              <div className="min-w-0 flex-1 space-y-1">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className={cn("text-xs font-bold truncate", currentTheme.text)}>
+                                    {task.fileName}
+                                  </span>
+                                  <span className="text-[11px] font-mono tabular-nums text-proton-muted shrink-0">
+                                    {task.status === 'resizing'
+                                      ? language === 'ka'
+                                        ? 'დამუშავება...'
+                                        : 'Resizing...'
+                                      : task.status === 'uploading'
+                                      ? `${task.progress}%`
+                                      : task.status === 'success'
+                                      ? language === 'ka'
+                                        ? '✓ აიტვირთა'
+                                        : '✓ Uploaded'
+                                      : language === 'ka'
+                                      ? 'შეცდომა'
+                                      : 'Failed'}
+                                  </span>
+                                </div>
+                                {(task.status === 'resizing' || task.status === 'uploading') && (
+                                  <div className="w-full h-1.5 rounded-full bg-proton-border/60 overflow-hidden">
+                                    <div
+                                      className="h-full bg-proton-accent transition-all duration-300"
+                                      style={{ width: `${Math.max(10, task.progress)}%` }}
+                                    />
+                                  </div>
+                                )}
+                                {task.status === 'error' && task.errorMessage && (
+                                  <p className="text-xs font-semibold text-rose-500 break-words">
+                                    {task.errorMessage}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                              {task.status === 'error' && onRetryPhotoUpload && (
+                                <button
+                                  type="button"
+                                  data-testid="retry-photo-upload-btn"
+                                  onClick={() => void onRetryPhotoUpload(task.id)}
+                                  className="min-h-[36px] px-3 py-1.5 rounded-xl bg-proton-accent text-proton-on-accent text-xs font-bold flex items-center gap-1.5 cursor-pointer hover:opacity-90"
+                                >
+                                  <RefreshCw size={13} />
+                                  <span>{language === 'ka' ? 'თავიდან ცდა' : 'Retry'}</span>
+                                </button>
+                              )}
+                              {onDismissPhotoTask && task.status !== 'uploading' && task.status !== 'resizing' && (
+                                <button
+                                  type="button"
+                                  data-testid="dismiss-photo-task-btn"
+                                  onClick={() => onDismissPhotoTask(task.id)}
+                                  aria-label={language === 'ka' ? 'დახურვა' : 'Dismiss'}
+                                  className="min-h-[36px] min-w-[36px] rounded-xl bg-proton-card border border-proton-border text-proton-muted hover:text-rose-500 flex items-center justify-center cursor-pointer"
+                                >
+                                  <X size={14} />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     )}
-                  />
-                </div>
-              </div>
+
+                    {/* Uploaded & Saved Photos Preview Grid (Reorder, Set Primary, Delete) */}
+                    {validImages.length > 0 && (
+                      <div
+                        data-testid="photo-preview-grid"
+                        className="grid grid-cols-2 min-[480px]:grid-cols-3 md:grid-cols-4 gap-3"
+                      >
+                        {validImages.map((imgUrl, idx) => {
+                          const isPrimary = idx === 0;
+                          const isDragging = draggingPhotoIdx === idx;
+                          const isDragTarget = dragTargetPhotoIdx === idx && draggingPhotoIdx !== idx;
+
+                          return (
+                            <div
+                              key={`${imgUrl}-${idx}`}
+                              data-testid={`photo-card-${idx}`}
+                              draggable
+                              onDragStart={e => {
+                                setDraggingPhotoIdx(idx);
+                                if (e.dataTransfer) {
+                                  e.dataTransfer.effectAllowed = 'move';
+                                  e.dataTransfer.setData('text/plain', String(idx));
+                                }
+                              }}
+                              onDragOver={e => {
+                                e.preventDefault();
+                                if (draggingPhotoIdx !== null && draggingPhotoIdx !== idx) {
+                                  setDragTargetPhotoIdx(idx);
+                                }
+                              }}
+                              onDragLeave={() => {
+                                if (dragTargetPhotoIdx === idx) {
+                                  setDragTargetPhotoIdx(null);
+                                }
+                              }}
+                              onDrop={e => {
+                                e.preventDefault();
+                                const fromIdx = draggingPhotoIdx;
+                                setDraggingPhotoIdx(null);
+                                setDragTargetPhotoIdx(null);
+                                if (fromIdx !== null && fromIdx !== idx) {
+                                  handleMovePhoto(fromIdx, idx);
+                                }
+                              }}
+                              onDragEnd={() => {
+                                setDraggingPhotoIdx(null);
+                                setDragTargetPhotoIdx(null);
+                              }}
+                              className={cn(
+                                "rounded-2xl border bg-proton-bg p-2 flex flex-col gap-2 transition-all min-w-0",
+                                isPrimary
+                                  ? "border-proton-accent ring-2 ring-proton-accent/25 shadow-md"
+                                  : "border-proton-border hover:border-proton-accent/40",
+                                isDragging && "opacity-50 scale-[0.98]",
+                                isDragTarget && "border-dashed border-proton-accent bg-proton-accent/5"
+                              )}
+                            >
+                              <div className="relative aspect-[4/3] w-full rounded-xl overflow-hidden bg-proton-card border border-proton-border/60">
+                                <img
+                                  src={imgUrl}
+                                  alt={`${formData.title || formData.titleGe || 'Listing'} ${idx + 1}`}
+                                  referrerPolicy="no-referrer"
+                                  className="w-full h-full object-cover object-center"
+                                />
+
+                                <div className="absolute top-1.5 left-1.5 flex items-center gap-1">
+                                  {isPrimary ? (
+                                    <span
+                                      data-testid="primary-photo-badge"
+                                      className="px-2 py-0.5 rounded-lg bg-proton-accent text-proton-on-accent text-[10px] font-extrabold shadow-sm flex items-center gap-1"
+                                    >
+                                      <Star size={10} className="fill-current shrink-0" />
+                                      <span>{language === 'ka' ? 'მთავარი' : 'Primary'}</span>
+                                    </span>
+                                  ) : (
+                                    <span className="px-1.5 py-0.5 rounded-lg bg-black/65 text-white text-[10px] font-mono font-bold">
+                                      #{idx + 1}
+                                    </span>
+                                  )}
+                                </div>
+
+                                <button
+                                  type="button"
+                                  data-testid={`delete-photo-${idx}`}
+                                  onClick={() => handleRemovePhotoAtIndex(idx)}
+                                  aria-label={language === 'ka' ? `ფოტო #${idx + 1} წაშლა` : `Delete photo #${idx + 1}`}
+                                  title={language === 'ka' ? 'ფოტოს წაშლა' : 'Delete photo'}
+                                  className="absolute top-1.5 right-1.5 min-w-[34px] min-h-[34px] w-8 h-8 rounded-lg bg-black/65 hover:bg-rose-600 text-white flex items-center justify-center transition-colors cursor-pointer"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+
+                              {/* Reorder & Set Primary Controls */}
+                              <div className="flex items-center justify-between gap-1 min-w-0">
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <button
+                                    type="button"
+                                    data-testid={`move-photo-left-${idx}`}
+                                    disabled={idx === 0}
+                                    onClick={() => handleMovePhoto(idx, idx - 1)}
+                                    aria-label={language === 'ka' ? 'მარცხნივ გადაწევა' : 'Move earlier'}
+                                    className="min-w-[34px] min-h-[34px] rounded-lg border border-proton-border bg-proton-card text-proton-text disabled:opacity-35 disabled:cursor-not-allowed hover:border-proton-accent flex items-center justify-center cursor-pointer"
+                                  >
+                                    <ChevronLeft size={14} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    data-testid={`move-photo-right-${idx}`}
+                                    disabled={idx === validImages.length - 1}
+                                    onClick={() => handleMovePhoto(idx, idx + 1)}
+                                    aria-label={language === 'ka' ? 'მარჯვნივ გადაწევა' : 'Move later'}
+                                    className="min-w-[34px] min-h-[34px] rounded-lg border border-proton-border bg-proton-card text-proton-text disabled:opacity-35 disabled:cursor-not-allowed hover:border-proton-accent flex items-center justify-center cursor-pointer"
+                                  >
+                                    <ChevronRight size={14} />
+                                  </button>
+                                </div>
+
+                                {!isPrimary ? (
+                                  <button
+                                    type="button"
+                                    data-testid={`set-primary-photo-${idx}`}
+                                    onClick={() => handleSetPrimaryPhotoAtIndex(idx)}
+                                    className="min-h-[34px] px-2 rounded-lg border border-proton-border bg-proton-card hover:border-proton-accent hover:text-proton-accent text-[11px] font-bold text-proton-muted truncate cursor-pointer transition-colors"
+                                  >
+                                    {language === 'ka' ? 'მთავარი' : 'Set Main'}
+                                  </button>
+                                ) : (
+                                  <span className="text-[11px] font-bold text-proton-accent truncate px-1">
+                                    {language === 'ka' ? 'გარეკანი' : 'Cover'}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Add Photo by External URL (non-destructive append up to 10) */}
+                    <div className="flex flex-col min-[420px]:flex-row items-stretch min-[420px]:items-center gap-2 pt-1">
+                      <div className="relative flex-1 group min-w-0">
+                        <Link size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-proton-muted group-focus-within:text-proton-accent transition-colors" />
+                        <input
+                          type="url"
+                          data-testid="add-photo-url-input"
+                          value={photoUrlInput}
+                          disabled={isAtLimit}
+                          onChange={e => setPhotoUrlInput(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleAddExternalPhotoUrl();
+                            }
+                          }}
+                          placeholder={
+                            isAtLimit
+                              ? language === 'ka'
+                                ? `მიღწეულია ${MAX_LISTING_PHOTOS} ფოტოს ლიმიტი`
+                                : `${MAX_LISTING_PHOTOS} photo limit reached`
+                              : language === 'ka'
+                              ? '...ან ჩასვით სურათის გარე ბმული (URL)'
+                              : '...or paste external image URL'
+                          }
+                          className={cn(
+                            "w-full min-h-[46px] pl-10.5 pr-4 py-2.5 rounded-2xl border text-base md:text-sm font-medium shadow-inner transition-all scroll-mb-24 disabled:opacity-50",
+                            currentTheme.input
+                          )}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        data-testid="add-photo-url-btn"
+                        disabled={isAtLimit || !photoUrlInput.trim()}
+                        onClick={handleAddExternalPhotoUrl}
+                        className="min-h-[46px] px-4 rounded-2xl bg-proton-card border border-proton-border hover:border-proton-accent text-xs sm:text-[13px] font-bold text-proton-text disabled:opacity-45 disabled:cursor-not-allowed transition-all cursor-pointer shrink-0"
+                      >
+                        {language === 'ka' ? '+ დამატება' : '+ Add URL'}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
             </motion.div>
           )}
 
@@ -1934,7 +2443,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                           <div className="flex flex-wrap items-center gap-2 text-xs sm:text-[13px] font-semibold">
                             <span className="text-proton-accent">
                               {formData.listingType === 'service'
-                                ? (language === 'ka' ? '⚡ სერვისი' : '⚡ Service')
+                                ? (language === 'ka' ? '⚡ მომსახურება' : '⚡ Service')
                                 : formData.listingType === 'project'
                                 ? (language === 'ka' ? '🚀 პროექტი' : '🚀 Project')
                                 : (language === 'ka' ? '📦 პროდუქტი' : '📦 Product')}
@@ -2096,6 +2605,32 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                               </p>
                             )
                           )}
+
+                          {validImages.length > 0 && (
+                            <div className="flex flex-wrap items-center gap-2 pt-1">
+                              {validImages.map((imgUrl, idx) => (
+                                <div
+                                  key={`step4-thumb-${idx}`}
+                                  className={cn(
+                                    "relative w-12 h-10 rounded-lg overflow-hidden border",
+                                    idx === 0 ? "border-proton-accent ring-1 ring-proton-accent/40" : "border-proton-border"
+                                  )}
+                                >
+                                  <img
+                                    src={imgUrl}
+                                    alt=""
+                                    referrerPolicy="no-referrer"
+                                    className="w-full h-full object-cover"
+                                  />
+                                  {idx === 0 && (
+                                    <span className="absolute bottom-0 inset-x-0 bg-proton-accent/90 text-proton-on-accent text-[8px] font-black text-center leading-tight py-0.5">
+                                      1
+                                    </span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -2125,6 +2660,95 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
             </motion.div>
           )}
 
+          {/* Cancel Confirmation Panel (Non-destructive choice: Keep Draft / Discard / Continue) */}
+          {showCancelModal && (
+            <div
+              role="dialog"
+              aria-modal="true"
+              data-testid="cancel-wizard-dialog"
+              className="p-4 sm:p-5 rounded-2xl bg-proton-bg border border-proton-accent/40 shadow-2xl space-y-3.5"
+            >
+              <div className="space-y-1">
+                <h4 className={cn("text-sm font-bold", currentTheme.text)}>
+                  {viewMode === 'edit'
+                    ? (language === 'ka' ? 'რედაქტირების შეწყვეტა?' : 'Exit editing?')
+                    : (language === 'ka' ? 'მონახაზის შენახვა თუ წაშლა?' : 'Keep or discard draft?')}
+                </h4>
+                <p className={cn("text-xs leading-relaxed", currentTheme.muted)}>
+                  {viewMode === 'edit'
+                    ? (language === 'ka'
+                        ? 'შეუნახავი ცვლილებები არ შეინახება. გამოქვეყნებული განცხადება უცვლელი დარჩება.'
+                        : 'Unsaved changes will not be applied. Your published listing will remain unchanged.')
+                    : (language === 'ka'
+                        ? 'შეგიძლიათ შეინახოთ მონახაზი მოგვიანებით გასაგრძელებლად ან წაშალოთ იგი.'
+                        : 'You can keep your draft to finish later, or discard it completely.')}
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-end gap-2">
+                <button
+                  type="button"
+                  data-testid="cancel-continue-editing-btn"
+                  onClick={() => setShowCancelModal(false)}
+                  className="min-h-[42px] px-4 py-2 rounded-xl bg-proton-card border border-proton-border text-xs font-bold text-proton-text hover:border-proton-accent/50 cursor-pointer"
+                >
+                  {language === 'ka' ? 'გაგრძელება' : 'Continue Editing'}
+                </button>
+                {viewMode === 'create' && (
+                  <button
+                    type="button"
+                    data-testid="cancel-keep-draft-btn"
+                    onClick={() => {
+                      skipUnmountFlushRef.current = true;
+                      saveUnifiedListingDraft(
+                        effectiveUserId,
+                        {
+                          mode: 'create',
+                          editingId: null,
+                          formStep,
+                          formData,
+                        },
+                        language
+                      );
+                      setShowCancelModal(false);
+                      setViewMode('browse');
+                      showToast(
+                        language === 'ka' ? 'მონახაზი შენახულია' : 'Draft saved for later',
+                        'info'
+                      );
+                    }}
+                    className={cn(
+                      "min-h-[42px] px-4 py-2 rounded-xl text-xs font-bold cursor-pointer shadow-sm",
+                      currentTheme.accentBg
+                    )}
+                  >
+                    {language === 'ka' ? 'შენახვა და გასვლა' : 'Keep Draft & Exit'}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  data-testid="cancel-discard-exit-btn"
+                  onClick={() => {
+                    skipUnmountFlushRef.current = true;
+                    if (viewMode === 'create') {
+                      clearUnifiedListingDraft(effectiveUserId);
+                      onDiscardSessionPhotos?.(formData.images);
+                    } else {
+                      onDiscardSessionPhotos?.();
+                    }
+                    setShowCancelModal(false);
+                    resetListingForm();
+                    setViewMode('browse');
+                  }}
+                  className="min-h-[42px] px-4 py-2 rounded-xl bg-rose-500/10 border border-rose-500/40 text-xs font-bold text-rose-500 hover:bg-rose-500 hover:text-white transition-colors cursor-pointer"
+                >
+                  {viewMode === 'edit'
+                    ? (language === 'ka' ? 'გასვლა შენახვის გარეშე' : 'Exit Without Saving')
+                    : (language === 'ka' ? 'წაშლა და გასვლა' : 'Discard & Exit')}
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Steps Progress Footer Bar */}
           <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-5 sm:pt-6 mt-6 border-t border-proton-border">
             <div className={cn(
@@ -2133,8 +2757,15 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
             )}>
               <button 
                 type="button"
+                data-testid="wizard-cancel-btn"
                 onClick={() => {
-                  localStorage.removeItem('proton_markethub_draft_form_data');
+                  const hasPendingChanges =
+                    hasMeaningfulDraftContent(formData) || photoUploadTasks.length > 0;
+                  if (hasPendingChanges) {
+                    setShowCancelModal(true);
+                    return;
+                  }
+                  skipUnmountFlushRef.current = true;
                   resetListingForm();
                   setViewMode('browse');
                 }}
@@ -2162,6 +2793,14 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                   type="button"
                   onClick={() => {
                     if (formStep === 1) {
+                      if (viewMode === 'create' && !hasSelectedDirection) {
+                        const msg = language === 'ka'
+                          ? 'გთხოვთ ჯერ აირჩიოთ განცხადების მიმართულება (პროდუქტი, მომსახურება ან პროექტი).'
+                          : 'Please choose a marketplace direction first (Product, Service, or Project).';
+                        setFieldErrors(prev => ({ ...prev, direction: msg }));
+                        showToast(msg, 'warning');
+                        return;
+                      }
                       const currentPrimary = activeFormPrimaryLang;
                       const tEn = (formData.title || '').trim();
                       const tGe = (formData.titleGe || '').trim();
@@ -2311,9 +2950,9 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
               </span>
             </div>
             <div className="flex items-center justify-between gap-2">
-              <span className={currentTheme.muted}>{language === 'ka' ? 'ფოტო' : 'Photo'}</span>
+              <span className={currentTheme.muted}>{language === 'ka' ? 'ფოტო' : 'Photos'}</span>
               <span className={cn("font-semibold", hasPhotoFilled ? "text-emerald-500" : currentTheme.muted)}>
-                {hasPhotoFilled ? (language === 'ka' ? '✓ ატვირთულია' : '✓ Added') : (language === 'ka' ? 'არასავალდებულო' : 'Optional')}
+                {hasPhotoFilled ? `✓ ${validImages.length} / ${MAX_LISTING_PHOTOS}` : (language === 'ka' ? 'არასავალდებულო' : 'Optional')}
               </span>
             </div>
           </div>
