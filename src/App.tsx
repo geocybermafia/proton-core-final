@@ -1267,6 +1267,7 @@ export default function App() {
         case 'clips': return '/clips';
         case 'translator': return '/translator';
         case 'creative-studio': return '/creative-studio';
+        case 'image': return '/image';
         case 'copywriting': return '/copywriting';
         case 'market-hub': return '/market-hub';
         case 'market': return '/market-hub';
@@ -1324,6 +1325,7 @@ export default function App() {
     if (pathname.startsWith('/clips')) return 'clips';
     if (pathname.startsWith('/reels')) return 'clips';
     if (pathname.startsWith('/creative-studio')) return 'creative-studio';
+    if (pathname.startsWith('/image')) return 'image';
     if (pathname.startsWith('/copywriting')) return 'copywriting';
     if (pathname.startsWith('/translator')) return 'translator';
     if (pathname.startsWith('/market-hub')) return 'market-hub';
@@ -1350,6 +1352,7 @@ export default function App() {
       case 'landing': return '/';
       case 'clips': return '/clips';
       case 'creative-studio': return '/creative-studio';
+      case 'image': return '/image';
       case 'copywriting': return '/copywriting';
       case 'translator': return '/translator';
       case 'market-hub': return '/market-hub';
