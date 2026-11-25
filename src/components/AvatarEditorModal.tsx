@@ -76,6 +76,7 @@ export default function AvatarEditorModal({
   }, [activeTab]);
 
   const startCamera = async () => {
+    return;
     setCameraError(null);
     setCameraActive(false);
     try {

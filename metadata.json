@@ -1,11 +1,7 @@
 {
   "name": "Proton AI",
   "description": "Enterprise-grade AI system hub with integrated professional industrial stealth marketplace for tech assets.",
-  "requestFramePermissions": [
-    "camera",
-    "microphone",
-    "geolocation"
-  ],
+  "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
   ]
