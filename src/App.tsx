@@ -135,21 +135,24 @@ const SidebarItem = React.memo(({
   expanded?: boolean,
   uiMode?: 'business' | 'creative' | 'market',
   badge?: string
-}) => (
+}) => {
+  const isLongLabel = label.length >= 19;
+
+  return (
   <button
     onClick={onClick}
     className={cn(
-      "flex w-full rounded-2xl transition-all duration-500 group relative",
+      "flex w-full rounded-2xl transition-all duration-500 group relative text-left",
       expanded 
         ? "flex-row items-center gap-4 px-4 py-3.5" 
-        : "flex-col items-center justify-center px-0 py-4 items-center",
+        : "flex-col items-center justify-center px-0 py-4",
       active 
         ? "bg-proton-accent/10 text-proton-accent shadow-[inset_0_0_20px_rgba(0,242,255,0.05)]"
         : "text-proton-muted hover:text-proton-text hover:bg-proton-accent/5",
     )}
     title={!expanded ? label : undefined}
   >
-    <div className="relative">
+    <div className="relative shrink-0 w-5 h-5 flex items-center justify-center">
       <Icon size={20} className={cn("shrink-0 transition-all duration-500 group-hover:scale-110", active ? "text-proton-accent scale-110" : "group-hover:text-proton-accent")} />
       {active && (
         <div className="absolute inset-0 bg-proton-accent/20 blur-md rounded-full -z-10" />
@@ -163,16 +166,17 @@ const SidebarItem = React.memo(({
           animate={{ opacity: 1, x: 0, width: "auto" }}
           exit={{ opacity: 0, x: -10, width: 0 }}
           transition={{ duration: 0.3, ease: "easeInOut" }}
-          className="flex items-center justify-between flex-1 min-w-0"
+          className="flex items-center justify-between gap-2 flex-1 min-w-0"
         >
           <span className={cn(
-            "text-[11px] font-bold uppercase tracking-wide leading-tight break-words transition-all duration-500 pr-1",
+            "text-xs font-bold uppercase tracking-wider transition-all duration-500",
+            isLongLabel ? "whitespace-normal leading-[1.35] text-left" : "whitespace-nowrap overflow-hidden",
             active ? "text-proton-accent" : "text-proton-muted group-hover:text-proton-text"
           )}>
             {label}
           </span>
           {badge && (
-            <span className="px-1.5 py-0.5 rounded-md bg-proton-accent/20 text-proton-accent text-[10px] font-black uppercase tracking-widest border border-proton-accent/30 animate-pulse">
+            <span className="shrink-0 px-1.5 py-0.5 rounded-md bg-proton-accent/20 text-proton-accent text-[10px] font-black uppercase tracking-widest border border-proton-accent/30 animate-pulse">
               {badge}
             </span>
           )}
@@ -190,7 +194,8 @@ const SidebarItem = React.memo(({
       />
     )}
   </button>
-));
+  );
+});
 
 const SystemsView = ({ 
   metadata, 
@@ -3235,11 +3240,11 @@ export default function App() {
               </div>
 
               <nav className={cn(
-                "flex-1 py-8 space-y-10 mt-2 overflow-y-auto overflow-x-hidden custom-scrollbar relative z-10 transition-all duration-500",
+                "flex-1 min-h-0 py-5 space-y-5 overflow-y-auto overflow-x-hidden custom-scrollbar relative z-10 transition-all duration-500",
                 isSidebarExpanded ? "px-4" : "px-2"
               )}>
                 {/* Permanent Home Navigation */}
-                <div className="space-y-3 min-h-[1.5rem]">
+                <div className="space-y-3">
                   <SidebarItem 
                     icon={LayoutDashboard} 
                     label={t.sidebar.dashboard} 
@@ -3252,10 +3257,8 @@ export default function App() {
                   />
                 </div>
 
-                <div className="pt-2"></div>
-
                 {/* UNIFIED SIDEBAR GROUPS */}
-                <div className="space-y-8">
+                <div className="space-y-5">
                   {/* GROUP 2: CREATIVE STUDIO */}
                   <div className="space-y-3">
                     <SidebarItem 
@@ -3350,14 +3353,14 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="pt-8 mt-8 border-t border-proton-border/30 space-y-4">
+                <div className="pt-5 mt-5 border-t border-proton-border/30 space-y-3">
                   <AnimatePresence mode="wait">
                     {isSidebarExpanded && (
                       <motion.p 
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -10 }}
-                        className="text-xs font-black text-proton-muted uppercase tracking-[0.2em] px-3 mb-4"
+                        className="text-xs font-black text-proton-muted uppercase tracking-[0.2em] px-3 mb-2"
                       >
                         {t.sidebar.system}
                       </motion.p>
@@ -3370,7 +3373,7 @@ export default function App() {
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: "auto" }}
                         exit={{ opacity: 0, height: 0 }}
-                        className="px-3 space-y-4 mb-6 overflow-hidden"
+                        className="px-3 space-y-3 mb-3 overflow-hidden"
                       >
                         <div className="space-y-2">
                           <p className="text-[10px] font-black text-proton-muted uppercase tracking-[0.1em] px-1">
@@ -3480,7 +3483,7 @@ export default function App() {
 
               {/* Bottom Section: Sidebar Display Modes + Profile */}
               <div className={cn(
-                "mt-auto border-t border-proton-border/30 relative z-10 flex flex-col gap-2.5 transition-all duration-300",
+                "mt-auto shrink-0 border-t border-proton-border/30 relative z-10 flex flex-col gap-2.5 transition-all duration-300",
                 isEffectiveExpanded ? "p-3.5" : "p-2 items-center"
               )}>
                 {/* 1. Sidebar Display Mode Selector */}
@@ -3506,7 +3509,7 @@ export default function App() {
                           setIsSidebarHovered(false);
                         }}
                         className={cn(
-                          "flex-1 flex items-center justify-center gap-1 py-1.5 px-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer",
+                          "flex-1 flex items-center justify-center gap-1 py-1.5 px-1 rounded-xl text-[10px] font-black uppercase tracking-wide transition-all duration-300 cursor-pointer",
                           isModeActive('expanded')
                             ? "bg-proton-accent/20 text-proton-accent border border-proton-accent/30 shadow-[0_0_12px_rgba(0,242,255,0.15)]"
                             : "text-proton-muted hover:text-proton-text hover:bg-white/5 border border-transparent"
@@ -3524,7 +3527,7 @@ export default function App() {
                           setIsSidebarHovered(false);
                         }}
                         className={cn(
-                          "flex-1 flex items-center justify-center gap-1 py-1.5 px-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer",
+                          "flex-1 flex items-center justify-center gap-1 py-1.5 px-1 rounded-xl text-[10px] font-black uppercase tracking-wide transition-all duration-300 cursor-pointer",
                           isModeActive('compact')
                             ? "bg-proton-accent/20 text-proton-accent border border-proton-accent/30 shadow-[0_0_12px_rgba(0,242,255,0.15)]"
                             : "text-proton-muted hover:text-proton-text hover:bg-white/5 border border-transparent"
@@ -3542,7 +3545,7 @@ export default function App() {
                           setIsSidebarHovered(false);
                         }}
                         className={cn(
-                          "flex-1 flex items-center justify-center gap-1 py-1.5 px-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer",
+                          "flex-1 flex items-center justify-center gap-1 py-1.5 px-1 rounded-xl text-[10px] font-black uppercase tracking-wide transition-all duration-300 cursor-pointer",
                           isModeActive('hover')
                             ? "bg-proton-accent/20 text-proton-accent border border-proton-accent/30 shadow-[0_0_12px_rgba(0,242,255,0.15)]"
                             : "text-proton-muted hover:text-proton-text hover:bg-white/5 border border-transparent"
