@@ -531,25 +531,6 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const image = processedImages[0] || '';
     const listingType = inferListingType(payload.category, payload.listingType);
 
-    const firestoreListingData = {
-      title,
-      price,
-      sellerId: user.uid,
-      sellerName: user.displayName || user.email || 'Proton Merchant',
-      category,
-      country: 'Switzerland',
-      city: 'Zürich',
-      location: 'Zürich / Global',
-      description,
-      image,
-      images: processedImages,
-      status: 'active',
-      isSold: false,
-      currency: 'USD',
-      listingType,
-      createdAt: serverTimestamp()
-    };
-
     const localListing: Listing = {
       id: newId,
       title,
@@ -571,13 +552,61 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
 
     try {
-      const docRef = doc(db, 'listings', newId);
-      await setDoc(docRef, firestoreListingData);
-      setAllListings(prev => [localListing, ...prev.filter(l => l.id !== localListing.id)]);
-      return localListing;
+      const idToken = await user.getIdToken();
+      const res = await fetch('/api/market/listings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify({
+          id: newId,
+          title,
+          description,
+          price,
+          currency: 'USD',
+          sellerName: user.displayName || user.email || 'Proton Merchant',
+          image,
+          images: processedImages,
+          category,
+          location: 'Zürich / Global',
+          country: 'Switzerland',
+          city: 'Zürich',
+          listingType
+        })
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || `Failed to publish listing (${res.status})`);
+      }
+
+      const created = await res.json();
+      const confirmedListing: Listing = {
+        id: created.id || newId,
+        title: created.title || title,
+        description: created.description || description,
+        price: created.price || price,
+        currency: created.currency || 'USD',
+        sellerId: user.uid,
+        sellerName: created.sellerName || user.displayName || user.email || 'Proton Merchant',
+        images: created.images || processedImages,
+        image: created.image || image,
+        category: created.category || category,
+        location: created.location || 'Zürich / Global',
+        country: created.country || 'Switzerland',
+        city: created.city || 'Zürich',
+        createdAt: created.createdAt || Date.now(),
+        status: 'active',
+        isSold: false,
+        listingType: created.listingType || listingType
+      };
+
+      setAllListings(prev => [confirmedListing, ...prev.filter(l => l.id !== confirmedListing.id)]);
+      return confirmedListing;
     } catch (err: any) {
-      console.error("[SellerContext] Firestore publish listing failed:", err);
-      setError(err instanceof Error ? err.message : 'Failed to publish listing to Firestore');
+      console.error("[SellerContext] Secure publish listing failed:", err);
+      setError(err instanceof Error ? err.message : 'Failed to publish listing securely');
       throw err;
     }
   }, [user]);

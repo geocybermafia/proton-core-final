@@ -84,10 +84,10 @@ export default function AvatarEditorModal({
         video: { width: 400, height: 400, facingMode: 'user', aspectRatio: 1 },
         audio: false
       });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play().catch(e => console.warn("Camera video stream play deferred or blocked:", e));
+      const v = videoRef.current;
+      if (v) {
+        (v as HTMLVideoElement).srcObject = stream;
+        (v as HTMLVideoElement).play().catch(e => console.warn("Camera video stream play deferred or blocked:", e));
         setCameraActive(true);
       }
     } catch (err: any) {

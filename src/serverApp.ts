@@ -24,7 +24,8 @@ import {
 import {
   AnalyticsConfigError,
   MarketAnalyticsService,
-  isAdminCredentialsError
+  isAdminCredentialsError,
+  getAdminFirestoreInstance
 } from "./lib/analyticsServer.js";
 
 // Lazy dynamic initialization of Firebase Admin for server-side token authentication
@@ -1173,6 +1174,97 @@ export function createApiApp(options?: CreateApiAppOptions): express.Express {
       }
       console.error("[MarketAnalytics] competition-preference error:", err);
       return res.status(500).json({ error: "Failed to update competition preference" });
+    }
+  });
+
+  // 5. Secure Server-Side Listing Creation with Controlled Freshness Eligibility
+  apiRouter.post("/market/listings", analyticsReadLimiter, async (req, res) => {
+    try {
+      const authRes = await verifyBearerTokenFromRequest(req, options?.verifyIdToken, options?.getPublicCerts);
+      if (!authRes.uid) {
+        return res.status(authRes.status || 401).json({
+          error: authRes.error || "Unauthorized",
+          code: authRes.code || "auth/invalid-id-token"
+        });
+      }
+
+      const body = req.body || {};
+      const title = typeof body.title === 'string' ? body.title.trim() : '';
+      const price = Number(body.price);
+      const category = typeof body.category === 'string' ? body.category.trim() : 'other';
+
+      if (!title || title.length > 200 || !Number.isFinite(price) || price <= 0 || !category) {
+        return res.status(400).json({ error: "Bad Request: valid title, price, and category are required" });
+      }
+
+      const normalizedTitle = title.toLowerCase().replace(/[^\w\s]|_/g, '').replace(/\s+/g, ' ').trim();
+      const registryKey = crypto
+        .createHash('sha256')
+        .update(`${authRes.uid}_${category.toLowerCase()}_${normalizedTitle}`)
+        .digest('hex');
+
+      const dbAdmin = await getAdminFirestoreInstance();
+      const listingId = typeof body.id === 'string' && body.id.trim() ? body.id.trim() : `list-${crypto.randomUUID()}`;
+      const registryRef = dbAdmin.collection('seller_freshness_registry').doc(registryKey);
+      const listingRef = dbAdmin.collection('listings').doc(listingId);
+
+      const savedListing = await dbAdmin.runTransaction(async (transaction: any) => {
+        const regDoc = await transaction.get(registryRef);
+        const nowMs = Date.now();
+        let firstPublishedAt = nowMs;
+
+        if (regDoc.exists) {
+          const regData = regDoc.data();
+          if (typeof regData.firstPublishedAt === 'number' && Number.isFinite(regData.firstPublishedAt)) {
+            firstPublishedAt = regData.firstPublishedAt;
+          }
+        } else {
+          transaction.set(registryRef, {
+            sellerId: authRes.uid,
+            category: category.toLowerCase(),
+            normalizedTitleHash: registryKey,
+            firstPublishedAt: nowMs,
+            originalListingId: listingId,
+            createdAt: nowMs,
+          });
+        }
+
+        const listingData = {
+          id: listingId,
+          title,
+          description: typeof body.description === 'string' ? body.description.trim() : '',
+          price,
+          currency: typeof body.currency === 'string' ? body.currency.trim() : 'USD',
+          sellerId: authRes.uid, // Authoritative!
+          sellerName: typeof body.sellerName === 'string' ? body.sellerName.trim() : 'Proton Merchant',
+          image: typeof body.image === 'string' ? body.image.trim() : '',
+          images: Array.isArray(body.images) ? body.images : [],
+          category,
+          location: typeof body.location === 'string' ? body.location.trim() : 'Zürich / Global',
+          country: typeof body.country === 'string' ? body.country.trim() : 'Switzerland',
+          city: typeof body.city === 'string' ? body.city.trim() : 'Zürich',
+          listingType: typeof body.listingType === 'string' ? body.listingType.trim() : 'product',
+          status: 'active',
+          isSold: false,
+          createdAt: firstPublishedAt,
+          updatedAt: nowMs,
+        };
+
+        transaction.set(listingRef, listingData);
+        return listingData;
+      });
+
+      return res.status(201).json(savedListing);
+    } catch (err: any) {
+      if (isAdminCredentialsError(err)) {
+        const isConfigErr = err instanceof AnalyticsConfigError;
+        return res.status(503).json({
+          code: isConfigErr ? err.code : "analytics/admin-credentials-missing",
+          error: isConfigErr ? err.message : "Listing creation requires server Firebase Admin credentials."
+        });
+      }
+      console.error("[MarketListings] create error:", err);
+      return res.status(500).json({ error: "Failed to create listing securely" });
     }
   });
 

@@ -230,11 +230,18 @@ service cloud.firestore {
     }
 
     // ======================================================
+    // 2.5. SELLER FRESHNESS REGISTRY (Server-side Admin SDK only)
+    // ======================================================
+    match /seller_freshness_registry/{registryId} {
+      allow read, write: if false;
+    }
+
+    // ======================================================
     // 3. LISTINGS
     // ======================================================
     match /listings/{listingId} {
       allow read: if true;
-      allow create: if isVerified() && isValidId(listingId) && isValidListingCreate(incoming());
+      allow create: if false; // Server-side creation via Firebase Admin SDK only
       allow update: if isVerified() && isValidId(listingId)
         && incoming().createdAt == existing().createdAt
         && (
