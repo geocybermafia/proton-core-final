@@ -1,26 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { ShieldAlert, Lock, AlertCircle, CheckCircle2, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  SecurityPinMeta,
-  verifyPinWithMeta,
-  checkPinLockout,
-  registerFailedPinAttempt,
-  resetPinLockoutAttempts,
-} from '../lib/securityUtils';
+import { EmailAuthProvider, reauthenticateWithCredential, reauthenticateWithPopup } from 'firebase/auth';
+import { googleProvider } from '../firebase';
+import { useAuth } from '../contexts/AuthContext';
+import { SecurityPinMeta } from '../lib/securityUtils';
 import { verifyStepUpPinCall } from '../services/cloudFunctionsService';
+
+export type SecurityModalScope = 'updateSecurityPin' | 'resetUserWorkspace' | 'changeEmail' | 'generalStepUp';
 
 export interface SecurityVerificationModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (grantId?: string) => void;
   actionTitle?: string;
-  scope?: 'updateSecurityPin' | 'resetUserWorkspace' | 'generalStepUp';
+  scope?: SecurityModalScope;
   securityPinEnabled?: boolean;
   securityPinMeta?: SecurityPinMeta;
-  correctPin?: string; // Legacy fallback
   language: 'ka' | 'en';
 }
+
+const MAX_CLIENT_AUTH_AGE_MS = 4 * 60 * 1000; // 4-minute client window before prompting Firebase reauth
 
 export const SecurityVerificationModal: React.FC<SecurityVerificationModalProps> = ({
   isOpen,
@@ -29,30 +29,75 @@ export const SecurityVerificationModal: React.FC<SecurityVerificationModalProps>
   actionTitle,
   scope = 'generalStepUp',
   securityPinEnabled = false,
-  securityPinMeta,
-  correctPin,
   language = 'ka',
 }) => {
+  const { user } = useAuth();
   const [pinInput, setPinInput] = useState(['', '', '', '']);
+  const [reauthPassword, setReauthPassword] = useState('');
+  const [needsReauth, setNeedsReauth] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [lockoutSecs, setLockoutSecs] = useState(0);
 
+  const hasPinProtection = !!securityPinEnabled;
+  const providerIds = (user?.providerData || []).map((p) => p?.providerId).filter(Boolean);
+  const usesPasswordProvider = providerIds.includes('password');
+  const usesGoogleProvider = providerIds.includes('google.com');
+  const isSensitiveNoPinScope = scope === 'changeEmail' || scope === 'resetUserWorkspace';
+
   useEffect(() => {
+    let cancelled = false;
+
     if (isOpen) {
       setPinInput(['', '', '', '']);
-      setErrorMsg('');
+      setReauthPassword('');
       setIsVerifying(false);
+      if (lockoutSecs <= 0) {
+        setErrorMsg('');
+      }
 
-      const lockout = checkPinLockout();
-      if (lockout.isLocked) {
-        setLockoutSecs(lockout.remainingSeconds);
-        setErrorMsg(language === 'ka' ? lockout.messageKa! : lockout.messageEn!);
+      if (!hasPinProtection && isSensitiveNoPinScope && user) {
+        const determineReauth = async () => {
+          // For password accounts on email change, always prompt password reauthentication.
+          if (scope === 'changeEmail' && usesPasswordProvider) {
+            if (!cancelled) setNeedsReauth(true);
+            return;
+          }
+          if (scope === 'changeEmail' && usesGoogleProvider) {
+            if (!cancelled) setNeedsReauth(true);
+            return;
+          }
+
+          if (typeof user.getIdTokenResult === 'function') {
+            try {
+              const tokenRes = await user.getIdTokenResult();
+              const authTimeStr = (tokenRes as any)?.authTime;
+              if (authTimeStr) {
+                const authMs = Date.parse(authTimeStr);
+                if (!Number.isNaN(authMs) && Date.now() - authMs > MAX_CLIENT_AUTH_AGE_MS) {
+                  if (!cancelled && (usesPasswordProvider || usesGoogleProvider)) {
+                    setNeedsReauth(true);
+                  }
+                  return;
+                }
+              }
+            } catch {
+              // Ignore token inspection failure; server enforces auth_time authoritatively
+            }
+          }
+
+          if (!cancelled) setNeedsReauth(false);
+        };
+        determineReauth();
       } else {
-        setLockoutSecs(0);
+        setNeedsReauth(false);
       }
     }
-  }, [isOpen, language]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, language, hasPinProtection, scope, user]);
 
   // Lockout countdown timer effect
   useEffect(() => {
@@ -104,78 +149,152 @@ export const SecurityVerificationModal: React.FC<SecurityVerificationModalProps>
   const fullPinEntered = pinInput.join('');
 
   const handleVerify = async () => {
-    const currentLockout = checkPinLockout();
-    if (currentLockout.isLocked) {
-      setLockoutSecs(currentLockout.remainingSeconds);
-      setErrorMsg(language === 'ka' ? currentLockout.messageKa! : currentLockout.messageEn!);
+    if (lockoutSecs > 0) {
+      setErrorMsg(
+        language === 'ka'
+          ? `მრავალჯერადი არასწორი მცდელობა. გთხოვთ დაელოდოთ ${lockoutSecs} წამს.`
+          : `Too many failed attempts. Please wait ${lockoutSecs} seconds.`
+      );
       return;
     }
 
     let issuedGrantId: string | undefined;
 
-    if (securityPinEnabled && (securityPinMeta || correctPin)) {
-      if (fullPinEntered.length < 4) {
+    if (hasPinProtection) {
+      if (fullPinEntered.length < 4 || !/^\d{4}$/.test(fullPinEntered)) {
         setErrorMsg(language === 'ka' ? 'გთხოვთ შეიყვანოთ 4-ნიშნა PIN კოდი' : 'Please enter complete 4-digit PIN');
         return;
       }
 
       setIsVerifying(true);
+      setErrorMsg('');
 
-      let isValid = false;
-
-      // Primary: Server-side PIN verification via Cloud Function
       try {
+        // Authoritative server-only PIN verification via Cloud Function
         const res = await verifyStepUpPinCall({ pin: fullPinEntered, scope });
-        if (res && res.success && res.grantId) {
-          isValid = true;
-          issuedGrantId = res.grantId;
+        if (!res || !res.success || typeof res.grantId !== 'string' || res.grantId.length === 0) {
+          throw new Error(
+            language === 'ka'
+              ? 'სერვერული დადასტურება ვერ მოხერხდა'
+              : 'Server step-up verification did not issue a valid grant'
+          );
         }
+        issuedGrantId = res.grantId;
       } catch (err: any) {
-        console.warn("[SecurityVerificationModal] Server verify step-up PIN call failed, checking fallback/client:", err);
-        // Fallback for client verify if cloud function network issue or uninitialized
-        if (securityPinMeta) {
-          isValid = await verifyPinWithMeta(fullPinEntered, securityPinMeta);
-        } else if (correctPin) {
-          isValid = fullPinEntered === correctPin;
-        }
+        setIsVerifying(false);
+        setPinInput(['', '', '', '']); // Immediately clear PIN input from memory
 
-        if (!isValid && err?.message) {
-          setErrorMsg(err.message);
-        }
-      }
+        const errCode = String(err?.code || '').toLowerCase();
+        const errMessage = String(err?.message || '');
 
-      setIsVerifying(false);
-
-      if (!isValid) {
-        const lockoutStatus = registerFailedPinAttempt();
-        setPinInput(['', '', '', '']); // Immediately clear pin input from memory
-        if (lockoutStatus.isLocked) {
-          setLockoutSecs(lockoutStatus.remainingSeconds);
-          setErrorMsg(language === 'ka' ? lockoutStatus.messageKa! : lockoutStatus.messageEn!);
-        } else if (!errorMsg) {
+        if (errCode.includes('resource-exhausted') || /too many failed attempts/i.test(errMessage)) {
+          const match = errMessage.match(/(\d+)\s*seconds?/i);
+          const remaining = match ? Math.max(1, parseInt(match[1], 10)) : 15;
+          setLockoutSecs(remaining);
+          setErrorMsg(
+            language === 'ka'
+              ? `მრავალჯერადი არასწორი მცდელობა. გთხოვთ დაელოდოთ ${remaining} წამს.`
+              : `Too many failed attempts. Please wait ${remaining} seconds.`
+          );
+        } else if (errCode.includes('permission-denied') || /incorrect pin/i.test(errMessage)) {
           setErrorMsg(
             language === 'ka'
               ? 'ოპერაციის შესრულება ვერ მოხერხდა — არასწორი PIN კოდი'
               : 'Operation failed — incorrect PIN code'
           );
+        } else if (errCode.includes('unauthenticated')) {
+          setErrorMsg(
+            language === 'ka'
+              ? 'დადასტურებისთვის საჭიროა ავტორიზაცია'
+              : 'Authentication required for step-up verification'
+          );
+        } else {
+          setErrorMsg(
+            language === 'ka'
+              ? 'სერვერთან დადასტურება ვერ მოხერხდა. სცადეთ მოგვიანებით.'
+              : 'Server verification unavailable or denied. Please try again.'
+          );
         }
         return;
       }
 
-      // Success! Reset lockout counter
-      resetPinLockoutAttempts();
+      setIsVerifying(false);
+    } else if (needsReauth && user) {
+      // PIN-disabled account requiring Firebase reauthentication
+      if (usesPasswordProvider) {
+        if (!reauthPassword) {
+          setErrorMsg(
+            language === 'ka'
+              ? 'გთხოვთ შეიყვანოთ თქვენი მიმდინარე პაროლი'
+              : 'Please enter your current password to verify identity'
+          );
+          return;
+        }
+        if (!user.email) {
+          setErrorMsg(
+            language === 'ka'
+              ? 'ანგარიშის ელფოსტა ვერ მოიძებნა ხელახალი ავთენტიფიკაციისთვის'
+              : 'Account email unavailable for password re-authentication'
+          );
+          return;
+        }
+
+        setIsVerifying(true);
+        setErrorMsg('');
+        try {
+          const credential = EmailAuthProvider.credential(user.email, reauthPassword);
+          await reauthenticateWithCredential(user, credential);
+          if (typeof user.getIdToken === 'function') {
+            await user.getIdToken(true);
+          }
+        } catch (reauthErr: any) {
+          setIsVerifying(false);
+          setReauthPassword('');
+          const code = String(reauthErr?.code || '').toLowerCase();
+          if (code.includes('wrong-password') || code.includes('invalid-credential')) {
+            setErrorMsg(
+              language === 'ka'
+                ? 'მიმდინარე პაროლი არასწორია'
+                : 'Incorrect current password'
+            );
+          } else {
+            setErrorMsg(
+              reauthErr?.message ||
+                (language === 'ka'
+                  ? 'ხელახალი ავთენტიფიკაცია ვერ მოხერხდა'
+                  : 'Re-authentication failed. Please try again.')
+            );
+          }
+          return;
+        }
+        setIsVerifying(false);
+      } else if (usesGoogleProvider) {
+        setIsVerifying(true);
+        setErrorMsg('');
+        try {
+          await reauthenticateWithPopup(user, googleProvider);
+          if (typeof user.getIdToken === 'function') {
+            await user.getIdToken(true);
+          }
+        } catch (reauthErr: any) {
+          setIsVerifying(false);
+          setErrorMsg(
+            reauthErr?.message ||
+              (language === 'ka'
+                ? 'Google-ით ხელახალი დადასტურება ვერ მოხერხდა'
+                : 'Google re-authentication failed or was cancelled')
+          );
+          return;
+        }
+        setIsVerifying(false);
+      }
     }
 
-    setIsVerifying(true);
-    setTimeout(() => {
-      setIsVerifying(false);
-      setPinInput(['', '', '', '']); // Clear memory
-      onConfirm(issuedGrantId);
-      onClose();
-    }, 150);
+    setPinInput(['', '', '', '']); // Clear memory
+    setReauthPassword('');
+    onConfirm(issuedGrantId);
+    onClose();
   };
-
-  const hasPinProtection = securityPinEnabled && (!!securityPinMeta || !!correctPin);
 
   return (
     <AnimatePresence>
@@ -256,6 +375,40 @@ export const SecurityVerificationModal: React.FC<SecurityVerificationModalProps>
                   ))}
                 </div>
               </div>
+            ) : needsReauth && usesPasswordProvider ? (
+              <div className="space-y-3 pt-1">
+                <label
+                  htmlFor="stepup-reauth-password"
+                  className="text-[10px] font-black uppercase tracking-widest text-proton-muted block"
+                >
+                  {language === 'ka'
+                    ? 'შეიყვანეთ ანგარიშის მიმდინარე პაროლი'
+                    : 'Enter current account password to re-authenticate'}
+                </label>
+                <input
+                  id="stepup-reauth-password"
+                  type="password"
+                  value={reauthPassword}
+                  onChange={(e) => {
+                    setReauthPassword(e.target.value);
+                    setErrorMsg('');
+                  }}
+                  placeholder="••••••••"
+                  autoFocus
+                  className="w-full px-4 py-3 bg-proton-bg border border-proton-border rounded-xl text-sm text-proton-text focus:outline-none focus:border-proton-accent focus:ring-2 focus:ring-proton-accent/20"
+                />
+              </div>
+            ) : needsReauth && usesGoogleProvider ? (
+              <div className="p-4 bg-amber-500/5 border border-amber-500/20 rounded-2xl text-[11px] text-proton-text font-medium leading-relaxed space-y-1">
+                <p className="font-bold text-amber-400">
+                  {language === 'ka' ? 'ხელახალი ავტორიზაცია (Google):' : 'Google Re-authentication:'}
+                </p>
+                <p>
+                  {language === 'ka'
+                    ? 'დადასტურების ღილაკზე დაჭერით გაიხსნება Google-ით ხელახალი ავტორიზაციის ფანჯარა.'
+                    : 'Clicking Confirm will verify your identity via Google re-authentication before proceeding.'}
+                </p>
+              </div>
             ) : (
               <div className="p-4 bg-amber-500/5 border border-amber-500/20 rounded-2xl text-[11px] text-proton-text font-medium leading-relaxed space-y-1">
                 <p className="font-bold text-amber-400">
@@ -263,8 +416,8 @@ export const SecurityVerificationModal: React.FC<SecurityVerificationModalProps>
                 </p>
                 <p>
                   {language === 'ka'
-                    ? 'ამ მოქმედების გაუქმება შეუძლებელია. გსურთ გაგრძელება?'
-                    : 'This action cannot be undone. Are you sure you want to proceed?'}
+                    ? 'ამ მოქმედების გაუქმება შეუძლებელია. სერვერი გადაამოწმებს თქვენს უსაფრთხოების სტატუსს. გსურთ გაგრძელება?'
+                    : 'This action cannot be undone. The server will verify your authorization before proceeding.'}
                 </p>
               </div>
             )}

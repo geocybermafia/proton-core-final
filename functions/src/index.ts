@@ -2,6 +2,7 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { onDocumentCreated, onDocumentUpdated } from "firebase-functions/v2/firestore";
 import { initializeApp, getApps } from "firebase-admin/app";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { getAuth } from "firebase-admin/auth";
 import * as crypto from "crypto";
 
 // Initialize Firebase Admin SDK (Only once)
@@ -17,6 +18,8 @@ const db = (() => {
     return getFirestore();
   }
 })();
+
+const adminAuth = getAuth();
 
 export interface SecureTransactionRequest {
   buyerId: string;
@@ -197,9 +200,131 @@ export const processSecureTransaction = onCall<SecureTransactionRequest>(async (
 // ZERO-TRUST STEP-UP VERIFICATION & PIN FUNCTIONS
 // =======================================================
 
+export type StepUpScope = 'updateSecurityPin' | 'resetUserWorkspace' | 'changeEmail' | 'generalStepUp';
+
+const ALLOWED_STEP_UP_SCOPES: readonly StepUpScope[] = [
+  'updateSecurityPin',
+  'resetUserWorkspace',
+  'changeEmail',
+  'generalStepUp',
+];
+
+const MAX_REAUTH_AGE_SEC = 300; // 5 minutes freshness for Firebase reauthentication
+
+export interface PinServerDependencies {
+  firestore: any;
+  auth: {
+    getUser: (uid: string) => Promise<{ email?: string }>;
+    updateUser: (uid: string, props: { email?: string }) => Promise<any>;
+  };
+  fieldValueDelete: () => any;
+  nowMs?: () => number;
+}
+
+const defaultPinDeps: PinServerDependencies = {
+  firestore: db,
+  auth: adminAuth,
+  fieldValueDelete: () => FieldValue.delete(),
+  nowMs: () => Date.now(),
+};
+
+function hasLegacyPlaintextPin(userData: any): boolean {
+  return typeof userData?.securityPin === 'string' && userData.securityPin.length > 0;
+}
+
+function isUserPinActive(userData: any): boolean {
+  return !!(
+    userData?.securityPinEnabled ||
+    userData?.securityPinMeta?.enabled ||
+    hasLegacyPlaintextPin(userData)
+  );
+}
+
+function derivePbkdf2PinMeta(pin: string, nowTimestamp: number) {
+  const saltBuf = crypto.randomBytes(16);
+  const saltHex = saltBuf.toString('hex');
+  const verifierBuf = crypto.pbkdf2Sync(pin, saltBuf, 100000, 32, 'sha256');
+  const verifierHex = verifierBuf.toString('hex');
+
+  return {
+    enabled: true,
+    salt: saltHex,
+    verifier: verifierHex,
+    version: 1,
+    updatedAt: nowTimestamp,
+  };
+}
+
+function verifyPinAgainstMeta(pin: string, meta: any): boolean {
+  if (!meta || !meta.enabled || !meta.salt || !meta.verifier) {
+    return false;
+  }
+  const saltBuf = Buffer.from(meta.salt, 'hex');
+  const derivedBuf = crypto.pbkdf2Sync(pin, saltBuf, 100000, 32, 'sha256');
+  const storedVerifierBuf = Buffer.from(meta.verifier, 'hex');
+  return (
+    derivedBuf.length === storedVerifierBuf.length &&
+    crypto.timingSafeEqual(derivedBuf, storedVerifierBuf)
+  );
+}
+
+function verifyPinAgainstLegacy(pin: string, legacyPin: string): boolean {
+  const a = crypto.createHash('sha256').update(pin, 'utf8').digest();
+  const b = crypto.createHash('sha256').update(legacyPin, 'utf8').digest();
+  return crypto.timingSafeEqual(a, b);
+}
+
+async function consumeScopedStepUpGrant(
+  firestore: any,
+  userRef: any,
+  uid: string,
+  grantId: string | undefined,
+  expectedScope: StepUpScope,
+  now: number,
+  missingMessage: string
+): Promise<void> {
+  if (!grantId || typeof grantId !== 'string') {
+    throw new HttpsError("permission-denied", missingMessage);
+  }
+
+  const grantRef = userRef.collection('security').doc(`grant_${grantId}`);
+
+  await firestore.runTransaction(async (transaction: any) => {
+    const grantSnap = await transaction.get(grantRef);
+
+    if (!grantSnap.exists) {
+      throw new HttpsError("permission-denied", "Invalid or expired step-up authorization grant.");
+    }
+
+    const grant = grantSnap.data()!;
+
+    if (
+      grant.consumed ||
+      grant.uid !== uid ||
+      grant.expiresAt <= now ||
+      grant.scope !== expectedScope
+    ) {
+      throw new HttpsError("permission-denied", "Step-up grant is expired, consumed, or invalid for this scope.");
+    }
+
+    transaction.update(grantRef, { consumed: true, consumedAt: now });
+  });
+}
+
+function assertRecentFirebaseReauth(authContext: { uid: string; token?: Record<string, any> }, nowMs: number): void {
+  const authTimeSec = Number(authContext?.token?.auth_time || 0);
+  const nowSec = Math.floor(nowMs / 1000);
+  if (!authTimeSec || (nowSec - authTimeSec) > MAX_REAUTH_AGE_SEC) {
+    throw new HttpsError(
+      "permission-denied",
+      "REAUTH_REQUIRED: Recent authentication is required to perform this sensitive action."
+    );
+  }
+}
+
 export interface VerifyStepUpPinRequest {
   pin: string;
-  scope?: 'updateSecurityPin' | 'resetUserWorkspace' | 'generalStepUp';
+  scope?: StepUpScope;
 }
 
 export interface VerifyStepUpPinResponse {
@@ -207,31 +332,32 @@ export interface VerifyStepUpPinResponse {
   grantId: string;
   scope: string;
   expiresAt: number;
+  migratedLegacyPin?: boolean;
 }
 
-/**
- * Serverless Callable Function: verifyStepUpPin
- * 
- * Verifies user Security PIN server-side using PBKDF2 (100k iterations, SHA-256).
- * Enforces atomic server-side lockout and generates short-lived scoped step-up grants.
- */
-export const verifyStepUpPin = onCall<VerifyStepUpPinRequest, Promise<VerifyStepUpPinResponse>>(async (request) => {
+export async function handleVerifyStepUpPin(
+  request: { auth?: { uid: string; token?: Record<string, any> } | null; data?: VerifyStepUpPinRequest },
+  deps: PinServerDependencies = defaultPinDeps
+): Promise<VerifyStepUpPinResponse> {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Authentication required for step-up verification.");
   }
 
   const uid = request.auth.uid;
-  const { pin, scope = 'generalStepUp' } = request.data || {};
+  const rawScope = request.data?.scope || 'generalStepUp';
+  const scope: StepUpScope = (ALLOWED_STEP_UP_SCOPES as readonly string[]).includes(rawScope)
+    ? (rawScope as StepUpScope)
+    : 'generalStepUp';
+  const pin = request.data?.pin;
 
   if (!pin || typeof pin !== 'string' || !/^\d{4}$/.test(pin)) {
     throw new HttpsError("invalid-argument", "PIN must be a valid 4-digit numeric string.");
   }
 
-  const userRef = db.collection('users').doc(uid);
+  const userRef = deps.firestore.collection('users').doc(uid);
   const lockoutRef = userRef.collection('security').doc('lockout');
 
-  // Server-side lockout check
-  const now = Date.now();
+  const now = deps.nowMs ? deps.nowMs() : Date.now();
   const lockoutSnap = await lockoutRef.get();
   const lockoutData = lockoutSnap.data() || { attempts: 0, lockedUntil: 0 };
 
@@ -243,31 +369,28 @@ export const verifyStepUpPin = onCall<VerifyStepUpPinRequest, Promise<VerifyStep
     );
   }
 
-  // Load PIN metadata from users/{uid}
   const userSnap = await userRef.get();
   if (!userSnap.exists) {
     throw new HttpsError("not-found", "User profile not found.");
   }
 
-  const userData = userSnap.data();
+  const userData = userSnap.data() || {};
   const meta = userData?.securityPinMeta;
+  const hasMeta = !!(meta && meta.enabled && meta.salt && meta.verifier);
+  const hasLegacy = hasLegacyPlaintextPin(userData);
 
-  if (!meta || !meta.enabled || !meta.salt || !meta.verifier) {
+  if (!hasMeta && !hasLegacy) {
     throw new HttpsError("failed-precondition", "Security PIN is not set up or disabled.");
   }
 
-  // Perform PBKDF2 derivation (HMAC-SHA-256, 100,000 iterations, 32-byte key)
-  const saltBuf = Buffer.from(meta.salt, 'hex');
-  const derivedBuf = crypto.pbkdf2Sync(pin, saltBuf, 100000, 32, 'sha256');
-  const storedVerifierBuf = Buffer.from(meta.verifier, 'hex');
-
-  const isValid =
-    derivedBuf.length === storedVerifierBuf.length &&
-    crypto.timingSafeEqual(derivedBuf, storedVerifierBuf);
+  // Verify against PBKDF2 meta when present, otherwise verify against legacy plaintext PIN
+  const isValid = hasMeta
+    ? verifyPinAgainstMeta(pin, meta)
+    : verifyPinAgainstLegacy(pin, String(userData.securityPin));
 
   if (!isValid) {
-    // Atomic lockout counter update
-    await db.runTransaction(async (transaction) => {
+    // Atomic lockout counter update; legacy PIN is NEVER migrated or deleted on failed PIN
+    await deps.firestore.runTransaction(async (transaction: any) => {
       const snap = await transaction.get(lockoutRef);
       const curr = snap.data() || { attempts: 0, lockedUntil: 0 };
       const attempts = (curr.attempts || 0) + 1;
@@ -283,6 +406,27 @@ export const verifyStepUpPin = onCall<VerifyStepUpPinRequest, Promise<VerifyStep
     });
 
     throw new HttpsError("permission-denied", "Incorrect PIN code.");
+  }
+
+  let migratedLegacyPin = false;
+
+  // Secure two-step server-side legacy PIN migration:
+  // 1. Store PBKDF2 metadata first; 2. Delete plaintext securityPin ONLY AFTER metadata save succeeds.
+  if (hasLegacy) {
+    if (!hasMeta) {
+      const migratedMeta = derivePbkdf2PinMeta(pin, now);
+      await userRef.set(
+        {
+          securityPinEnabled: true,
+          securityPinMeta: migratedMeta,
+        },
+        { merge: true }
+      );
+      migratedLegacyPin = true;
+    }
+    await userRef.update({
+      securityPin: deps.fieldValueDelete(),
+    });
   }
 
   // Success: Reset lockout attempts & create server-side scoped grant
@@ -305,8 +449,20 @@ export const verifyStepUpPin = onCall<VerifyStepUpPinRequest, Promise<VerifyStep
     success: true,
     grantId,
     scope,
-    expiresAt
+    expiresAt,
+    migratedLegacyPin,
   };
+}
+
+/**
+ * Serverless Callable Function: verifyStepUpPin
+ * 
+ * Verifies user Security PIN server-side using PBKDF2 (100k iterations, SHA-256).
+ * Enforces atomic server-side lockout, migrates legacy plaintext PINs safely after verification,
+ * and generates short-lived scoped step-up grants.
+ */
+export const verifyStepUpPin = onCall<VerifyStepUpPinRequest, Promise<VerifyStepUpPinResponse>>(async (request) => {
+  return handleVerifyStepUpPin(request, defaultPinDeps);
 });
 
 export interface UpdateSecurityPinRequest {
@@ -315,54 +471,35 @@ export interface UpdateSecurityPinRequest {
   grantId?: string;
 }
 
-/**
- * Serverless Callable Function: updateSecurityPin
- * 
- * Safely sets, updates, or disables Security PIN metadata.
- * Server derives salt and verifier using PBKDF2. Requires valid step-up grant if PIN is currently active.
- */
-export const updateSecurityPin = onCall<UpdateSecurityPinRequest, Promise<{ success: boolean }>>(async (request) => {
+export async function handleUpdateSecurityPin(
+  request: { auth?: { uid: string; token?: Record<string, any> } | null; data?: UpdateSecurityPinRequest },
+  deps: PinServerDependencies = defaultPinDeps
+): Promise<{ success: boolean }> {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Authentication required to update Security PIN.");
   }
 
   const uid = request.auth.uid;
   const { newPin, disable, grantId } = request.data || {};
+  const now = deps.nowMs ? deps.nowMs() : Date.now();
 
-  const userRef = db.collection('users').doc(uid);
+  const userRef = deps.firestore.collection('users').doc(uid);
   const userSnap = await userRef.get();
   const userData = userSnap.data() || {};
-  const isCurrentlyEnabled = !!(userData.securityPinEnabled || userData.securityPinMeta?.enabled);
+  const hasLegacy = hasLegacyPlaintextPin(userData);
+  const isCurrentlyEnabled = isUserPinActive(userData);
 
-  // If user already has PIN enabled, require a valid scoped step-up grant
+  // If user already has PIN (including legacy plaintext securityPin), require valid scoped step-up grant
   if (isCurrentlyEnabled) {
-    if (!grantId) {
-      throw new HttpsError("permission-denied", "Step-up verification required to change Security PIN.");
-    }
-
-    const grantRef = userRef.collection('security').doc(`grant_${grantId}`);
-    const now = Date.now();
-
-    await db.runTransaction(async (transaction) => {
-      const grantSnap = await transaction.get(grantRef);
-
-      if (!grantSnap.exists) {
-        throw new HttpsError("permission-denied", "Invalid or expired step-up authorization grant.");
-      }
-
-      const grant = grantSnap.data()!;
-
-      if (
-        grant.consumed ||
-        grant.uid !== uid ||
-        grant.expiresAt <= now ||
-        grant.scope !== 'updateSecurityPin'
-      ) {
-        throw new HttpsError("permission-denied", "Step-up grant is expired, consumed, or invalid for this scope.");
-      }
-
-      transaction.update(grantRef, { consumed: true, consumedAt: now });
-    });
+    await consumeScopedStepUpGrant(
+      deps.firestore,
+      userRef,
+      uid,
+      grantId,
+      'updateSecurityPin',
+      now,
+      "Step-up verification required to change Security PIN."
+    );
   }
 
   if (disable) {
@@ -371,11 +508,14 @@ export const updateSecurityPin = onCall<UpdateSecurityPinRequest, Promise<{ succ
         securityPinEnabled: false,
         securityPinMeta: {
           enabled: false,
-          updatedAt: Date.now()
+          updatedAt: now
         }
       },
       { merge: true }
     );
+    if (hasLegacy) {
+      await userRef.update({ securityPin: deps.fieldValueDelete() });
+    }
     return { success: true };
   }
 
@@ -383,20 +523,10 @@ export const updateSecurityPin = onCall<UpdateSecurityPinRequest, Promise<{ succ
     throw new HttpsError("invalid-argument", "New PIN must be a valid 4-digit numeric string.");
   }
 
-  // Derive PBKDF2 metadata server-side
-  const saltBuf = crypto.randomBytes(16);
-  const saltHex = saltBuf.toString('hex');
-  const verifierBuf = crypto.pbkdf2Sync(newPin, saltBuf, 100000, 32, 'sha256');
-  const verifierHex = verifierBuf.toString('hex');
+  // Derive PBKDF2 metadata server-side (16-byte salt, 100k iterations, 32-byte SHA-256)
+  const newMeta = derivePbkdf2PinMeta(newPin, now);
 
-  const newMeta = {
-    enabled: true,
-    salt: saltHex,
-    verifier: verifierHex,
-    version: 1,
-    updatedAt: Date.now()
-  };
-
+  // Persist new metadata FIRST; delete legacy plaintext field ONLY AFTER metadata save succeeds
   await userRef.set(
     {
       securityPinEnabled: true,
@@ -405,73 +535,256 @@ export const updateSecurityPin = onCall<UpdateSecurityPinRequest, Promise<{ succ
     { merge: true }
   );
 
-  return { success: true };
-});
+  if (hasLegacy) {
+    await userRef.update({ securityPin: deps.fieldValueDelete() });
+  }
 
-export interface ResetUserWorkspaceRequest {
-  grantId: string;
+  return { success: true };
 }
 
 /**
- * Serverless Callable Function: resetUserWorkspace
+ * Serverless Callable Function: updateSecurityPin
  * 
- * Server-authoritative destructive workspace reset.
- * Requires valid step-up grant for scope `resetUserWorkspace`.
+ * Safely sets, updates, or disables Security PIN metadata.
+ * Server derives salt and verifier using PBKDF2. Requires valid step-up grant if PIN (including legacy securityPin) is currently active.
  */
-export const resetUserWorkspace = onCall<ResetUserWorkspaceRequest, Promise<{ success: boolean; message: string }>>(async (request) => {
+export const updateSecurityPin = onCall<UpdateSecurityPinRequest, Promise<{ success: boolean }>>(async (request) => {
+  return handleUpdateSecurityPin(request, defaultPinDeps);
+});
+
+export interface ResetUserWorkspaceRequest {
+  grantId?: string;
+}
+
+export interface ResetUserWorkspaceResponse {
+  success: boolean;
+  message: string;
+  resetProfile: {
+    name: string;
+    email: string;
+    language: 'en';
+    region: string;
+    preferredCurrency: 'USD';
+    notifications: boolean;
+    notificationsEnabled: boolean;
+    phoneNumber: string;
+    avatar: string;
+    role: string;
+    theme: 'proton';
+    showCommercialHub: boolean;
+    securityPinEnabled: boolean;
+  };
+}
+
+export async function handleResetUserWorkspace(
+  request: { auth?: { uid: string; token?: Record<string, any> } | null; data?: ResetUserWorkspaceRequest },
+  deps: PinServerDependencies = defaultPinDeps
+): Promise<ResetUserWorkspaceResponse> {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Authentication required to reset workspace.");
   }
 
   const uid = request.auth.uid;
   const { grantId } = request.data || {};
+  const now = deps.nowMs ? deps.nowMs() : Date.now();
 
-  if (!grantId) {
-    throw new HttpsError("permission-denied", "Step-up verification required to reset workspace.");
+  const userRef = deps.firestore.collection('users').doc(uid);
+  const userSnap = await userRef.get();
+  const userData = userSnap.data() || {};
+
+  // Server-authoritative authorization check strictly from Firestore (NEVER trusts client flags)
+  const isPinActive = isUserPinActive(userData);
+
+  if (isPinActive) {
+    await consumeScopedStepUpGrant(
+      deps.firestore,
+      userRef,
+      uid,
+      grantId,
+      'resetUserWorkspace',
+      now,
+      "STEP_UP_REQUIRED: Step-up verification required to reset workspace."
+    );
+  } else {
+    // PIN is disabled on server: enforce recent Firebase Auth re-authentication (auth_time within 5 minutes)
+    assertRecentFirebaseReauth(request.auth, now);
   }
 
-  const userRef = db.collection('users').doc(uid);
-  const grantRef = userRef.collection('security').doc(`grant_${grantId}`);
-  const now = Date.now();
-
-  await db.runTransaction(async (transaction) => {
-    const grantSnap = await transaction.get(grantRef);
-
-    if (!grantSnap.exists) {
-      throw new HttpsError("permission-denied", "Invalid or expired step-up authorization grant.");
-    }
-
-    const grant = grantSnap.data()!;
-
-    if (
-      grant.consumed ||
-      grant.uid !== uid ||
-      grant.expiresAt <= now ||
-      grant.scope !== 'resetUserWorkspace'
-    ) {
-      throw new HttpsError("permission-denied", "Step-up grant is expired, consumed, or invalid for this scope.");
-    }
-
-    transaction.update(grantRef, { consumed: true, consumedAt: now });
-  });
-
-  // Server-side batch deletion of user subcollections
-  const subcollections = ['workflows', 'personas', 'chatHistory', 'tasks', 'customAvatars'];
+  // Server-side batch deletion of all user workspace subcollections (including projects)
+  const subcollections = ['workflows', 'personas', 'chatHistory', 'tasks', 'projects', 'customAvatars'];
 
   for (const sub of subcollections) {
     const colRef = userRef.collection(sub);
     const snap = await colRef.get();
     if (!snap.empty) {
-      const batch = db.batch();
-      snap.docs.forEach((doc) => batch.delete(doc.ref));
-      await batch.commit();
+      const docs = snap.docs;
+      for (let i = 0; i < docs.length; i += 450) {
+        const batch = deps.firestore.batch();
+        docs.slice(i, i + 450).forEach((d: any) => batch.delete(d.ref));
+        await batch.commit();
+      }
     }
+  }
+
+  // Reset stats and base user profile fields authoritatively on server
+  await userRef.collection('stats').doc('current').set({
+    storageGB: 0,
+    computeTimeHours: 0,
+    aiTokens: 0,
+    dailyGenerationsCount: 0,
+    dailyGenerationsDate: '',
+    spendingLimit: 5.00
+  });
+
+  const defaultEmail = String(request.auth.token?.email || userData.email || '');
+  const defaultName = defaultEmail ? defaultEmail.split('@')[0] : 'User';
+  const preservedRole = userData.role === 'admin' ? 'admin' : 'System Architect';
+
+  const resetProfile = {
+    name: defaultName,
+    email: defaultEmail,
+    language: 'en' as const,
+    region: 'Tbilisi, GE',
+    preferredCurrency: 'USD' as const,
+    notifications: true,
+    notificationsEnabled: true,
+    phoneNumber: '',
+    avatar: '',
+    role: preservedRole,
+    theme: 'proton' as const,
+    showCommercialHub: false,
+  };
+
+  await userRef.set(resetProfile, { merge: true });
+
+  return {
+    success: true,
+    message: "Workspace subcollections and profile defaults securely reset via Admin SDK.",
+    resetProfile: {
+      ...resetProfile,
+      securityPinEnabled: isPinActive,
+    }
+  };
+}
+
+/**
+ * Serverless Callable Function: resetUserWorkspace
+ * 
+ * Server-authoritative destructive workspace reset.
+ * Checks Firestore server state to enforce step-up grant (when PIN active) or recent reauth (when PIN disabled).
+ */
+export const resetUserWorkspace = onCall<ResetUserWorkspaceRequest, Promise<ResetUserWorkspaceResponse>>(async (request) => {
+  return handleResetUserWorkspace(request, defaultPinDeps);
+});
+
+export interface UpdateUserEmailRequest {
+  newEmail: string;
+  grantId?: string;
+}
+
+export interface UpdateUserEmailResponse {
+  success: boolean;
+  email: string;
+}
+
+export async function handleUpdateUserEmail(
+  request: { auth?: { uid: string; token?: Record<string, any> } | null; data?: UpdateUserEmailRequest },
+  deps: PinServerDependencies = defaultPinDeps
+): Promise<UpdateUserEmailResponse> {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Authentication required to change email address.");
+  }
+
+  const uid = request.auth.uid;
+  const rawEmail = request.data?.newEmail;
+  const grantId = request.data?.grantId;
+  const now = deps.nowMs ? deps.nowMs() : Date.now();
+
+  if (!rawEmail || typeof rawEmail !== 'string') {
+    throw new HttpsError("invalid-argument", "A valid email address is required.");
+  }
+
+  const normalizedEmail = rawEmail.trim().toLowerCase();
+  if (normalizedEmail.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+    throw new HttpsError("invalid-argument", "Invalid email address format.");
+  }
+
+  const userRef = deps.firestore.collection('users').doc(uid);
+  const userSnap = await userRef.get();
+  const userData = userSnap.data() || {};
+
+  // Server-authoritative authorization check strictly from Firestore
+  const isPinActive = isUserPinActive(userData);
+
+  if (isPinActive) {
+    await consumeScopedStepUpGrant(
+      deps.firestore,
+      userRef,
+      uid,
+      grantId,
+      'changeEmail',
+      now,
+      "STEP_UP_REQUIRED: Step-up verification required to change email address."
+    );
+  } else {
+    // PIN is disabled on server: require recent Firebase Authentication (reauthentication)
+    assertRecentFirebaseReauth(request.auth, now);
+  }
+
+  const authRecord = await deps.auth.getUser(uid);
+  const previousAuthEmail = authRecord?.email ? String(authRecord.email).trim().toLowerCase() : '';
+
+  if (previousAuthEmail === normalizedEmail) {
+    if (String(userData.email || '').trim().toLowerCase() !== normalizedEmail) {
+      await userRef.set({ email: normalizedEmail }, { merge: true });
+    }
+    return { success: true, email: normalizedEmail };
+  }
+
+  // Step 1: Update Firebase Authentication email first
+  try {
+    await deps.auth.updateUser(uid, { email: normalizedEmail });
+  } catch (authErr: any) {
+    const code = String(authErr?.code || '');
+    if (code === 'auth/email-already-exists') {
+      throw new HttpsError("already-exists", "Email address is already in use by another account.");
+    }
+    if (code === 'auth/invalid-email') {
+      throw new HttpsError("invalid-argument", "Invalid email address format.");
+    }
+    throw new HttpsError(
+      "failed-precondition",
+      `Firebase Authentication email update failed: ${authErr?.message || code || 'operation denied'}`
+    );
+  }
+
+  // Step 2: Synchronize Firestore profile email; rollback Firebase Auth if Firestore write fails
+  try {
+    await userRef.set({ email: normalizedEmail }, { merge: true });
+  } catch (fsErr: any) {
+    if (previousAuthEmail) {
+      try {
+        await deps.auth.updateUser(uid, { email: previousAuthEmail });
+      } catch (rollbackErr) {
+        console.error("CRITICAL: Failed to rollback Firebase Auth email after Firestore failure:", rollbackErr);
+      }
+    }
+    throw new HttpsError("internal", "Failed to synchronize email to user profile; Auth email change was rolled back.");
   }
 
   return {
     success: true,
-    message: "Workspace subcollections securely reset via Admin SDK."
+    email: normalizedEmail,
   };
+}
+
+/**
+ * Serverless Callable Function: updateUserEmail
+ * 
+ * Synchronizes Firebase Auth email and Firestore users/{uid}.email atomically with rollback protection.
+ */
+export const updateUserEmail = onCall<UpdateUserEmailRequest, Promise<UpdateUserEmailResponse>>(async (request) => {
+  return handleUpdateUserEmail(request, defaultPinDeps);
 });
 
 /**

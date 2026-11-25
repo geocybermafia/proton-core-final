@@ -93,24 +93,28 @@ service cloud.firestore {
       return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']);
     }
 
-    // Cryptographic PIN metadata validation
-    function isValidSecurityPinMeta(meta) {
-      return meta is map
-        && (!('enabled' in meta) || meta.enabled is bool)
-        && (!('salt' in meta) || (meta.salt is string && meta.salt.size() <= 64))
-        && (!('verifier' in meta) || (meta.verifier is string && meta.verifier.size() <= 128))
-        && (!('version' in meta) || meta.version is number)
-        && (!('updatedAt' in meta) || meta.updatedAt is number);
+    // Zero-Trust PIN Security Guard: Deny client-side creation or mutation of security PIN fields.
+    // Only server-side Firebase Admin SDK (Cloud Functions) may write these fields.
+    function hasNoSecurityPinFieldsOnCreate() {
+      return !incoming().keys().hasAny(['securityPinEnabled', 'securityPinMeta', 'securityPin']);
+    }
+
+    function areSecurityPinFieldsUnchanged() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'securityPinEnabled',
+        'securityPinMeta',
+        'securityPin'
+      ]);
     }
 
     function isSafeUserCreate() {
       return isNotRoleEscalated()
-        && (!('securityPinMeta' in incoming()) || incoming().securityPinMeta == null || isValidSecurityPinMeta(incoming().securityPinMeta));
+        && hasNoSecurityPinFieldsOnCreate();
     }
 
     function isSafeUserUpdate() {
       return isRoleUnchanged()
-        && (!('securityPinMeta' in incoming()) || incoming().securityPinMeta == null || isValidSecurityPinMeta(incoming().securityPinMeta));
+        && areSecurityPinFieldsUnchanged();
     }
 
     // ======================================================

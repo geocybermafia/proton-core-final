@@ -1759,7 +1759,13 @@ export default function App() {
       if (uiMode !== 'market') {
         setUiMode('market');
       }
-    } else if (location.pathname.startsWith('/translator') || location.pathname.startsWith('/studio')) {
+    } else if (
+      location.pathname.startsWith('/creative-studio') ||
+      location.pathname.startsWith('/image') ||
+      location.pathname.startsWith('/copywriting') ||
+      location.pathname.startsWith('/translator') ||
+      location.pathname.startsWith('/studio')
+    ) {
       if (uiMode !== 'creative') {
         setUiMode('creative');
       }
@@ -2479,12 +2485,7 @@ export default function App() {
     const unsubscribe = onSnapshot(profileRef, { includeMetadataChanges: true }, (snap) => {
       if (snap.exists()) {
         const rawData = snap.data();
-        if (rawData && typeof rawData.securityPin === 'string') {
-          // Trigger asynchronous migration of legacy plaintext PIN to PBKDF2 hash
-          import('./lib/securityUtils').then(({ checkAndMigrateLegacyPin }) => {
-            checkAndMigrateLegacyPin(user.uid, rawData);
-          }).catch((err) => console.warn('Dynamic import error:', err));
-        }
+        const hasLegacyPin = !!(rawData && typeof rawData.securityPin === 'string' && rawData.securityPin.length > 0);
 
         const data = rawData as Partial<UserProfile>;
         const dbLanguage = data.language as 'en' | 'ka';
@@ -2502,6 +2503,10 @@ export default function App() {
             : (validCurrencies.includes(String(prev.preferredCurrency || '').toUpperCase())
                 ? (String(prev.preferredCurrency).toUpperCase() as NonNullable<UserProfile['preferredCurrency']>)
                 : 'USD');
+          const resolvedPinEnabled =
+            data.securityPinEnabled !== undefined
+              ? (!!data.securityPinEnabled || hasLegacyPin)
+              : (hasLegacyPin || !!data.securityPinMeta?.enabled || prev.securityPinEnabled);
           return {
             ...prev,
             ...cleanData,
@@ -2510,7 +2515,7 @@ export default function App() {
             language: targetLanguage,
             preferredCurrency: targetCurrency,
             avatar: data.avatar || prev.avatar,
-            securityPinEnabled: data.securityPinEnabled !== undefined ? data.securityPinEnabled : prev.securityPinEnabled,
+            securityPinEnabled: resolvedPinEnabled,
             securityPinMeta: data.securityPinMeta || prev.securityPinMeta,
           };
         });

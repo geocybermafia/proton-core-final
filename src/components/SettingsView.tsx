@@ -60,7 +60,7 @@ import { useToast } from './Toast';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../firebase';
-import { doc, setDoc, updateDoc, deleteField, onSnapshot } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { uploadAvatarImage } from '../lib/storageUtils';
 import { SecurityVerificationModal } from './SecurityVerificationModal';
 import { 
@@ -70,8 +70,7 @@ import {
   ProtonBadge, 
   ProtonAvatar 
 } from '../ui';
-import { createPinMeta, verifyPinWithMeta, registerFailedPinAttempt, resetPinLockoutAttempts, checkPinLockout } from '../lib/securityUtils';
-import { updateSecurityPinCall, resetUserWorkspaceCall } from '../services/cloudFunctionsService';
+import { updateSecurityPinCall, resetUserWorkspaceCall, updateUserEmailCall } from '../services/cloudFunctionsService';
 
 interface SettingsViewProps {
   userProfile: UserProfile;
@@ -319,7 +318,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [stepUpState, setStepUpState] = useState<{
     isOpen: boolean;
     actionTitle: string;
-    scope?: 'updateSecurityPin' | 'resetUserWorkspace' | 'generalStepUp';
+    scope?: 'updateSecurityPin' | 'resetUserWorkspace' | 'changeEmail' | 'generalStepUp';
     onConfirm: (grantId?: string) => void;
   }>({
     isOpen: false,
@@ -331,15 +330,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   // Security PIN Modal State
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
   const [pinMode, setPinMode] = useState<'enable' | 'change' | 'disable'>('enable');
-  const [pinCurrentInput, setPinCurrentInput] = useState('');
   const [pinNewInput, setPinNewInput] = useState('');
   const [pinConfirmInput, setPinConfirmInput] = useState('');
   const [pinModalError, setPinModalError] = useState('');
+  const [isPinSaving, setIsPinSaving] = useState(false);
 
   const requestStepUpVerification = (
     actionTitle: string,
     onVerifiedAction: (grantId?: string) => void,
-    scope: 'updateSecurityPin' | 'resetUserWorkspace' | 'generalStepUp' = 'generalStepUp'
+    scope: 'updateSecurityPin' | 'resetUserWorkspace' | 'changeEmail' | 'generalStepUp' = 'generalStepUp'
   ) => {
     setStepUpState({
       isOpen: true,
@@ -351,7 +350,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   const openPinSetupModal = (mode: 'enable' | 'change' | 'disable') => {
     setPinMode(mode);
-    setPinCurrentInput('');
     setPinNewInput('');
     setPinConfirmInput('');
     setPinModalError('');
@@ -359,11 +357,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   };
 
   const handleSavePin = async () => {
+    if (isPinSaving) return;
     setPinModalError('');
 
-    const currentLockout = checkPinLockout();
-    if (currentLockout.isLocked) {
-      setPinModalError(language === 'ka' ? currentLockout.messageKa! : currentLockout.messageEn!);
+    if (!user) {
+      setPinModalError(
+        language === 'ka'
+          ? 'PIN კოდის სამართავად საჭიროა ავტორიზაცია'
+          : 'Authentication required to manage Security PIN'
+      );
       return;
     }
 
@@ -377,45 +379,29 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         return;
       }
 
+      setIsPinSaving(true);
       try {
-        // Try server callable first
-        try {
-          await updateSecurityPinCall({ newPin: pinNewInput });
-        } catch (callErr) {
-          console.warn("[SettingsView] Cloud Function PIN setup call failed, using client-side PBKDF2 fallback:", callErr);
-        }
-
-        // Generate client-side PBKDF2 cryptographic metadata (100,000 iterations SHA-256)
-        const pinMeta = await createPinMeta(pinNewInput);
-
-        if (user) {
-          try {
-            const userRef = doc(db, 'users', user.uid);
-            await setDoc(userRef, {
-              securityPinEnabled: true,
-              securityPinMeta: pinMeta,
-              securityPin: deleteField()
-            }, { merge: true });
-          } catch (dbErr) {
-            console.warn("[SettingsView] Firestore direct write for PIN metadata fallback:", dbErr);
-          }
+        const res = await updateSecurityPinCall({ newPin: pinNewInput });
+        if (!res?.success) {
+          throw new Error(language === 'ka' ? 'PIN კოდის ჩართვა ვერ მოხერხდა' : 'Failed to enable Security PIN');
         }
 
         setUserProfile(prev => ({
           ...prev,
-          securityPinEnabled: true,
-          securityPinMeta: pinMeta
+          securityPinEnabled: true
         }));
 
-        resetPinLockoutAttempts();
-        setPinCurrentInput('');
         setPinNewInput('');
         setPinConfirmInput('');
         setIsPinModalOpen(false);
         showToast(language === 'ka' ? 'უსაფრთხოების პარამეტრები განახლდა' : 'Security settings updated', 'success');
       } catch (e: any) {
         console.error("Error setting up PIN:", e);
-        setPinModalError(e?.message || (language === 'ka' ? 'ოპერაციის შესრულება ვერ მოხერხდა' : 'Operation failed — please try again'));
+        setPinModalError(
+          e?.message || (language === 'ka' ? 'ოპერაციის შესრულება ვერ მოხერხდა' : 'Operation failed — please try again')
+        );
+      } finally {
+        setIsPinSaving(false);
       }
     } else if (pinMode === 'change') {
       if (pinNewInput.length < 4 || !/^\d{4}$/.test(pinNewInput)) {
@@ -427,39 +413,33 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         return;
       }
 
-      // Close Pin Modal & Open StepUp Modal to acquire server step-up grant
+      const pendingNewPin = pinNewInput;
+
+      // Close Pin Modal & Open StepUp Modal to verify current PIN and acquire server step-up grant
       setIsPinModalOpen(false);
       requestStepUpVerification(
         language === 'ka' ? 'PIN კოდის შეცვლა' : 'Change Security PIN',
         async (grantId) => {
-          try {
-            try {
-              await updateSecurityPinCall({ newPin: pinNewInput, grantId });
-            } catch (callErr) {
-              console.warn("[SettingsView] Cloud Function change PIN call failed, using client-side PBKDF2 fallback:", callErr);
-            }
+          if (!grantId) {
+            showToast(
+              language === 'ka'
+                ? 'საჭიროა სერვერული Step-Up დადასტურება'
+                : 'Server step-up authorization required',
+              'error'
+            );
+            return;
+          }
 
-            const pinMeta = await createPinMeta(pinNewInput);
-            if (user) {
-              try {
-                const userRef = doc(db, 'users', user.uid);
-                await setDoc(userRef, {
-                  securityPinEnabled: true,
-                  securityPinMeta: pinMeta,
-                  securityPin: deleteField()
-                }, { merge: true });
-              } catch (dbErr) {
-                console.warn("[SettingsView] Firestore direct write for change PIN fallback:", dbErr);
-              }
+          try {
+            const res = await updateSecurityPinCall({ newPin: pendingNewPin, grantId });
+            if (!res?.success) {
+              throw new Error(language === 'ka' ? 'PIN კოდის შეცვლა ვერ მოხერხდა' : 'Failed to update Security PIN');
             }
 
             setUserProfile(prev => ({
               ...prev,
-              securityPinEnabled: true,
-              securityPinMeta: pinMeta
+              securityPinEnabled: true
             }));
-            resetPinLockoutAttempts();
-            setPinCurrentInput('');
             setPinNewInput('');
             setPinConfirmInput('');
             showToast(language === 'ka' ? 'PIN წარმატებით შეიცვალა' : 'PIN changed successfully', 'success');
@@ -475,27 +455,20 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       requestStepUpVerification(
         language === 'ka' ? 'PIN კოდის გათიშვა' : 'Disable Security PIN',
         async (grantId) => {
-          try {
-            try {
-              await updateSecurityPinCall({ disable: true, grantId });
-            } catch (callErr) {
-              console.warn("[SettingsView] Cloud Function disable PIN call failed, using client-side fallback:", callErr);
-            }
+          if (!grantId) {
+            showToast(
+              language === 'ka'
+                ? 'საჭიროა სერვერული Step-Up დადასტურება'
+                : 'Server step-up authorization required',
+              'error'
+            );
+            return;
+          }
 
-            if (user) {
-              try {
-                const userRef = doc(db, 'users', user.uid);
-                await setDoc(userRef, {
-                  securityPinEnabled: false,
-                  securityPinMeta: {
-                    enabled: false,
-                    updatedAt: Date.now()
-                  },
-                  securityPin: deleteField()
-                }, { merge: true });
-              } catch (dbErr) {
-                console.warn("[SettingsView] Firestore direct write for disable PIN fallback:", dbErr);
-              }
+          try {
+            const res = await updateSecurityPinCall({ disable: true, grantId });
+            if (!res?.success) {
+              throw new Error(language === 'ka' ? 'PIN კოდის გათიშვა ვერ მოხერხდა' : 'Failed to disable Security PIN');
             }
 
             setUserProfile(prev => ({
@@ -503,8 +476,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               securityPinEnabled: false,
               securityPinMeta: undefined
             }));
-            resetPinLockoutAttempts();
-            setPinCurrentInput('');
             setPinNewInput('');
             setPinConfirmInput('');
             showToast(language === 'ka' ? 'უსაფრთხოების პარამეტრები განახლდა' : 'Security settings updated', 'success');
@@ -673,8 +644,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     });
   };
 
-  const executeSave = async () => {
-    setIsSaving(true);
+  const executeSave = async (
+    confirmedEmail?: string,
+    options?: { skipLoadingToggle?: boolean; skipToast?: boolean }
+  ) => {
+    if (!options?.skipLoadingToggle) {
+      setIsSaving(true);
+    }
     try {
       if (user) {
         const userDocRef = doc(db, 'users', user.uid);
@@ -688,10 +664,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           customApiKey: aiSettings.customApiKey || ''
         };
 
-        // Sync to cloud Firestore safely
+        // Sync non-email profile fields to cloud Firestore safely.
+        // Email updates MUST go exclusively through updateUserEmailCall to keep Firebase Auth and Firestore synchronized.
         await setDoc(userDocRef, {
           name: userProfile.name || '',
-          email: userProfile.email || '',
           language: userProfile.language || 'en',
           region: userProfile.region || '',
           preferredCurrency: resolvePreferredCurrency(userProfile.preferredCurrency),
@@ -701,7 +677,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           avatar: userProfile.avatar || '',
           role: userProfile.role || 'System Architect',
           showCommercialHub: !!userProfile.showCommercialHub,
-          securityPin: deleteField(),
           aiSettings: sanitizedAiSettings
         }, { merge: true });
 
@@ -709,26 +684,34 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         await setDoc(statsRef, { spendingLimit }, { merge: true });
       }
 
-      setLastSavedProfile({ ...userProfile });
+      const persistedEmail = confirmedEmail !== undefined ? confirmedEmail : lastSavedProfile.email;
+      setLastSavedProfile({ ...userProfile, email: persistedEmail });
       setIsSaved(true);
       setTimeout(() => setIsSaved(false), 2000);
-      
-      showToast(
-        language === 'ka' 
-          ? 'ცვლილებები შენახულია' 
-          : 'Changes saved successfully',
-        'success'
-      );
+
+      if (!options?.skipToast) {
+        showToast(
+          language === 'ka' 
+            ? 'ცვლილებები შენახულია' 
+            : 'Changes saved successfully',
+          'success'
+        );
+      }
     } catch (err: any) {
       console.error("Failed to sync user profile directly to Firestore:", err);
-      showToast(
-        language === 'ka' 
-          ? 'ოპერაციის შესრულება ვერ მოხერხდა' 
-          : 'Operation failed — please try again',
-        'error'
-      );
+      if (!options?.skipToast) {
+        showToast(
+          language === 'ka' 
+            ? 'ოპერაციის შესრულება ვერ მოხერხდა' 
+            : 'Operation failed — please try again',
+          'error'
+        );
+      }
+      throw err;
     } finally {
-      setIsSaving(false);
+      if (!options?.skipLoadingToggle) {
+        setIsSaving(false);
+      }
     }
   };
 
@@ -745,16 +728,91 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       return;
     }
 
-    // Step-Up Security Trigger for sensitive Email changes
-    if (userProfile.email !== lastSavedProfile.email) {
+    const normalizedNewEmail = (userProfile.email || '').trim().toLowerCase();
+    const normalizedOldEmail = (lastSavedProfile.email || '').trim().toLowerCase();
+    const emailChanged = normalizedNewEmail !== normalizedOldEmail;
+
+    // Step-Up Security Trigger for sensitive Email changes (synchronizes Firebase Auth + Firestore server-side)
+    if (emailChanged) {
+      if (!normalizedNewEmail || !isEmailValid(normalizedNewEmail)) {
+        setEmailTouched(true);
+        showToast(
+          language === 'ka'
+            ? 'გთხოვთ მიუთითოთ მოქმედი ელფოსტის მისამართი'
+            : 'Please provide a valid email address.',
+          'error'
+        );
+        return;
+      }
+
+      if (!user) {
+        showToast(
+          language === 'ka'
+            ? 'ელფოსტის შესაცვლელად საჭიროა ავტორიზაცია'
+            : 'Authentication required to update email address',
+          'error'
+        );
+        return;
+      }
+
       requestStepUpVerification(
         language === 'ka' ? 'ელფოსტის შეცვლა' : 'Change Email Address',
-        () => executeSave()
+        async (grantId) => {
+          setIsSaving(true);
+          try {
+            const emailRes = await updateUserEmailCall({
+              newEmail: normalizedNewEmail,
+              grantId,
+            });
+            if (!emailRes?.success) {
+              throw new Error(
+                language === 'ka'
+                  ? 'ელფოსტის განახლება ვერ მოხერხდა'
+                  : 'Failed to synchronize email update'
+              );
+            }
+
+            if (typeof (user as any).reload === 'function') {
+              try { await (user as any).reload(); } catch {}
+            }
+            if (typeof user.getIdToken === 'function') {
+              try { await user.getIdToken(true); } catch {}
+            }
+
+            const confirmedEmail = emailRes.email || normalizedNewEmail;
+            setUserProfile(prev => ({ ...prev, email: confirmedEmail }));
+
+            await executeSave(confirmedEmail, { skipLoadingToggle: true, skipToast: true });
+
+            showToast(
+              language === 'ka'
+                ? 'ელფოსტა და პროფილი წარმატებით განახლდა'
+                : 'Email address synchronized across account and profile',
+              'success'
+            );
+          } catch (err: any) {
+            console.error("Failed to update email synchronously:", err);
+            const msg = String(err?.message || '');
+            if (msg.includes('STEP_UP_REQUIRED')) {
+              setUserProfile(prev => ({ ...prev, securityPinEnabled: true }));
+            }
+            showToast(
+              err?.message ||
+                (language === 'ka'
+                  ? 'ელფოსტის შეცვლა ვერ მოხერხდა — Firebase Auth და პროფილი უცვლელია'
+                  : 'Email change failed — Firebase Auth and profile remain unchanged'),
+              'error'
+            );
+          } finally {
+            setIsSaving(false);
+          }
+        },
+        'changeEmail'
       );
       return;
     }
 
-    executeSave();
+    await executeSave().catch(() => {});
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -786,33 +844,57 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   };
 
   const executeResetWorkspace = async (grantId?: string) => {
-    setShowResetModal(false);
-    
-    if (grantId) {
+    let serverResetProfile: Record<string, any> | undefined;
+
+    if (user) {
       try {
-        await resetUserWorkspaceCall({ grantId });
-      } catch (err) {
+        // NEVER trust client securityPinEnabled to skip server authorization or perform client-side Firestore reset.
+        // Server inspects Firestore state directly and executes all subcollection + profile resets.
+        const res = await resetUserWorkspaceCall(grantId ? { grantId } : {});
+        if (!res?.success) {
+          throw new Error(
+            language === 'ka' ? 'სერვერული განულება უარყოფილია' : 'Server workspace reset failed'
+          );
+        }
+        serverResetProfile = res.resetProfile;
+      } catch (err: any) {
         console.error("Cloud Function resetUserWorkspace failed:", err);
+        setShowResetModal(false);
+        const msg = String(err?.message || '');
+        if (msg.includes('STEP_UP_REQUIRED')) {
+          setUserProfile(prev => ({ ...prev, securityPinEnabled: true }));
+        }
+        showToast(
+          err?.message ||
+            (language === 'ka'
+              ? 'სამუშაო სივრცის განულება ვერ მოხერხდა — სერვერული შეცდომა'
+              : 'Workspace reset failed — server authorization denied or unavailable'),
+          'error'
+        );
+        return;
       }
     }
+
+    setShowResetModal(false);
 
     const defaultName = user && user.email ? user.email.split('@')[0] : 'User';
     const defaultEmail = user && user.email ? user.email : '';
     const initialProfile: UserProfile = {
-      name: defaultName,
-      email: defaultEmail,
+      name: serverResetProfile?.name ?? defaultName,
+      email: serverResetProfile?.email ?? defaultEmail,
       language: 'en',
-      region: 'Tbilisi, GE',
+      region: serverResetProfile?.region ?? 'Tbilisi, GE',
       preferredCurrency: 'USD',
       notifications: true,
       notificationsEnabled: true,
       phoneNumber: '',
       avatar: '',
-      role: 'System Architect',
+      role: serverResetProfile?.role ?? 'System Architect',
       showCommercialHub: false,
-      securityPinEnabled: false,
+      securityPinEnabled: serverResetProfile?.securityPinEnabled ?? userProfile.securityPinEnabled,
     };
     setUserProfile(initialProfile);
+    setLastSavedProfile(initialProfile);
 
     setAiSettings({
       temperature: 0.5,
@@ -829,38 +911,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     localStorage.removeItem('proton_tasks');
     localStorage.removeItem('organizer_events');
     localStorage.removeItem('active_session_sec');
-    
-    if (user) {
-      try {
-        const userDocRef = doc(db, 'users', user.uid);
-        await setDoc(userDocRef, {
-          name: defaultName,
-          email: defaultEmail,
-          language: 'en',
-          region: 'Tbilisi, GE',
-          preferredCurrency: 'USD',
-          notifications: true,
-          phoneNumber: '',
-          avatar: '',
-          role: 'System Architect',
-          theme: 'proton',
-          showCommercialHub: false,
-          securityPin: deleteField()
-        }, { merge: true });
-
-        const statsRef = doc(db, 'users', user.uid, 'stats', 'current');
-        await setDoc(statsRef, {
-          storageGB: 0,
-          computeTimeHours: 0,
-          aiTokens: 0,
-          dailyGenerationsCount: 0,
-          dailyGenerationsDate: '',
-          spendingLimit: 5.00
-        });
-      } catch (err) {
-        console.error("Firestore Reset error:", err);
-      }
-    }
 
     showToast(
       language === 'ka' 
@@ -3128,19 +3178,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               )}
 
               <div className="space-y-4">
-                {(pinMode === 'change' || pinMode === 'disable') && (
-                  <div>
-                    <label className="text-[10px] font-black uppercase tracking-wider text-proton-text block mb-1.5">
-                      {language === 'ka' ? 'მიმდინარე PIN კოდი' : 'Current PIN Code'}
-                    </label>
-                    <input
-                      type="password"
-                      maxLength={4}
-                      value={pinCurrentInput}
-                      onChange={(e) => setPinCurrentInput(e.target.value.replace(/\D/g, ''))}
-                      placeholder="••••"
-                      className="w-full bg-proton-secondary/20 border border-proton-border rounded-xl px-4 py-2.5 text-center text-lg font-mono tracking-[0.5em] text-proton-text focus:outline-none focus:border-proton-accent"
-                    />
+                {pinMode === 'disable' && (
+                  <div className="p-3.5 bg-amber-500/5 border border-amber-500/20 rounded-xl text-xs text-proton-muted leading-relaxed">
+                    {language === 'ka'
+                      ? 'უსაფრთხოების PIN კოდის გასათიშად დააჭირეთ შენახვას და შემდეგ ფანჯარაში გაიარეთ PIN დადასტურება.'
+                      : 'Click Save and verify your current PIN in the next step to disable PIN protection.'}
                   </div>
                 )}
 
@@ -3188,9 +3230,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <button
                   type="button"
                   onClick={handleSavePin}
-                  className="px-5 py-2 rounded-xl bg-proton-accent text-proton-bg text-xs font-black uppercase tracking-wider hover:bg-white transition-all cursor-pointer shadow-md"
+                  disabled={isPinSaving}
+                  className="px-5 py-2 rounded-xl bg-proton-accent text-proton-bg text-xs font-black uppercase tracking-wider hover:bg-white transition-all cursor-pointer shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {language === 'ka' ? 'შენახვა' : 'Save'}
+                  {isPinSaving
+                    ? (language === 'ka' ? 'იტვირთება...' : 'Saving...')
+                    : (language === 'ka' ? 'შენახვა' : 'Save')}
                 </button>
               </div>
             </motion.div>

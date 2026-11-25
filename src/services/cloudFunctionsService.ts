@@ -35,7 +35,7 @@ export async function executeSecureTransaction(params: SecureTransactionParams):
 
 export interface VerifyStepUpPinParams {
   pin: string;
-  scope?: 'updateSecurityPin' | 'resetUserWorkspace' | 'generalStepUp';
+  scope?: 'updateSecurityPin' | 'resetUserWorkspace' | 'changeEmail' | 'generalStepUp';
 }
 
 export interface VerifyStepUpPinResponse {
@@ -43,6 +43,7 @@ export interface VerifyStepUpPinResponse {
   grantId: string;
   scope: string;
   expiresAt: number;
+  migratedLegacyPin?: boolean;
 }
 
 /**
@@ -78,16 +79,45 @@ export async function updateSecurityPinCall(params: UpdateSecurityPinParams): Pr
 }
 
 export interface ResetUserWorkspaceParams {
-  grantId: string;
+  grantId?: string;
+}
+
+export interface ResetUserWorkspaceResponse {
+  success: boolean;
+  message: string;
+  resetProfile?: Record<string, any>;
 }
 
 /**
- * Resets user workspace subcollections server-side via `resetUserWorkspace` Cloud Function.
+ * Resets user workspace subcollections and defaults server-side via `resetUserWorkspace` Cloud Function.
  */
-export async function resetUserWorkspaceCall(params: ResetUserWorkspaceParams): Promise<{ success: boolean; message: string }> {
-  const callable = httpsCallable<ResetUserWorkspaceParams, { success: boolean; message: string }>(
+export async function resetUserWorkspaceCall(params: ResetUserWorkspaceParams = {}): Promise<ResetUserWorkspaceResponse> {
+  const callable = httpsCallable<ResetUserWorkspaceParams, ResetUserWorkspaceResponse>(
     functions,
     'resetUserWorkspace'
+  );
+
+  const result = await callable(params);
+  return result.data;
+}
+
+export interface UpdateUserEmailParams {
+  newEmail: string;
+  grantId?: string;
+}
+
+export interface UpdateUserEmailResponse {
+  success: boolean;
+  email: string;
+}
+
+/**
+ * Synchronizes Firebase Auth email and Firestore profile email server-side via `updateUserEmail` Cloud Function.
+ */
+export async function updateUserEmailCall(params: UpdateUserEmailParams): Promise<UpdateUserEmailResponse> {
+  const callable = httpsCallable<UpdateUserEmailParams, UpdateUserEmailResponse>(
+    functions,
+    'updateUserEmail'
   );
 
   const result = await callable(params);

@@ -1,6 +1,3 @@
-import { doc, updateDoc, deleteField } from 'firebase/firestore';
-import { db } from '../firebase';
-
 export interface SecurityPinMeta {
   enabled: boolean;
   salt: string; // 16-byte random hex salt
@@ -173,31 +170,14 @@ export function resetPinLockoutAttempts(): void {
   saveStoredLockoutData({ attempts: 0, lockedUntil: 0 });
 }
 
-// Migrate legacy plaintext PIN to PBKDF2 hash & delete plaintext field from Firestore
-export async function checkAndMigrateLegacyPin(userId: string, docData: any): Promise<{
+// Evaluate legacy plaintext PIN status cleanly (read-only; server handles migration after PIN verification)
+export async function checkAndMigrateLegacyPin(_userId: string, docData: any): Promise<{
   securityPinEnabled?: boolean;
   securityPinMeta?: SecurityPinMeta;
 }> {
-  if (docData && typeof docData.securityPin === 'string' && docData.securityPin.length > 0) {
-    const rawLegacyPin = docData.securityPin;
-    try {
-      const pinMeta = await createPinMeta(rawLegacyPin);
-      const userRef = doc(db, 'users', userId);
-      await updateDoc(userRef, {
-        securityPinMeta: pinMeta,
-        securityPinEnabled: true,
-        securityPin: deleteField(), // Permanently delete raw plaintext PIN from Firestore
-      });
-      return {
-        securityPinEnabled: true,
-        securityPinMeta: pinMeta,
-      };
-    } catch (e) {
-      console.error("Failed to migrate legacy plaintext PIN:", e);
-    }
-  }
+  const hasLegacyPin = typeof docData?.securityPin === 'string' && docData.securityPin.length > 0;
   return {
-    securityPinEnabled: !!(docData?.securityPinEnabled || docData?.securityPinMeta?.enabled),
+    securityPinEnabled: !!(docData?.securityPinEnabled || docData?.securityPinMeta?.enabled || hasLegacyPin),
     securityPinMeta: docData?.securityPinMeta,
   };
 }
