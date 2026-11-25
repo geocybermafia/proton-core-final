@@ -3258,47 +3258,16 @@ export default function App() {
                 <div className="space-y-8">
                   {/* GROUP 2: CREATIVE STUDIO */}
                   <div className="space-y-3">
-                    <AnimatePresence mode="wait">
-                      {isSidebarExpanded && (
-                        <motion.p 
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          exit={{ opacity: 0, x: -10 }}
-                          className="text-[10px] font-black text-amber-500 uppercase tracking-[0.2em] px-3"
-                        >
-                          {language === 'ka' ? 'კრეატიული სტუდია' : 'CREATIVE STUDIO'}
-                        </motion.p>
-                      )}
-                    </AnimatePresence>
                     <SidebarItem 
                       icon={Sparkles} 
                       label={language === 'ka' ? 'კრეატიული სტუდია' : 'Creative Studio'} 
-                      active={activeView === 'creative-studio'} 
+                      active={
+                        activeView === 'creative-studio' ||
+                        activeView === 'image' ||
+                        (activeView as string) === 'translator' ||
+                        activeView === 'copywriting'
+                      } 
                       onClick={() => handleViewChange('creative-studio')} 
-                      expanded={isSidebarExpanded}
-                      uiMode={uiMode}
-                    />
-                    <SidebarItem 
-                      icon={Image} 
-                      label={t.sidebar.image} 
-                      active={activeView === 'image'} 
-                      onClick={() => handleViewChange('image')} 
-                      expanded={isSidebarExpanded}
-                      uiMode={uiMode}
-                    />
-                    <SidebarItem 
-                      icon={Languages} 
-                      label={t.sidebar.translator} 
-                      active={(activeView as string) === 'translator'} 
-                      onClick={() => handleViewChange('translator')} 
-                      expanded={isSidebarExpanded}
-                      uiMode={uiMode}
-                    />
-                    <SidebarItem 
-                      icon={FileText} 
-                      label={language === 'ka' ? 'კოპირაიტინგი' : 'Copywriting'} 
-                      active={activeView === 'copywriting'} 
-                      onClick={() => handleViewChange('copywriting')} 
                       expanded={isSidebarExpanded}
                       uiMode={uiMode}
                     />
