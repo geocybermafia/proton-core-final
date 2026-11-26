@@ -7,7 +7,6 @@ import {
   MessageCircle,
   MapPin,
   Star,
-  ShieldCheck,
   ChevronLeft,
   ChevronRight,
   Heart,
@@ -876,7 +875,6 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
                                   <span className={cn('text-sm font-bold truncate', currentTheme.text)}>
                                     {sellerName}
                                   </span>
-                                  <ShieldCheck size={14} className={cn('shrink-0', currentTheme.accent)} />
                                 </div>
                                 <div className="flex items-center gap-1.5 text-xs mt-0.5">
                                   {sellerRating && sellerRating.count > 0 ? (

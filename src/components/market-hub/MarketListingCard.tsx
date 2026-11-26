@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
   ShoppingBag,
-  ShieldCheck,
   Star,
   Trash2,
   Edit3,
@@ -614,7 +613,6 @@ export const MarketListingCard = React.memo(function MarketListingCard({
                   <span className="text-xs font-bold tracking-wide truncate block text-proton-text group-hover/vendor:text-proton-accent transition-colors">
                     {sellerName}
                   </span>
-                  <ShieldCheck size={12} className="shrink-0 text-proton-accent" aria-hidden="true" />
                 </div>
               </div>
             </div>
