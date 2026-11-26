@@ -35,7 +35,9 @@ var init_listingClassification = __esm({
       "sport",
       "business",
       "book",
-      "art"
+      "art",
+      "realestate",
+      "auto"
     ];
     SERVICE_CATEGORY_IDS = [
       "service",
@@ -4116,6 +4118,86 @@ function injectListingMetaToHtml(params) {
 }
 
 // src/serverApp.ts
+init_listingClassification();
+
+// src/lib/listingPhotos.ts
+var MAX_LISTING_PHOTOS = 10;
+var MAX_LISTING_PHOTO_BYTES = 5 * 1024 * 1024;
+function normalizePhotoUrlList(images, maxPhotos = MAX_LISTING_PHOTOS) {
+  if (!Array.isArray(images)) return [];
+  const cap = Math.max(0, maxPhotos);
+  const seen = /* @__PURE__ */ new Set();
+  const normalized = [];
+  for (const item of images) {
+    if (typeof item !== "string") continue;
+    const trimmed = item.trim();
+    if (!trimmed || seen.has(trimmed)) continue;
+    seen.add(trimmed);
+    normalized.push(trimmed);
+    if (normalized.length >= cap) break;
+  }
+  return normalized;
+}
+function resolveListingPrimaryAndGalleryImages(images, maxPhotos = MAX_LISTING_PHOTOS) {
+  const normalized = normalizePhotoUrlList(images, maxPhotos);
+  return {
+    image: normalized[0] || "",
+    images: normalized
+  };
+}
+
+// src/lib/listingPricing.ts
+init_listingClassification();
+var OPTIONAL_PRICE_CATEGORIES = /* @__PURE__ */ new Set(["project-jobs", "collaboration"]);
+function isZeroOrEmptyPriceAllowed(params) {
+  const normalizedCategory = normalizeCategoryId(params.category);
+  if (OPTIONAL_PRICE_CATEGORIES.has(normalizedCategory)) {
+    return true;
+  }
+  return Boolean(params.isNegotiable);
+}
+var STRICT_DECIMAL_PATTERN = /^[+-]?(?:\d+\.?\d*|\.\d+)$/;
+function validateAndNormalizeListingPrice(input) {
+  const { rawPrice, category, isNegotiable } = input;
+  const allowZeroOrEmpty = isZeroOrEmptyPriceAllowed({ category, isNegotiable });
+  if (typeof rawPrice === "boolean" || typeof rawPrice === "object" && rawPrice !== null) {
+    return { valid: false, reason: "invalid_format" };
+  }
+  const isEmpty = rawPrice === void 0 || rawPrice === null || typeof rawPrice === "string" && rawPrice.trim() === "";
+  if (isEmpty) {
+    if (allowZeroOrEmpty) {
+      return { valid: true, price: 0, priceUnspecified: true };
+    }
+    return { valid: false, reason: "required" };
+  }
+  let parsed;
+  if (typeof rawPrice === "number") {
+    parsed = rawPrice;
+  } else if (typeof rawPrice === "string") {
+    const normalizedStr = rawPrice.trim().replace(",", ".");
+    if (!STRICT_DECIMAL_PATTERN.test(normalizedStr)) {
+      return { valid: false, reason: "invalid_format" };
+    }
+    parsed = Number(normalizedStr);
+  } else {
+    return { valid: false, reason: "invalid_format" };
+  }
+  if (!Number.isFinite(parsed)) {
+    return { valid: false, reason: "invalid_format" };
+  }
+  if (parsed < 0) {
+    return { valid: false, reason: "negative" };
+  }
+  if (parsed === 0) {
+    if (allowZeroOrEmpty) {
+      return { valid: true, price: 0, priceUnspecified: false };
+    }
+    return { valid: false, reason: "must_be_positive" };
+  }
+  return { valid: true, price: parsed, priceUnspecified: false };
+}
+
+// src/serverApp.ts
 dotenv.config();
 var _adminAuthMap = /* @__PURE__ */ new Map();
 var _googlePublicCerts = null;
@@ -5037,6 +5119,98 @@ function createApiApp(options) {
       return res.status(500).json({ error: "Failed to update competition preference" });
     }
   });
+  const SUPPORTED_LISTING_CURRENCIES = /* @__PURE__ */ new Set(["USD", "EUR", "GEL", "GBP", "JPY", "CNY"]);
+  const VALID_LISTING_CONDITIONS = /* @__PURE__ */ new Set(["new", "used", "refurbished"]);
+  const VALID_LISTING_ID_REGEX = /^[a-zA-Z0-9_-]{1,128}$/;
+  const validateServerListingImageUrl = (rawUrl, ownerUid) => {
+    const trimmed = rawUrl.trim();
+    if (!trimmed || trimmed.length > 2048) {
+      return { ok: false, status: 400, error: "Bad Request: Invalid image URL length", code: "listings/invalid-image-url" };
+    }
+    const lower = trimmed.toLowerCase();
+    if (lower.startsWith("data:") || lower.startsWith("javascript:") || lower.startsWith("vbscript:")) {
+      return {
+        ok: false,
+        status: 400,
+        error: "Bad Request: Raw data URIs and unsafe image protocols are not permitted",
+        code: "listings/unsafe-image-url"
+      };
+    }
+    let rawPath = "";
+    let isInternalStorageTarget = false;
+    if (lower.startsWith("http://") || lower.startsWith("https://")) {
+      let parsed;
+      try {
+        parsed = new URL(trimmed);
+      } catch {
+        return { ok: false, status: 400, error: "Bad Request: Malformed image URL", code: "listings/invalid-image-url" };
+      }
+      const host = parsed.hostname.toLowerCase();
+      const supMatch = parsed.pathname.match(/\/storage\/v1\/object\/(?:public|sign|authenticated)?\/?([^/]+)\/(.+)$/);
+      if (supMatch) {
+        isInternalStorageTarget = true;
+        const bucket = decodeURIComponent(supMatch[1]).toLowerCase();
+        const objectPath = decodeURIComponent(supMatch[2]);
+        rawPath = `${bucket}/${objectPath}`;
+      } else if (parsed.pathname.startsWith("/api/storage/file/") || parsed.pathname.startsWith("/storage/file/")) {
+        isInternalStorageTarget = true;
+        const clean = decodeURIComponent(parsed.pathname.replace(/^\/?(?:api\/)?storage\/file\//, ""));
+        rawPath = `listings/${clean}`;
+      } else if (host === "firebasestorage.googleapis.com") {
+        const fbMatch = parsed.pathname.match(/^\/v0\/b\/([^/]+)\/o\/(.+)$/);
+        if (!fbMatch) {
+          return { ok: false, status: 400, error: "Bad Request: Invalid Firebase Storage image URL", code: "listings/invalid-image-url" };
+        }
+        isInternalStorageTarget = true;
+        rawPath = decodeURIComponent(fbMatch[2]);
+      } else if (host === "storage.googleapis.com") {
+        const gcsMatch = parsed.pathname.match(/^\/([^/]+)\/(.+)$/);
+        if (!gcsMatch) {
+          return { ok: false, status: 400, error: "Bad Request: Invalid GCS image URL", code: "listings/invalid-image-url" };
+        }
+        isInternalStorageTarget = true;
+        rawPath = decodeURIComponent(gcsMatch[2]);
+      } else {
+        return { ok: true };
+      }
+    } else if (trimmed.startsWith("/api/storage/file/") || trimmed.startsWith("api/storage/file/") || trimmed.startsWith("/storage/file/") || trimmed.startsWith("storage/file/")) {
+      isInternalStorageTarget = true;
+      let clean = trimmed.replace(/^\/?(?:api\/)?storage\/file\//, "");
+      try {
+        clean = decodeURIComponent(clean);
+      } catch {
+        return { ok: false, status: 400, error: "Bad Request: Malformed percent-encoding in image path", code: "listings/invalid-image-path" };
+      }
+      rawPath = `listings/${clean}`;
+    } else {
+      return { ok: false, status: 400, error: "Bad Request: Image URL must use HTTP(S) or verified storage path", code: "listings/invalid-image-url" };
+    }
+    if (isInternalStorageTarget) {
+      const cleanedPath = rawPath.split("?")[0].split("#")[0].replace(/^\/+/, "");
+      const segments = cleanedPath.split("/");
+      if (segments.some((s) => s === ".." || s === "." || s === "")) {
+        return { ok: false, status: 400, error: "Bad Request: Invalid storage path in image URL", code: "listings/invalid-image-path" };
+      }
+      const requiredPrefix = `listings/${ownerUid}/`;
+      if (!cleanedPath.startsWith(requiredPrefix)) {
+        if (cleanedPath.startsWith("listings/")) {
+          return {
+            ok: false,
+            status: 403,
+            error: "Forbidden: Using listing images belonging to another user is not permitted",
+            code: "listings/image-ownership-mismatch"
+          };
+        }
+        return {
+          ok: false,
+          status: 400,
+          error: "Bad Request: Image path must point to listings storage",
+          code: "listings/invalid-image-path"
+        };
+      }
+    }
+    return { ok: true };
+  };
   apiRouter.post("/market/listings", analyticsReadLimiter, async (req, res) => {
     try {
       const authRes = await verifyBearerTokenFromRequest(req, options?.verifyIdToken, options?.getPublicCerts);
@@ -5046,26 +5220,363 @@ function createApiApp(options) {
           code: authRes.code || "auth/invalid-id-token"
         });
       }
-      const body = req.body || {};
-      const title = typeof body.title === "string" ? body.title.trim() : "";
-      const price = Number(body.price);
-      const category = typeof body.category === "string" ? body.category.trim() : "other";
-      if (!title || title.length > 200 || !Number.isFinite(price) || price <= 0 || !category) {
-        return res.status(400).json({ error: "Bad Request: valid title, price, and category are required" });
+      const body = req.body;
+      if (!body || typeof body !== "object" || Array.isArray(body)) {
+        return res.status(400).json({ error: "Bad Request: JSON object body is required", code: "listings/invalid-body" });
       }
-      const normalizedTitle = title.toLowerCase().replace(/[^\w\s]|_/g, "").replace(/\s+/g, " ").trim();
-      const registryKey = crypto2.createHash("sha256").update(`${authRes.uid}_${category.toLowerCase()}_${normalizedTitle}`).digest("hex");
-      const dbAdmin = await getAdminFirestoreInstance();
-      const listingId = typeof body.id === "string" && body.id.trim() ? body.id.trim() : `list-${crypto2.randomUUID()}`;
+      if (body.sellerId !== void 0 && body.sellerId !== null && body.sellerId !== "") {
+        if (typeof body.sellerId !== "string" || body.sellerId.trim() !== authRes.uid) {
+          return res.status(403).json({
+            error: "Forbidden: Cannot create a listing on behalf of another seller",
+            code: "listings/seller-mismatch"
+          });
+        }
+      }
+      let listingId = `list-${crypto2.randomUUID()}`;
+      if (body.id !== void 0 && body.id !== null && body.id !== "") {
+        if (typeof body.id !== "string" || !VALID_LISTING_ID_REGEX.test(body.id.trim())) {
+          return res.status(400).json({
+            error: "Bad Request: Invalid listing id format",
+            code: "listings/invalid-id"
+          });
+        }
+        listingId = body.id.trim();
+      }
+      for (const field of ["title", "titleGe", "titleEn", "description", "descriptionGe", "sellerName", "category", "location", "country", "city", "serviceDuration", "serviceTerms", "currency", "condition", "listingType", "primaryLanguage"]) {
+        if (body[field] !== void 0 && body[field] !== null && typeof body[field] !== "string") {
+          return res.status(400).json({
+            error: `Bad Request: '${field}' must be a string`,
+            code: "listings/invalid-field-type"
+          });
+        }
+      }
+      const rawTitle = typeof body.title === "string" ? body.title.trim() : "";
+      const rawTitleGe = typeof body.titleGe === "string" ? body.titleGe.trim() : "";
+      const rawTitleEn = typeof body.titleEn === "string" ? body.titleEn.trim() : "";
+      if (!rawTitle && !rawTitleGe && !rawTitleEn) {
+        return res.status(400).json({
+          error: "Bad Request: A valid listing title (title, titleGe, or titleEn) is required",
+          code: "listings/missing-title"
+        });
+      }
+      if (rawTitle.length > 200 || rawTitleGe.length > 200 || rawTitleEn.length > 200) {
+        return res.status(400).json({
+          error: "Bad Request: Title fields must not exceed 200 characters",
+          code: "listings/title-too-long"
+        });
+      }
+      let primaryLanguage;
+      if (typeof body.primaryLanguage === "string" && body.primaryLanguage.trim()) {
+        const normalizedLang = body.primaryLanguage.trim().toLowerCase();
+        if (normalizedLang !== "ka" && normalizedLang !== "en") {
+          return res.status(400).json({
+            error: "Bad Request: primaryLanguage must be 'ka' or 'en'",
+            code: "listings/invalid-primary-language"
+          });
+        }
+        primaryLanguage = normalizedLang;
+      } else {
+        const hasGeorgianChars = (val) => /[\u10A0-\u10FF]/.test(val);
+        if (rawTitleGe && !rawTitleEn && (!rawTitle || hasGeorgianChars(rawTitle))) {
+          primaryLanguage = "ka";
+        } else if (hasGeorgianChars(rawTitle)) {
+          primaryLanguage = "ka";
+        } else {
+          primaryLanguage = "en";
+        }
+      }
+      const titleGe = rawTitleGe || (primaryLanguage === "ka" && !rawTitleEn ? rawTitle : "");
+      const titleEn = rawTitleEn;
+      const title = rawTitle || (primaryLanguage === "ka" ? titleGe || titleEn : titleEn || titleGe);
+      if (!title || title.length > 200) {
+        return res.status(400).json({
+          error: "Bad Request: Valid title (1-200 characters) is required",
+          code: "listings/invalid-title"
+        });
+      }
+      const rawDesc = typeof body.description === "string" ? body.description.trim() : "";
+      const rawDescGe = typeof body.descriptionGe === "string" ? body.descriptionGe.trim() : "";
+      if (rawDesc.length > 5e3 || rawDescGe.length > 5e3) {
+        return res.status(400).json({
+          error: "Bad Request: Description fields must not exceed 5000 characters",
+          code: "listings/description-too-long"
+        });
+      }
+      const description = rawDesc || rawDescGe;
+      const descriptionGe = rawDescGe || (primaryLanguage === "ka" && rawDesc ? rawDesc : "");
+      const rawCurrency = typeof body.currency === "string" && body.currency.trim() ? body.currency.trim().toUpperCase() : "USD";
+      if (!SUPPORTED_LISTING_CURRENCIES.has(rawCurrency)) {
+        return res.status(400).json({
+          error: `Bad Request: Unsupported currency '${rawCurrency}'`,
+          code: "listings/invalid-currency"
+        });
+      }
+      if (body.isNegotiable !== void 0 && body.isNegotiable !== null && typeof body.isNegotiable !== "boolean") {
+        return res.status(400).json({
+          error: "Bad Request: 'isNegotiable' must be a boolean",
+          code: "listings/invalid-negotiable"
+        });
+      }
+      const isNegotiable = Boolean(body.isNegotiable);
+      if (body.priceUnspecified !== void 0 && body.priceUnspecified !== null && typeof body.priceUnspecified !== "boolean") {
+        return res.status(400).json({
+          error: "Bad Request: 'priceUnspecified' must be a boolean",
+          code: "listings/invalid-price-unspecified"
+        });
+      }
+      const category = body.category === void 0 || body.category === null ? "other" : String(body.category).trim();
+      if (!category || category.length > 50) {
+        return res.status(400).json({
+          error: "Bad Request: Valid category (1-50 characters) is required",
+          code: "listings/invalid-category"
+        });
+      }
+      if (typeof body.listingType === "string" && body.listingType.trim()) {
+        const explicitType = normalizeExplicitListingType(body.listingType);
+        if (!explicitType) {
+          return res.status(400).json({
+            error: "Bad Request: listingType must be 'product', 'service', or 'project'",
+            code: "listings/invalid-listing-type"
+          });
+        }
+      }
+      const listingType = inferListingType(category, body.listingType);
+      const priceValidation = validateAndNormalizeListingPrice({
+        rawPrice: body.price,
+        category,
+        isNegotiable
+      });
+      if (!priceValidation.valid) {
+        const errMsg = priceValidation.reason === "negative" ? "Bad Request: Price cannot be negative" : priceValidation.reason === "invalid_format" ? "Bad Request: Valid numeric price is required" : "Bad Request: Price must be greater than 0 unless Negotiable or in Jobs / Collaboration";
+        return res.status(400).json({
+          error: errMsg,
+          code: "listings/invalid-price"
+        });
+      }
+      const price = priceValidation.price;
+      const priceUnspecified = price > 0 ? false : typeof body.priceUnspecified === "boolean" ? body.priceUnspecified : priceValidation.priceUnspecified;
+      let condition = "";
+      if (typeof body.condition === "string" && body.condition.trim()) {
+        const normalizedCond = body.condition.trim().toLowerCase();
+        if (!VALID_LISTING_CONDITIONS.has(normalizedCond)) {
+          return res.status(400).json({
+            error: "Bad Request: condition must be 'new', 'used', or 'refurbished'",
+            code: "listings/invalid-condition"
+          });
+        }
+        condition = normalizedCond;
+      }
+      if (body.isRemote !== void 0 && body.isRemote !== null && typeof body.isRemote !== "boolean") {
+        return res.status(400).json({
+          error: "Bad Request: 'isRemote' must be a boolean",
+          code: "listings/invalid-remote"
+        });
+      }
+      const isRemote = Boolean(body.isRemote);
+      const rawCountry = typeof body.country === "string" ? body.country.trim() : "";
+      const rawCity = typeof body.city === "string" ? body.city.trim() : "";
+      const rawLocation = typeof body.location === "string" ? body.location.trim() : "";
+      if (rawCountry.length > 50 || rawCity.length > 50 || rawLocation.length > 200) {
+        return res.status(400).json({
+          error: "Bad Request: Location fields exceed maximum allowed length",
+          code: "listings/location-too-long"
+        });
+      }
+      let country = rawCountry;
+      let city = rawCity;
+      let location = rawLocation;
+      if (isRemote) {
+        const hasRealCity = Boolean(rawCity && rawCity.toLowerCase() !== "online");
+        if (!hasRealCity) {
+          country = rawCountry && rawCountry.toUpperCase() !== "GLOBAL" ? rawCountry : "GLOBAL";
+          city = "Online";
+          location = rawLocation || "Online / Remote";
+        } else {
+          country = rawCountry || "GLOBAL";
+          city = rawCity;
+          location = rawLocation || `${rawCity}, ${country}`;
+        }
+      } else {
+        country = rawCountry;
+        city = rawCity;
+        if (rawLocation) {
+          location = rawLocation;
+        } else if (rawCity && rawCountry) {
+          location = `${rawCity}, ${rawCountry}`;
+        } else {
+          location = rawCity || rawCountry || "";
+        }
+      }
+      const parseOptionalCoord = (val, name) => {
+        if (val === void 0 || val === null || val === "") {
+          return { present: false, value: null, valid: true };
+        }
+        if (typeof val === "boolean" || typeof val === "object") {
+          return { present: true, value: null, valid: false };
+        }
+        const num = Number(val);
+        if (!Number.isFinite(num)) {
+          return { present: true, value: null, valid: false };
+        }
+        if (name === "lat" && (num < -90 || num > 90)) {
+          return { present: true, value: null, valid: false };
+        }
+        if (name === "lng" && (num < -180 || num > 180)) {
+          return { present: true, value: null, valid: false };
+        }
+        return { present: true, value: num, valid: true };
+      };
+      const latCheck = parseOptionalCoord(body.lat, "lat");
+      const lngCheck = parseOptionalCoord(body.lng, "lng");
+      if (!latCheck.valid || !lngCheck.valid) {
+        return res.status(400).json({
+          error: "Bad Request: Invalid coordinates (lat must be -90..90, lng must be -180..180)",
+          code: "listings/invalid-coordinates"
+        });
+      }
+      if (latCheck.present !== lngCheck.present) {
+        return res.status(400).json({
+          error: "Bad Request: Both 'lat' and 'lng' must be provided together",
+          code: "listings/incomplete-coordinates"
+        });
+      }
+      const lat = latCheck.present ? latCheck.value : null;
+      const lng = lngCheck.present ? lngCheck.value : null;
+      const sanitizedAttributes = {};
+      if (body.attributes !== void 0 && body.attributes !== null) {
+        if (typeof body.attributes !== "object" || Array.isArray(body.attributes)) {
+          return res.status(400).json({
+            error: "Bad Request: 'attributes' must be a plain object",
+            code: "listings/invalid-attributes"
+          });
+        }
+        const entries = Object.entries(body.attributes);
+        if (entries.length > 50) {
+          return res.status(400).json({
+            error: "Bad Request: Too many attributes (max 50)",
+            code: "listings/too-many-attributes"
+          });
+        }
+        for (const [rawKey, rawVal] of entries) {
+          const key = rawKey.trim();
+          if (!key || key.length > 80 || key === "__proto__" || key === "constructor" || key === "prototype" || key.startsWith("$")) {
+            return res.status(400).json({
+              error: `Bad Request: Invalid attribute key '${rawKey}'`,
+              code: "listings/invalid-attribute-key"
+            });
+          }
+          if (rawVal === void 0 || rawVal === null) continue;
+          if (typeof rawVal === "boolean") {
+            sanitizedAttributes[key] = rawVal;
+          } else if (typeof rawVal === "number") {
+            if (!Number.isFinite(rawVal)) {
+              return res.status(400).json({
+                error: `Bad Request: Attribute '${key}' must be a finite number`,
+                code: "listings/invalid-attribute-value"
+              });
+            }
+            sanitizedAttributes[key] = rawVal;
+          } else if (typeof rawVal === "string") {
+            const trimmedVal = rawVal.trim();
+            if (!trimmedVal) continue;
+            if (trimmedVal.length > 500) {
+              return res.status(400).json({
+                error: `Bad Request: Attribute '${key}' exceeds max length of 500 characters`,
+                code: "listings/attribute-too-long"
+              });
+            }
+            if (/^(javascript|data|vbscript):/i.test(trimmedVal)) {
+              return res.status(400).json({
+                error: `Bad Request: Attribute '${key}' contains an unsafe URI scheme`,
+                code: "listings/unsafe-attribute-value"
+              });
+            }
+            sanitizedAttributes[key] = trimmedVal;
+          } else {
+            return res.status(400).json({
+              error: `Bad Request: Attribute '${key}' must be a string, number, or boolean`,
+              code: "listings/invalid-attribute-value"
+            });
+          }
+        }
+      }
+      const serviceDuration = typeof body.serviceDuration === "string" ? body.serviceDuration.trim() : "";
+      const serviceTerms = typeof body.serviceTerms === "string" ? body.serviceTerms.trim() : "";
+      if (serviceDuration.length > 160 || serviceTerms.length > 2e3) {
+        return res.status(400).json({
+          error: "Bad Request: Service duration or terms exceed maximum length",
+          code: "listings/service-fields-too-long"
+        });
+      }
+      if (body.images !== void 0 && body.images !== null && !Array.isArray(body.images)) {
+        return res.status(400).json({
+          error: "Bad Request: 'images' must be an array of URLs",
+          code: "listings/invalid-images"
+        });
+      }
+      const rawImageList = [];
+      if (typeof body.image === "string" && body.image.trim()) {
+        rawImageList.push(body.image.trim());
+      }
+      if (Array.isArray(body.images)) {
+        if (body.images.length > MAX_LISTING_PHOTOS * 2) {
+          return res.status(400).json({
+            error: `Bad Request: Too many images (maximum ${MAX_LISTING_PHOTOS})`,
+            code: "listings/too-many-images"
+          });
+        }
+        for (const item of body.images) {
+          if (typeof item !== "string") {
+            return res.status(400).json({
+              error: "Bad Request: All items in 'images' must be strings",
+              code: "listings/invalid-images"
+            });
+          }
+          if (item.trim()) rawImageList.push(item.trim());
+        }
+      }
+      const { image: primaryImage, images: normalizedImages } = resolveListingPrimaryAndGalleryImages(
+        rawImageList,
+        MAX_LISTING_PHOTOS
+      );
+      for (const imgUrl of normalizedImages) {
+        const imgCheck = validateServerListingImageUrl(imgUrl, authRes.uid);
+        if (!imgCheck.ok) {
+          return res.status(imgCheck.status || 400).json({
+            error: imgCheck.error || "Bad Request: Invalid listing image URL",
+            code: imgCheck.code || "listings/invalid-image-url"
+          });
+        }
+      }
+      let sanitizedTags;
+      if (body.tags !== void 0 && body.tags !== null) {
+        if (!Array.isArray(body.tags) || body.tags.some((t) => typeof t !== "string")) {
+          return res.status(400).json({
+            error: "Bad Request: 'tags' must be an array of strings",
+            code: "listings/invalid-tags"
+          });
+        }
+        const stringTags = body.tags.map((t) => t.trim()).filter(Boolean).map((t) => t.slice(0, 40));
+        sanitizedTags = Array.from(new Set(stringTags)).slice(0, 20);
+      }
+      const sellerNameRaw = typeof body.sellerName === "string" ? body.sellerName.trim() : "";
+      const sellerName = (sellerNameRaw || (authRes.email ? String(authRes.email).split("@")[0] : "") || "Proton Merchant").slice(0, 120);
+      const normalizedTitle = title.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, "").replace(/\s+/g, " ").trim();
+      const registryKey = crypto2.createHash("sha256").update(`${authRes.uid}_${category.toLowerCase()}_${normalizedTitle || title.toLowerCase()}`).digest("hex");
+      const dbAdmin = await (options?.getAdminFirestore ? options.getAdminFirestore() : getAdminFirestoreInstance());
       const registryRef = dbAdmin.collection("seller_freshness_registry").doc(registryKey);
       const listingRef = dbAdmin.collection("listings").doc(listingId);
-      const savedListing = await dbAdmin.runTransaction(async (transaction) => {
+      const txResult = await dbAdmin.runTransaction(async (transaction) => {
+        const existingListingSnap = await transaction.get(listingRef);
+        if (existingListingSnap && existingListingSnap.exists) {
+          return { conflict: true };
+        }
         const regDoc = await transaction.get(registryRef);
         const nowMs = Date.now();
         let firstPublishedAt = nowMs;
         if (regDoc.exists) {
           const regData = regDoc.data();
-          if (typeof regData.firstPublishedAt === "number" && Number.isFinite(regData.firstPublishedAt)) {
+          if (typeof regData?.firstPublishedAt === "number" && Number.isFinite(regData.firstPublishedAt)) {
             firstPublishedAt = regData.firstPublishedAt;
           }
         } else {
@@ -5081,28 +5592,50 @@ function createApiApp(options) {
         const listingData = {
           id: listingId,
           title,
-          description: typeof body.description === "string" ? body.description.trim() : "",
+          titleGe,
+          titleEn,
+          primaryLanguage,
+          description,
+          descriptionGe,
           price,
-          currency: typeof body.currency === "string" ? body.currency.trim() : "USD",
+          priceUnspecified,
+          currency: rawCurrency,
           sellerId: authRes.uid,
           // Authoritative!
-          sellerName: typeof body.sellerName === "string" ? body.sellerName.trim() : "Proton Merchant",
-          image: typeof body.image === "string" ? body.image.trim() : "",
-          images: Array.isArray(body.images) ? body.images : [],
+          sellerName,
+          image: primaryImage,
+          images: normalizedImages,
           category,
-          location: typeof body.location === "string" ? body.location.trim() : "Z\xFCrich / Global",
-          country: typeof body.country === "string" ? body.country.trim() : "Switzerland",
-          city: typeof body.city === "string" ? body.city.trim() : "Z\xFCrich",
-          listingType: typeof body.listingType === "string" ? body.listingType.trim() : "product",
+          location,
+          country,
+          city,
+          lat,
+          lng,
+          condition,
+          isNegotiable,
+          listingType,
+          isRemote,
+          attributes: sanitizedAttributes,
+          serviceDuration,
+          serviceTerms,
           status: "active",
           isSold: false,
           createdAt: firstPublishedAt,
           updatedAt: nowMs
         };
+        if (sanitizedTags !== void 0) {
+          listingData.tags = sanitizedTags;
+        }
         transaction.set(listingRef, listingData);
-        return listingData;
+        return { conflict: false, listingData };
       });
-      return res.status(201).json(savedListing);
+      if (txResult.conflict) {
+        return res.status(409).json({
+          error: "Conflict: A listing with this ID already exists",
+          code: "listings/already-exists"
+        });
+      }
+      return res.status(201).json(txResult.listingData);
     } catch (err) {
       if (isAdminCredentialsError(err)) {
         const isConfigErr = err instanceof AnalyticsConfigError;

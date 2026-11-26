@@ -1106,7 +1106,7 @@ const MobileNavItem = React.memo(({ id, icon: Icon, label, isActive, onClick }: 
       )}
     >
       <Icon size={18} className={cn(isActive && "animate-pulse")} />
-      <span className="text-[8px] font-sans font-bold uppercase tracking-wider">{label}</span>
+      <span className="text-[10px] font-sans font-bold uppercase tracking-wider">{label}</span>
       {isActive && (
         <motion.div 
           initial={{ scaleX: 0, opacity: 0 }}
