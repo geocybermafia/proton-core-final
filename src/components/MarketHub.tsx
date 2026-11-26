@@ -150,6 +150,7 @@ import { CartDrawer } from './market-hub/CartDrawer';
 import { CheckoutModal } from './market-hub/CheckoutModal';
 import { ListingDetailsModal } from './market-hub/ListingDetailsModal';
 import { CancelOrderModal } from './market-hub/CancelOrderModal';
+import { ConfirmActionModal } from './market-hub/ConfirmActionModal';
 import { MarketChatDrawer } from './market-hub/MarketChatDrawer';
 import { ChatThreadList, ChatThreadSummary } from './market-hub/chat/ChatThreadList';
 import { ChatThreadHeader } from './market-hub/chat/ChatThreadHeader';
@@ -694,6 +695,16 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isPlacingCartOrders, setIsPlacingCartOrders] = useState(false);
   const [cartServiceInstructions, setCartServiceInstructions] = useState<Record<string, string>>({});
+  const [confirmDialog, setConfirmDialog] = useState<
+    | { kind: 'delete-listing'; listingId: string; listingTitle?: string }
+    | { kind: 'delete-review'; reviewId: string }
+    | { kind: 'ai-generate'; titleForAi: string; category: string }
+    | { kind: 'ai-template-fallback'; titleForAi: string; category: string }
+    | null
+  >(null);
+  const [isConfirmPending, setIsConfirmPending] = useState(false);
+  const [confirmError, setConfirmError] = useState<string | null>(null);
+  const confirmInFlightRef = useRef(false);
 
   // Focus traps for accessible modal & drawer management
   const cartDrawerRef = useFocusTrap<HTMLDivElement>({
@@ -1233,7 +1244,11 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
 
   const vendorModalRef = useFocusTrap<HTMLDivElement>({
     isOpen: !!selectedVendor,
-    onClose: () => setSelectedVendor(null),
+    onClose: () => {
+      if (!confirmDialog && !isConfirmPending) {
+        setSelectedVendor(null);
+      }
+    },
   });
 
   useEffect(() => {
@@ -1485,14 +1500,22 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
     }
   };
 
-  const handleDeleteReview = async (reviewId: string) => {
-    if (!window.confirm(language === 'ka' ? "ნამდვილად გსურთ შეფასების წაშლა?" : "Are you sure you want to delete this review?")) return;
+  const executeDeleteReview = async (reviewId: string): Promise<{ ok: boolean; error?: string }> => {
     try {
       await deleteDoc(doc(db, 'seller_reviews', reviewId));
+      showToast(language === 'ka' ? "შეფასება წაიშალა." : "Review deleted.", 'success');
+      return { ok: true };
     } catch (err) {
       console.error("Error deleting review:", err);
-      showToast(language === 'ka' ? "წაშლა ვერ მოხერხდა." : "Could not delete review.", 'error');
+      const errMsg = language === 'ka' ? "წაშლა ვერ მოხერხდა." : "Could not delete review.";
+      showToast(errMsg, 'error');
+      return { ok: false, error: errMsg };
     }
+  };
+
+  const handleDeleteReview = (reviewId: string) => {
+    setConfirmError(null);
+    setConfirmDialog({ kind: 'delete-review', reviewId });
   };
 
   // Vendor Chat State & Actions
@@ -3938,22 +3961,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
       : `${title} (${getCategoryLabel(category, t, language)})\n\n[Key Details]\n${lines}\n\n[Overview]\nAdditional details and terms.`;
   };
 
-  const handleAiDescription = async () => {
-    const titleForAi = (language === 'ka'
-      ? (formData.titleGe || formData.title)
-      : (formData.title || formData.titleGe) || '').trim();
-    if (!titleForAi) {
-      showToast(language === 'ka' ? "გთხოვთ შეიყვანოთ სათაური" : "Please enter a title first", 'warning');
-      return;
-    }
-
-    const confirmed = window.confirm(
-      language === 'ka' 
-        ? "გსურთ AI-ს გამოყენება აღწერის გენერირებისთვის? ეს პროცესი ხარჯავს რესურსებს." 
-        : "Do you want to use AI to generate a professional spec? This action uses cloud resources."
-    );
-    if (!confirmed) return;
-
+  const executeAiDescription = async (titleForAi: string) => {
     if (aiAbortControllerRef.current) {
       aiAbortControllerRef.current.abort();
     }
@@ -3982,13 +3990,13 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
               'warning'
             );
             
-            // Provide fallback if requested
-            if (window.confirm(language === 'ka' ? "გსურთ გამოიყენოთ სტანდარტული შაბლონი?" : "Would you like to use a standard template instead?")) {
-              const template = getFallbackTemplate(titleForAi, formData.category);
-              if (!controller.signal.aborted) {
-                setFormData(prev => ({ ...prev, description: template }));
-              }
-            }
+            // Provide fallback via confirmation modal if requested
+            setConfirmError(null);
+            setConfirmDialog({
+              kind: 'ai-template-fallback',
+              titleForAi,
+              category: formData.category,
+            });
             return;
           }
         }
@@ -4054,6 +4062,22 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
       setIsAiGenerating(false);
       isGeneratingRef.current = false;
     }
+  };
+
+  const handleAiDescription = () => {
+    const titleForAi = (language === 'ka'
+      ? (formData.titleGe || formData.title)
+      : (formData.title || formData.titleGe) || '').trim();
+    if (!titleForAi) {
+      showToast(language === 'ka' ? "გთხოვთ შეიყვანოთ სათაური" : "Please enter a title first", 'warning');
+      return;
+    }
+    setConfirmError(null);
+    setConfirmDialog({
+      kind: 'ai-generate',
+      titleForAi,
+      category: formData.category,
+    });
   };
 
   const checkRateLimit = async () => {
@@ -4484,109 +4508,178 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
     }
   };
 
-  const handleDeleteListing = async (id: string) => {
-    if (window.confirm(t.market.delete_confirm)) {
-      try {
-        // Step 1: Read authoritative listing data before deleting its Firestore document
-        const listingDocRef = doc(db, 'listings', id);
-        const listingSnap = await getDoc(listingDocRef);
+  const executeDeleteListing = async (id: string): Promise<{ ok: boolean; error?: string }> => {
+    try {
+      // Step 1: Read authoritative listing data before deleting its Firestore document
+      const listingDocRef = doc(db, 'listings', id);
+      const listingSnap = await getDoc(listingDocRef);
 
-        let candidateImages: string[] = [];
-        let sellerId = user?.uid;
+      let candidateImages: string[] = [];
+      let sellerId = user?.uid;
 
-        if (listingSnap.exists()) {
-          const data = listingSnap.data();
-          sellerId = data?.sellerId || sellerId;
-          const imgList: string[] = [];
-          if (typeof data?.image === 'string' && data.image) {
-            imgList.push(data.image.trim());
-          }
-          if (Array.isArray(data?.images)) {
-            for (const img of data.images) {
-              if (typeof img === 'string' && img) {
-                imgList.push(img.trim());
-              }
+      if (listingSnap.exists()) {
+        const data = listingSnap.data();
+        sellerId = data?.sellerId || sellerId;
+        const imgList: string[] = [];
+        if (typeof data?.image === 'string' && data.image) {
+          imgList.push(data.image.trim());
+        }
+        if (Array.isArray(data?.images)) {
+          for (const img of data.images) {
+            if (typeof img === 'string' && img) {
+              imgList.push(img.trim());
             }
           }
-          candidateImages = Array.from(new Set(imgList.filter(Boolean)));
         }
+        candidateImages = Array.from(new Set(imgList.filter(Boolean)));
+      }
 
-        // Step 2: Check whether any candidate image is still referenced by another listing of this seller
-        let safeImagesToDelete: string[] = [];
-        if (candidateImages.length > 0 && sellerId) {
-          try {
-            const otherListingsQuery = query(
-              collection(db, 'listings'),
-              where('sellerId', '==', sellerId)
-            );
-            const otherSnap = await getDocs(otherListingsQuery);
-            const otherReferencedUrls = new Set<string>();
-            otherSnap.forEach(d => {
-              if (d.id !== id) {
-                const otherData = d.data();
-                if (typeof otherData?.image === 'string' && otherData.image) {
-                  otherReferencedUrls.add(otherData.image.trim());
-                }
-                if (Array.isArray(otherData?.images)) {
-                  for (const img of otherData.images) {
-                    if (typeof img === 'string' && img) {
-                      otherReferencedUrls.add(img.trim());
-                    }
+      // Step 2: Check whether any candidate image is still referenced by another listing of this seller
+      let safeImagesToDelete: string[] = [];
+      if (candidateImages.length > 0 && sellerId) {
+        try {
+          const otherListingsQuery = query(
+            collection(db, 'listings'),
+            where('sellerId', '==', sellerId)
+          );
+          const otherSnap = await getDocs(otherListingsQuery);
+          const otherReferencedUrls = new Set<string>();
+          otherSnap.forEach(d => {
+            if (d.id !== id) {
+              const otherData = d.data();
+              if (typeof otherData?.image === 'string' && otherData.image) {
+                otherReferencedUrls.add(otherData.image.trim());
+              }
+              if (Array.isArray(otherData?.images)) {
+                for (const img of otherData.images) {
+                  if (typeof img === 'string' && img) {
+                    otherReferencedUrls.add(img.trim());
                   }
                 }
               }
-            });
-
-            // Filter out any image that is still referenced by another listing
-            safeImagesToDelete = candidateImages.filter(img => !otherReferencedUrls.has(img.trim()));
-          } catch (queryErr) {
-            console.warn("[MarketHub] Could not verify cross-listing references, preserving images:", queryErr);
-            // Safety guard: Prefer preserving potentially orphaned files over deleting an image active listings still need
-            safeImagesToDelete = [];
-          }
-        }
-
-        // Step 3: Delete the Firestore listing document first
-        await deleteDoc(listingDocRef);
-
-        // Step 4: Delete confirmed safe Storage objects
-        let cleanupNotice: string | null = null;
-        if (safeImagesToDelete.length > 0 && user?.uid && user.uid === sellerId) {
-          try {
-            const cleanupResult = await deleteListingImagesFromStorage(safeImagesToDelete, user.uid);
-            if (cleanupResult.failed > 0) {
-              cleanupNotice = language === 'ka'
-                ? 'განცხადება წაიშალა, მაგრამ ზოგიერთი ფოტოს მეხსიერებიდან წაშლა ვერ მოხერხდა.'
-                : 'Listing deleted, but some images could not be cleaned up from storage.';
             }
-          } catch (storageErr) {
-            console.warn("[MarketHub] Non-blocking storage cleanup notice:", storageErr);
-            cleanupNotice = language === 'ka'
-              ? 'განცხადება წაიშალა, მაგრამ ფოტოების მეხსიერებიდან გასუფთავება ვერ მოხერხდა.'
-              : 'Listing deleted, but image cleanup encountered an error.';
-          }
-        }
+          });
 
-        // Step 5: Truthful UI feedback
-        if (cleanupNotice) {
-          showToast(cleanupNotice, 'warning');
-        } else {
-          showToast(
-            language === 'ka' 
-              ? 'განცხადება წარმატებით წაიშალა.' 
-              : 'Listing deleted successfully.', 
-            'success'
-          );
+          // Filter out any image that is still referenced by another listing
+          safeImagesToDelete = candidateImages.filter(img => !otherReferencedUrls.has(img.trim()));
+        } catch (queryErr) {
+          console.warn("[MarketHub] Could not verify cross-listing references, preserving images:", queryErr);
+          // Safety guard: Prefer preserving potentially orphaned files over deleting an image active listings still need
+          safeImagesToDelete = [];
         }
-      } catch (error) {
-        console.error("Error deleting listing:", error);
+      }
+
+      // Step 3: Delete the Firestore listing document first
+      await deleteDoc(listingDocRef);
+
+      // Step 4: Delete confirmed safe Storage objects
+      let cleanupNotice: string | null = null;
+      if (safeImagesToDelete.length > 0 && user?.uid && user.uid === sellerId) {
+        try {
+          const cleanupResult = await deleteListingImagesFromStorage(safeImagesToDelete, user.uid);
+          if (cleanupResult.failed > 0) {
+            cleanupNotice = language === 'ka'
+              ? 'განცხადება წაიშალა, მაგრამ ზოგიერთი ფოტოს მეხსიერებიდან წაშლა ვერ მოხერხდა.'
+              : 'Listing deleted, but some images could not be cleaned up from storage.';
+          }
+        } catch (storageErr) {
+          console.warn("[MarketHub] Non-blocking storage cleanup notice:", storageErr);
+          cleanupNotice = language === 'ka'
+            ? 'განცხადება წაიშალა, მაგრამ ფოტოების მეხსიერებიდან გასუფთავება ვერ მოხერხდა.'
+            : 'Listing deleted, but image cleanup encountered an error.';
+        }
+      }
+
+      // Step 5: Truthful UI feedback
+      if (cleanupNotice) {
+        showToast(cleanupNotice, 'warning');
+      } else {
         showToast(
           language === 'ka' 
-            ? 'განცხადების წაშლა ვერ მოხერხდა.' 
-            : 'Could not delete listing.', 
-          'error'
+            ? 'განცხადება წარმატებით წაიშალა.' 
+            : 'Listing deleted successfully.', 
+          'success'
         );
       }
+      return { ok: true };
+    } catch (error) {
+      console.error("Error deleting listing:", error);
+      const errMsg =
+        language === 'ka'
+          ? 'განცხადების წაშლა ვერ მოხერხდა.'
+          : 'Could not delete listing.';
+      showToast(errMsg, 'error');
+      return { ok: false, error: errMsg };
+    }
+  };
+
+  const handleDeleteListing = (id: string) => {
+    const targetListing = listings.find(l => l.id === id);
+    const listingTitle = targetListing ? getListingTitle(targetListing, language) : undefined;
+    setConfirmError(null);
+    setConfirmDialog({
+      kind: 'delete-listing',
+      listingId: id,
+      listingTitle: listingTitle || undefined,
+    });
+  };
+
+  const handleCloseConfirmDialog = () => {
+    if (confirmInFlightRef.current || isConfirmPending) return;
+    setConfirmDialog(null);
+    setConfirmError(null);
+  };
+
+  const handleConfirmDialogAction = async () => {
+    if (!confirmDialog || confirmInFlightRef.current || isConfirmPending) return;
+    confirmInFlightRef.current = true;
+    setIsConfirmPending(true);
+    setConfirmError(null);
+
+    try {
+      if (confirmDialog.kind === 'delete-listing') {
+        const res = await executeDeleteListing(confirmDialog.listingId);
+        if (res.ok) {
+          setConfirmDialog(null);
+        } else {
+          setConfirmError(
+            res.error ||
+              (language === 'ka' ? 'განცხადების წაშლა ვერ მოხერხდა.' : 'Could not delete listing.')
+          );
+        }
+        return;
+      }
+
+      if (confirmDialog.kind === 'delete-review') {
+        const res = await executeDeleteReview(confirmDialog.reviewId);
+        if (res.ok) {
+          setConfirmDialog(null);
+        } else {
+          setConfirmError(
+            res.error ||
+              (language === 'ka' ? 'წაშლა ვერ მოხერხდა.' : 'Could not delete review.')
+          );
+        }
+        return;
+      }
+
+      if (confirmDialog.kind === 'ai-generate') {
+        const { titleForAi } = confirmDialog;
+        setConfirmDialog(null);
+        confirmInFlightRef.current = false;
+        setIsConfirmPending(false);
+        void executeAiDescription(titleForAi);
+        return;
+      }
+
+      if (confirmDialog.kind === 'ai-template-fallback') {
+        const template = getFallbackTemplate(confirmDialog.titleForAi, confirmDialog.category);
+        setFormData(prev => ({ ...prev, description: template }));
+        setConfirmDialog(null);
+      }
+    } finally {
+      confirmInFlightRef.current = false;
+      setIsConfirmPending(false);
     }
   };
 
@@ -7023,6 +7116,61 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
     }}
     isSeller={profileSubMode === 'selling'}
     language={language}
+    currentTheme={currentTheme}
+  />
+
+  {/* Unified Accessible Confirmation Modal (Listing Delete, Review Delete, AI Prompt) */}
+  <ConfirmActionModal
+    isOpen={Boolean(confirmDialog)}
+    isPending={isConfirmPending}
+    variant={confirmDialog?.kind === 'delete-listing' || confirmDialog?.kind === 'delete-review' ? 'danger' : 'accent'}
+    title={
+      confirmDialog?.kind === 'delete-listing'
+        ? (language === 'ka' ? 'განცხადების წაშლა' : 'Delete Listing')
+        : confirmDialog?.kind === 'delete-review'
+        ? (language === 'ka' ? 'შეფასების წაშლა' : 'Delete Review')
+        : confirmDialog?.kind === 'ai-generate'
+        ? (language === 'ka' ? 'AI აღწერის გენერირება' : 'Generate Description with AI')
+        : (language === 'ka' ? 'სტანდარტული შაბლონის გამოყენება' : 'Use Standard Template')
+    }
+    warningNote={
+      confirmDialog?.kind === 'delete-listing' || confirmDialog?.kind === 'delete-review'
+        ? (language === 'ka' ? 'ეს მოქმედება შეუქცევადია' : 'This action cannot be undone')
+        : undefined
+    }
+    description={
+      confirmDialog?.kind === 'delete-listing'
+        ? t.market.delete_confirm
+        : confirmDialog?.kind === 'delete-review'
+        ? (language === 'ka'
+            ? 'ნამდვილად გსურთ შეფასების წაშლა?'
+            : 'Are you sure you want to delete this review?')
+        : confirmDialog?.kind === 'ai-generate'
+        ? (language === 'ka'
+            ? 'გსურთ AI-ს გამოყენება აღწერის გენერირებისთვის? ეს პროცესი ხარჯავს რესურსებს.'
+            : 'Do you want to use AI to generate a professional spec? This action uses cloud resources.')
+        : (language === 'ka'
+            ? 'გსურთ გამოიყენოთ სტანდარტული შაბლონი?'
+            : 'Would you like to use a standard template instead?')
+    }
+    itemPreview={confirmDialog?.kind === 'delete-listing' ? confirmDialog.listingTitle : undefined}
+    errorMessage={confirmError}
+    confirmLabel={
+      confirmDialog?.kind === 'delete-listing' || confirmDialog?.kind === 'delete-review'
+        ? (language === 'ka' ? 'წაშლის დადასტურება' : 'Confirm Delete')
+        : confirmDialog?.kind === 'ai-generate'
+        ? (language === 'ka' ? 'გენერირება' : 'Generate')
+        : (language === 'ka' ? 'შაბლონის გამოყენება' : 'Use Template')
+    }
+    pendingLabel={
+      confirmDialog?.kind === 'delete-listing' || confirmDialog?.kind === 'delete-review'
+        ? (language === 'ka' ? 'იშლება...' : 'Deleting...')
+        : (language === 'ka' ? 'მუშავდება...' : 'Processing...')
+    }
+    cancelLabel={language === 'ka' ? 'გაუქმება' : 'Cancel'}
+    closeAriaLabel={language === 'ka' ? 'დახურვა' : 'Close'}
+    onConfirm={handleConfirmDialogAction}
+    onCancel={handleCloseConfirmDialog}
     currentTheme={currentTheme}
   />
 
