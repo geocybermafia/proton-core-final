@@ -25,17 +25,16 @@ import {
   isValidOrderStatusTransition,
   placeVerifiedOrderInTransaction
 } from '../lib/marketOrderRules';
+import {
+  CreateListingApiPayload,
+  MarketListingApiError,
+  generateClientListingId,
+  isValidClientListingId,
+  submitListingViaApi
+} from '../lib/marketListingApi';
 export { isRealListing };
 
-export interface CreateListingPayload {
-  title: string;
-  description: string;
-  images?: string[];
-  status?: 'draft' | 'active' | 'sold' | string;
-  price?: number;
-  category?: string;
-  listingType?: 'product' | 'service' | 'project';
-}
+export interface CreateListingPayload extends CreateListingApiPayload {}
 
 export interface CreateOrderPayload {
   listingId: string;
@@ -437,17 +436,30 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const localListing: Listing = {
       id: newId,
       title: payload.title || 'Untitled Listing Draft',
+      titleGe: payload.titleGe,
+      titleEn: payload.titleEn,
+      primaryLanguage: payload.primaryLanguage,
       description: payload.description || '',
+      descriptionGe: payload.descriptionGe,
       price,
-      currency: 'USD',
+      currency: payload.currency || 'USD',
       sellerId: user?.uid || 'guest-seller',
-      sellerName: user?.displayName || user?.email || 'Proton Merchant',
+      sellerName: payload.sellerName || user?.displayName || user?.email || 'Proton Merchant',
       images: processedImages,
-      image: processedImages[0] || '',
+      image: payload.image || processedImages[0] || '',
       category: payload.category || 'Digital Assets',
-      location: 'Zürich / Global',
-      country: 'Switzerland',
-      city: 'Zürich',
+      location: payload.location || '',
+      country: payload.country || '',
+      city: payload.city || '',
+      lat: typeof payload.lat === 'number' ? payload.lat : undefined,
+      lng: typeof payload.lng === 'number' ? payload.lng : undefined,
+      condition: payload.condition,
+      isNegotiable: payload.isNegotiable,
+      isRemote: payload.isRemote,
+      attributes: payload.attributes,
+      serviceDuration: payload.serviceDuration,
+      serviceTerms: payload.serviceTerms,
+      tags: payload.tags,
       createdAt: Date.now(),
       status: status as any,
       isSold: false,
@@ -465,44 +477,51 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [user]);
 
   /**
-   * Publishes an active listing to Firestore.
+   * Publishes an active listing via the authenticated server API (`POST /api/market/listings`).
    * Requires:
-   *  - authenticated user
+   *  - authenticated user (valid Firebase ID Token)
    *  - status === 'active'
    *  - price > 0
-   * Uses user.uid as sellerId and serverTimestamp() for createdAt on Firestore.
+   * Server authoritatively enforces sellerId and Controlled Freshness Protection (`createdAt`).
    */
   const publishListing = useCallback(async (payload: CreateListingPayload): Promise<Listing> => {
     if (!user) {
-      const err = new Error('Authentication required to publish a listing');
+      const err = new MarketListingApiError(
+        401,
+        'Authentication required to publish a listing',
+        'auth/unauthenticated'
+      );
       console.error("[SellerContext] Publish listing error:", err);
       setError(err.message);
       throw err;
     }
 
     const price = typeof payload.price === 'number' ? payload.price : 0;
-    if (price <= 0) {
-      const err = new Error('Listing price must be strictly positive to publish');
+    if (!Number.isFinite(price) || price <= 0) {
+      const err = new MarketListingApiError(
+        400,
+        'Listing price must be strictly positive to publish',
+        'listings/invalid-price'
+      );
       console.error("[SellerContext] Publish listing error:", err);
       setError(err.message);
       throw err;
     }
 
-    const newId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-      ? `lst-${crypto.randomUUID()}`
-      : `lst-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    const targetId = isValidClientListingId(payload.id)
+      ? payload.id.trim()
+      : generateClientListingId();
+
+    const rawImages = Array.isArray(payload.images)
+      ? payload.images
+      : (typeof payload.image === 'string' && payload.image.trim() ? [payload.image.trim()] : []);
 
     let processedImages: string[] = [];
-    if (payload.images && payload.images.length > 0) {
+    if (rawImages.length > 0) {
       processedImages = await Promise.all(
-        payload.images.map(async (img) => {
+        rawImages.map(async (img) => {
           if (typeof img === 'string' && img.startsWith('data:')) {
-            try {
-              return await uploadProductImage(user.uid, img, newId);
-            } catch (err) {
-              console.warn("[SellerContext] Product image upload to Storage failed, falling back:", err);
-              return img;
-            }
+            return await uploadProductImage(user.uid, img, targetId);
           }
           return img;
         })
@@ -513,10 +532,19 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (typeof img === 'string' && img.trim()) {
         const check = validateListingImageUrl(img, user.uid);
         if (!check.isAllowed) {
-          const err = new Error(
+          const code =
+            check.reason === 'ownership_mismatch'
+              ? 'listings/image-ownership-mismatch'
+              : check.reason === 'not_a_listing_path'
+              ? 'listings/invalid-image-path'
+              : 'listings/invalid-image-url';
+          const statusCode = check.reason === 'ownership_mismatch' ? 403 : 400;
+          const err = new MarketListingApiError(
+            statusCode,
             check.reason === 'ownership_mismatch'
               ? 'Using images belonging to other users is not permitted'
-              : 'Invalid or unauthorized image URL'
+              : 'Invalid or unauthorized image URL',
+            code
           );
           console.error('[SellerContext] Publish listing image validation error:', err);
           setError(err.message);
@@ -525,83 +553,88 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     }
 
-    const title = payload.title?.trim() || 'Untitled Listing';
+    const title = (payload.title || payload.titleGe || payload.titleEn || '').trim() || 'Untitled Listing';
     const category = payload.category?.trim() || 'Digital Assets';
-    const description = payload.description || '';
-    const image = processedImages[0] || '';
-    const listingType = inferListingType(payload.category, payload.listingType);
+    const description = (payload.description ?? '').trim();
+    const primaryImage = (typeof payload.image === 'string' && payload.image.trim())
+      ? payload.image.trim()
+      : (processedImages[0] || '');
+    const listingType = inferListingType(category, payload.listingType);
+    const currency = (payload.currency || 'USD').trim().toUpperCase();
+    const isRemote = Boolean(payload.isRemote);
 
-    const localListing: Listing = {
-      id: newId,
-      title,
-      description,
-      price,
-      currency: 'USD',
-      sellerId: user.uid,
-      sellerName: user.displayName || user.email || 'Proton Merchant',
-      images: processedImages,
-      image,
-      category,
-      location: 'Zürich / Global',
-      country: 'Switzerland',
-      city: 'Zürich',
-      createdAt: Date.now(),
-      status: 'active',
-      isSold: false,
-      listingType
-    };
+    const rawCountry = typeof payload.country === 'string' ? payload.country.trim() : '';
+    const rawCity = typeof payload.city === 'string' ? payload.city.trim() : '';
+    const rawLocation = typeof payload.location === 'string' ? payload.location.trim() : '';
+    const hasRealCity = Boolean(rawCity && rawCity.toLowerCase() !== 'online');
+
+    let country = rawCountry;
+    let city = rawCity;
+    let location = rawLocation;
+
+    if (isRemote) {
+      if (!hasRealCity) {
+        country = rawCountry && rawCountry.toUpperCase() !== 'GLOBAL' ? rawCountry : 'GLOBAL';
+        city = 'Online';
+        location = rawLocation || 'Online / Remote';
+      } else {
+        country = rawCountry || 'GLOBAL';
+        city = rawCity;
+        location = rawLocation || `${rawCity}, ${country}`;
+      }
+    } else if (!location) {
+      location = rawCity && rawCountry ? `${rawCity}, ${rawCountry}` : (rawCity || rawCountry || '');
+    }
+
+    const sellerName =
+      (typeof payload.sellerName === 'string' && payload.sellerName.trim()) ||
+      user.displayName ||
+      user.email?.split('@')[0] ||
+      'Proton Merchant';
 
     try {
-      const idToken = await user.getIdToken();
-      const res = await fetch('/api/market/listings', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`
-        },
-        body: JSON.stringify({
-          id: newId,
+      const created = await submitListingViaApi({
+        payload: {
+          id: targetId,
           title,
+          titleGe: payload.titleGe ?? '',
+          titleEn: payload.titleEn ?? '',
+          primaryLanguage: payload.primaryLanguage,
           description,
+          descriptionGe: payload.descriptionGe ?? description,
           price,
-          currency: 'USD',
-          sellerName: user.displayName || user.email || 'Proton Merchant',
-          image,
+          currency,
+          sellerName,
+          image: primaryImage,
           images: processedImages,
           category,
-          location: 'Zürich / Global',
-          country: 'Switzerland',
-          city: 'Zürich',
-          listingType
-        })
+          location,
+          country,
+          city,
+          lat: payload.lat ?? null,
+          lng: payload.lng ?? null,
+          condition: payload.condition ?? '',
+          isNegotiable: Boolean(payload.isNegotiable),
+          listingType,
+          isRemote,
+          attributes: payload.attributes ?? {},
+          serviceDuration: payload.serviceDuration ?? '',
+          serviceTerms: payload.serviceTerms ?? '',
+          tags: payload.tags,
+        },
+        getIdToken: (forceRefresh) => user.getIdToken(forceRefresh),
       });
 
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => ({}));
-        throw new Error(errJson.error || `Failed to publish listing (${res.status})`);
-      }
-
-      const created = await res.json();
       const confirmedListing: Listing = {
-        id: created.id || newId,
-        title: created.title || title,
-        description: created.description || description,
-        price: created.price || price,
-        currency: created.currency || 'USD',
-        sellerId: user.uid,
-        sellerName: created.sellerName || user.displayName || user.email || 'Proton Merchant',
-        images: created.images || processedImages,
-        image: created.image || image,
-        category: created.category || category,
-        location: created.location || 'Zürich / Global',
-        country: created.country || 'Switzerland',
-        city: created.city || 'Zürich',
-        createdAt: created.createdAt || Date.now(),
-        status: 'active',
-        isSold: false,
-        listingType: created.listingType || listingType
+        ...created,
+        id: created.id || targetId,
+        sellerId: created.sellerId || user.uid,
+        status: created.status || 'active',
+        isSold: created.isSold ?? false,
+        listingType: created.listingType || listingType,
       };
 
+      setError(null);
       setAllListings(prev => [confirmedListing, ...prev.filter(l => l.id !== confirmedListing.id)]);
       return confirmedListing;
     } catch (err: any) {

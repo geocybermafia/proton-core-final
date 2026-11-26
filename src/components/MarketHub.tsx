@@ -189,6 +189,7 @@ import { OrderDetailsModal } from './market-hub/OrderDetailsModal';
 import { SellerAnalyticsPanel } from './market-hub/SellerAnalyticsPanel';
 import { MarketRankingsView } from './market-hub/MarketRankingsView';
 import { fetchSellerAnalyticsOverview, setCompetitionOptOutPreference } from '../utils/marketAnalyticsClient';
+import { formatPublishListingErrorMessage, generateClientListingId } from '../lib/marketListingApi';
 
 const AVAILABLE_COUNTRY_OPTIONS = WORLD_COUNTRIES.filter(c => c.code !== 'GLOBAL');
 
@@ -1020,7 +1021,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
     };
   }, [t, language, checkoutItem, selectedListing]);
   const [profileSubMode, setProfileSubMode] = useState<'selling' | 'buying'>('selling');
-  const { sellerOrders = [], buyerOrders = [] } = useSeller();
+  const { sellerOrders = [], buyerOrders = [], publishListing } = useSeller();
   const [sellerOrderFilter, setSellerOrderFilter] = useState<SellerOrderFilter>('all');
 
   // Keep sellerSelectedOrder synced with real-time updates in sellerOrders
@@ -1181,6 +1182,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
   const currentUserUidRef = useRef<string | null>(user?.uid ?? null);
   currentUserUidRef.current = user?.uid ?? null;
   const prevAuthUidForWizardRef = useRef<string | null | undefined>(undefined);
+  const pendingCreateListingIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     photoUploadTasksRef.current = photoUploadTasks;
@@ -1191,6 +1193,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
 
   const resetListingForm = useCallback(() => {
     uploadSessionEpochRef.current += 1;
+    pendingCreateListingIdRef.current = null;
     setEditingListing(null);
     setFormStep(1);
     setPhotoUploadTasks([]);
@@ -4426,7 +4429,38 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
           }
         }
       } else {
-        await addDoc(collection(db, 'listings'), listingData);
+        if (!pendingCreateListingIdRef.current) {
+          pendingCreateListingIdRef.current = generateClientListingId();
+        }
+        const createdListing = await publishListing({
+          id: pendingCreateListingIdRef.current,
+          title: resolvedFirestoreTitle,
+          titleGe: finalTitleGe,
+          titleEn: finalTitleEn,
+          primaryLanguage: effectivePrimaryLang,
+          description: formData.description.trim(),
+          descriptionGe: formData.description.trim(),
+          price: parsedPrice,
+          currency: formData.currency || 'USD',
+          sellerName: user.displayName || user.email?.split('@')[0] || 'Unknown',
+          image: primaryListingImage,
+          images: normalizedGalleryImages,
+          category: resolvedCategory,
+          listingType: resolvedListingType,
+          condition: activeSchema.showCondition ? (formData.condition || 'new') : '',
+          isNegotiable: formData.isNegotiable ?? false,
+          isRemote: effectiveIsRemote,
+          location: finalLocation,
+          country: finalCountry,
+          city: finalCity,
+          lat: sanitizedLat,
+          lng: sanitizedLng,
+          attributes: sanitizedAttributes,
+          serviceDuration: activeSchema.showServiceTerms ? (formData.serviceDuration || '') : '',
+          serviceTerms: activeSchema.showServiceTerms ? (formData.serviceTerms || '') : '',
+        });
+        pendingCreateListingIdRef.current = null;
+        setListings(prev => [createdListing, ...prev.filter(l => l.id !== createdListing.id)]);
       }
 
       if (!isEdit) {
@@ -4439,8 +4473,8 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
         isEdit
       });
     } catch (error: any) {
-      console.error(error);
-      showToast("Firebase Error: " + error.message, 'error');
+      console.error("[MarketHub] Failed to save listing:", error);
+      showToast(formatPublishListingErrorMessage(error, language), 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -4553,6 +4587,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
   };
 
   const startEdit = (listing: Listing) => {
+    pendingCreateListingIdRef.current = null;
     setEditingListing(listing);
 
     // Detect primary language and preserve genuine title inputs
