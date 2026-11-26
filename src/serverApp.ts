@@ -27,6 +27,11 @@ import {
   isAdminCredentialsError,
   getAdminFirestoreInstance
 } from "./lib/analyticsServer.js";
+import {
+  fetchListingPreviewData,
+  loadBaseHtml,
+  injectListingMetaToHtml
+} from "./lib/marketListingMeta.js";
 
 // Lazy dynamic initialization of Firebase Admin for server-side token authentication
 const _adminAuthMap = new Map<string, any>();
@@ -1267,6 +1272,60 @@ export function createApiApp(options?: CreateApiAppOptions): express.Express {
       return res.status(500).json({ error: "Failed to create listing securely" });
     }
   });
+
+  // 6. Dynamic Market Listing HTML Preview for Social Media Crawlers & Deep-Linking
+  const handleMarketPreview = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const listingId = (
+      (typeof req.query.listingId === 'string' && req.query.listingId.trim()) ||
+      (typeof req.query.id === 'string' && req.query.id.trim()) ||
+      (typeof req.params?.listingId === 'string' && req.params.listingId.trim()) ||
+      ''
+    );
+
+    // If no listingId is specified on a general route, let normal SPA routing continue
+    const isDirectPreviewEndpoint = req.path === '/market-preview' || req.path === '/api/market-preview';
+    if (!listingId && !isDirectPreviewEndpoint) {
+      return next();
+    }
+
+    try {
+      const listing = listingId ? await fetchListingPreviewData(listingId) : null;
+      const baseHtml = loadBaseHtml();
+
+      const host = req.get('x-forwarded-host') || req.get('host') || 'proton-core-final.vercel.app';
+      const cleanHost = host.includes('localhost') || host.includes('127.0.0.1')
+        ? 'proton-core-final.vercel.app'
+        : host;
+      const canonicalUrl = listingId
+        ? `https://${cleanHost}/market-hub?listingId=${encodeURIComponent(listingId)}`
+        : `https://${cleanHost}/market-hub`;
+
+      const html = injectListingMetaToHtml({
+        baseHtml,
+        listing,
+        canonicalUrl
+      });
+
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
+      return res.status(200).send(html);
+    } catch (err) {
+      console.error('[MarketPreview] Error serving dynamic listing preview:', err);
+      try {
+        const baseHtml = loadBaseHtml();
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        return res.status(200).send(baseHtml);
+      } catch {
+        return next();
+      }
+    }
+  };
+
+  apiRouter.get('/market-preview', handleMarketPreview);
+  apiRouter.get('/market-hub', handleMarketPreview);
+  apiRouter.get('/market', handleMarketPreview);
+  apiRouter.get('/market-hub/:listingId', handleMarketPreview);
+  apiRouter.get('/market/:listingId', handleMarketPreview);
 
   // Mount apiRouter both with and without "/api" prefix for seamless routing
   // whether called as /api/xxx or rewritten directly to /xxx

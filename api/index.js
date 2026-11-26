@@ -1,3 +1,3000 @@
+var __defProp = Object.defineProperty;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __esm = (fn, res, err) => function __init() {
+  if (err) throw err[0];
+  try {
+    return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+  } catch (e) {
+    throw err = [e], e;
+  }
+};
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+
+// src/lib/listingClassification.ts
+var PRODUCT_CATEGORY_IDS, SERVICE_CATEGORY_IDS, PROJECT_ASSET_CATEGORY_IDS, JOB_CATEGORY_IDS, COLLABORATION_CATEGORY_IDS, PROJECT_CATEGORY_IDS, ALL_ACTIVE_CATEGORY_IDS, PRODUCT_CATEGORY_SET, SERVICE_CATEGORY_SET, PROJECT_ASSET_CATEGORY_SET, JOB_CATEGORY_SET, COLLABORATION_CATEGORY_SET, PROJECT_CATEGORY_SET, normalizeCategoryId, normalizeExplicitListingType, classifyListing, inferListingType;
+var init_listingClassification = __esm({
+  "src/lib/listingClassification.ts"() {
+    "use strict";
+    PRODUCT_CATEGORY_IDS = [
+      "newyear",
+      "phones",
+      "technics",
+      "family-technic",
+      "garden",
+      "furniture",
+      "hunting",
+      "music",
+      "kids",
+      "fashion",
+      "building",
+      "village",
+      "animals",
+      "sport",
+      "business",
+      "book",
+      "art"
+    ];
+    SERVICE_CATEGORY_IDS = [
+      "service",
+      "rent",
+      "audience-growth"
+    ];
+    PROJECT_ASSET_CATEGORY_IDS = [
+      "social-accounts",
+      "youtube-channels",
+      "digital-projects"
+    ];
+    JOB_CATEGORY_IDS = [
+      "project-jobs"
+    ];
+    COLLABORATION_CATEGORY_IDS = [
+      "collaboration"
+    ];
+    PROJECT_CATEGORY_IDS = [
+      "project-jobs",
+      "social-accounts",
+      "youtube-channels",
+      "collaboration",
+      "digital-projects"
+    ];
+    ALL_ACTIVE_CATEGORY_IDS = [
+      ...PRODUCT_CATEGORY_IDS,
+      ...SERVICE_CATEGORY_IDS,
+      ...PROJECT_CATEGORY_IDS
+    ];
+    PRODUCT_CATEGORY_SET = new Set(PRODUCT_CATEGORY_IDS);
+    SERVICE_CATEGORY_SET = new Set(SERVICE_CATEGORY_IDS);
+    PROJECT_ASSET_CATEGORY_SET = new Set(PROJECT_ASSET_CATEGORY_IDS);
+    JOB_CATEGORY_SET = new Set(JOB_CATEGORY_IDS);
+    COLLABORATION_CATEGORY_SET = new Set(COLLABORATION_CATEGORY_IDS);
+    PROJECT_CATEGORY_SET = new Set(PROJECT_CATEGORY_IDS);
+    normalizeCategoryId = (category) => typeof category === "string" ? category.trim().toLowerCase() : "";
+    normalizeExplicitListingType = (listingType) => {
+      if (typeof listingType !== "string") return null;
+      const normalized = listingType.trim().toLowerCase();
+      if (normalized === "product" || normalized === "service" || normalized === "project") {
+        return normalized;
+      }
+      return null;
+    };
+    classifyListing = (item) => {
+      if (!item) return null;
+      const cat = normalizeCategoryId(item.category);
+      const explicit = normalizeExplicitListingType(item.listingType);
+      if (SERVICE_CATEGORY_SET.has(cat) || cat === "services") {
+        return "service";
+      }
+      if (PROJECT_ASSET_CATEGORY_SET.has(cat) || cat === "digital" || normalizeCategoryId(item.listingType) === "digital") {
+        return "project_asset";
+      }
+      if (JOB_CATEGORY_SET.has(cat)) {
+        return "job";
+      }
+      if (COLLABORATION_CATEGORY_SET.has(cat)) {
+        return "collaboration";
+      }
+      if (PRODUCT_CATEGORY_SET.has(cat)) {
+        return "product";
+      }
+      if (explicit === "service") return "service";
+      if (explicit === "project") return "project";
+      if (explicit === "product") return "product";
+      if (cat === "project" || PROJECT_CATEGORY_SET.has(cat)) return "project";
+      return "product";
+    };
+    inferListingType = (category, explicitListingType) => {
+      const classification = classifyListing({ category, listingType: explicitListingType });
+      if (classification === "service") return "service";
+      if (classification === "project_asset" || classification === "job" || classification === "collaboration" || classification === "project") {
+        return "project";
+      }
+      return "product";
+    };
+  }
+});
+
+// src/lib/marketAnalyticsUtils.ts
+function isBotUserAgent(userAgent) {
+  if (!userAgent || typeof userAgent !== "string") return true;
+  const trimmed = userAgent.trim();
+  if (trimmed.length < 8) return true;
+  return BOT_USER_AGENT_PATTERN.test(trimmed);
+}
+function isValidAnalyticsId(id) {
+  return typeof id === "string" && id.length >= 1 && id.length <= 128 && /^[a-zA-Z0-9_-]+$/.test(id);
+}
+function getHourBucketKey(tsMs) {
+  const d = new Date(tsMs);
+  const year = d.getUTCFullYear();
+  const month = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  const hour = String(d.getUTCHours()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hour}`;
+}
+function getDayBucketKey(tsMs) {
+  const d = new Date(tsMs);
+  const year = d.getUTCFullYear();
+  const month = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+function sanitizeBucketCounter(v) {
+  const bucket = {
+    impressions: Number(v.impressions) || 0,
+    views: Number(v.views) || 0,
+    uniqueViewers: Number(v.uniqueViewers) || 0
+  };
+  if (typeof v.authImpressions === "number" || typeof v.authViews === "number" || typeof v.authUniqueViewers === "number" || typeof v.guestImpressions === "number" || typeof v.guestViews === "number" || typeof v.guestUniqueViewers === "number") {
+    bucket.authImpressions = Number(v.authImpressions) || 0;
+    bucket.authViews = Number(v.authViews) || 0;
+    bucket.authUniqueViewers = Number(v.authUniqueViewers) || 0;
+    bucket.guestImpressions = Number(v.guestImpressions) || 0;
+    bucket.guestViews = Number(v.guestViews) || 0;
+    bucket.guestUniqueViewers = Number(v.guestUniqueViewers) || 0;
+  }
+  return bucket;
+}
+function pruneHourlyBuckets(hourly, nowMs) {
+  const result = {};
+  if (!hourly || typeof hourly !== "object") return result;
+  const minTs = nowMs - 52 * 60 * 60 * 1e3;
+  const minKey = getHourBucketKey(minTs);
+  for (const [k, v] of Object.entries(hourly)) {
+    if (k >= minKey && v && typeof v === "object") {
+      result[k] = sanitizeBucketCounter(v);
+    }
+  }
+  return result;
+}
+function pruneDailyBuckets(daily, nowMs) {
+  const result = {};
+  if (!daily || typeof daily !== "object") return result;
+  const minTs = nowMs - 62 * 24 * 60 * 60 * 1e3;
+  const minKey = getDayBucketKey(minTs);
+  for (const [k, v] of Object.entries(daily)) {
+    if (k >= minKey && v && typeof v === "object") {
+      result[k] = sanitizeBucketCounter(v);
+    }
+  }
+  return result;
+}
+function computeEngagementRate(views, impressions) {
+  if (!Number.isFinite(views) || !Number.isFinite(impressions) || views <= 0 || impressions <= 0) {
+    return 0;
+  }
+  const raw = views / impressions * 100;
+  return Math.min(100, Math.round(raw * 10) / 10);
+}
+function sumBucketKeys(buckets, keys) {
+  let impressions = 0;
+  let views = 0;
+  let uniqueViewers = 0;
+  if (buckets) {
+    for (const key of keys) {
+      const b = buckets[key];
+      if (b) {
+        impressions += Number(b.impressions) || 0;
+        views += Number(b.views) || 0;
+        uniqueViewers += Number(b.uniqueViewers) || 0;
+      }
+    }
+  }
+  return {
+    impressions,
+    views,
+    uniqueViewers,
+    engagementRate: computeEngagementRate(views, impressions)
+  };
+}
+function computeComparison(curr, prev) {
+  const pct = (c, p) => {
+    if (p <= 0) return c > 0 ? 100 : null;
+    return Math.round((c - p) / p * 1e3) / 10;
+  };
+  return {
+    impressionsDelta: curr.impressions - prev.impressions,
+    viewsDelta: curr.views - prev.views,
+    uniqueViewersDelta: curr.uniqueViewers - prev.uniqueViewers,
+    engagementRateDelta: Math.round((curr.engagementRate - prev.engagementRate) * 10) / 10,
+    impressionsChangePct: pct(curr.impressions, prev.impressions),
+    viewsChangePct: pct(curr.views, prev.views),
+    uniqueViewersChangePct: pct(curr.uniqueViewers, prev.uniqueViewers)
+  };
+}
+function buildHourWindowKeys(nowMs, offsetHoursStart, count) {
+  const keys = [];
+  for (let i = 0; i < count; i++) {
+    keys.push(getHourBucketKey(nowMs - (offsetHoursStart + i) * 60 * 60 * 1e3));
+  }
+  return keys;
+}
+function buildDayWindowKeys(nowMs, offsetDaysStart, count) {
+  const keys = [];
+  for (let i = 0; i < count; i++) {
+    keys.push(getDayBucketKey(nowMs - (offsetDaysStart + i) * 24 * 60 * 60 * 1e3));
+  }
+  return keys;
+}
+function aggregatePeriodFromBuckets(docData, nowMs = Date.now()) {
+  const h24Keys = buildHourWindowKeys(nowMs, 0, 24);
+  const prevH24Keys = buildHourWindowKeys(nowMs, 24, 24);
+  const d7Keys = buildDayWindowKeys(nowMs, 0, 7);
+  const prevD7Keys = buildDayWindowKeys(nowMs, 7, 7);
+  const d30Keys = buildDayWindowKeys(nowMs, 0, 30);
+  const prevD30Keys = buildDayWindowKeys(nowMs, 30, 30);
+  const m24h = sumBucketKeys(docData.hourly, h24Keys);
+  const prev24h = sumBucketKeys(docData.hourly, prevH24Keys);
+  const m7d = sumBucketKeys(docData.daily, d7Keys);
+  const prev7d = sumBucketKeys(docData.daily, prevD7Keys);
+  const m30d = sumBucketKeys(docData.daily, d30Keys);
+  const prev30d = sumBucketKeys(docData.daily, prevD30Keys);
+  const totalImpressions = Number(docData.impressions) || 0;
+  const totalViews = Number(docData.views) || 0;
+  const totalUniqueViewers = Number(docData.uniqueViewers) || 0;
+  const mAll = {
+    impressions: totalImpressions,
+    views: totalViews,
+    uniqueViewers: totalUniqueViewers,
+    engagementRate: computeEngagementRate(totalViews, totalImpressions)
+  };
+  return {
+    periods: {
+      "24h": m24h,
+      "7d": m7d,
+      "30d": m30d,
+      "all": mAll
+    },
+    comparisons: {
+      "24h": computeComparison(m24h, prev24h),
+      "7d": computeComparison(m7d, prev7d),
+      "30d": computeComparison(m30d, prev30d)
+    },
+    prevPeriods: {
+      "24h": prev24h,
+      "7d": prev7d,
+      "30d": prev30d
+    }
+  };
+}
+function sumPeriodMetricsList(list) {
+  let impressions = 0;
+  let views = 0;
+  let uniqueViewers = 0;
+  for (const item of list) {
+    impressions += item.impressions || 0;
+    views += item.views || 0;
+    uniqueViewers += item.uniqueViewers || 0;
+  }
+  return {
+    impressions,
+    views,
+    uniqueViewers,
+    engagementRate: computeEngagementRate(views, impressions)
+  };
+}
+function createZeroViewerSegmentMetrics() {
+  return {
+    authImpressions: 0,
+    authViews: 0,
+    authUniqueViewers: 0,
+    guestImpressions: 0,
+    guestViews: 0,
+    guestUniqueViewers: 0
+  };
+}
+function sumViewerBreakdownBuckets(buckets, keys) {
+  const totals = createZeroViewerSegmentMetrics();
+  if (!buckets) return totals;
+  for (const key of keys) {
+    const b = buckets[key];
+    if (!b) continue;
+    totals.authImpressions += Number(b.authImpressions) || 0;
+    totals.authViews += Number(b.authViews) || 0;
+    totals.authUniqueViewers += Number(b.authUniqueViewers) || 0;
+    totals.guestImpressions += Number(b.guestImpressions) || 0;
+    totals.guestViews += Number(b.guestViews) || 0;
+    totals.guestUniqueViewers += Number(b.guestUniqueViewers) || 0;
+  }
+  return totals;
+}
+function hasRecordedViewerBreakdown(docData) {
+  if (!docData) return false;
+  if (typeof docData.breakdownSince === "number" && Number.isFinite(docData.breakdownSince)) {
+    return true;
+  }
+  return typeof docData.authImpressions === "number" || typeof docData.authViews === "number" || typeof docData.authUniqueViewers === "number" || typeof docData.guestImpressions === "number" || typeof docData.guestViews === "number" || typeof docData.guestUniqueViewers === "number";
+}
+function aggregateViewerBreakdownFromDoc(docData, nowMs = Date.now()) {
+  if (!hasRecordedViewerBreakdown(docData)) {
+    return void 0;
+  }
+  const h24Keys = buildHourWindowKeys(nowMs, 0, 24);
+  const d7Keys = buildDayWindowKeys(nowMs, 0, 7);
+  const d30Keys = buildDayWindowKeys(nowMs, 0, 30);
+  return {
+    ...typeof docData?.breakdownSince === "number" && Number.isFinite(docData.breakdownSince) ? { breakdownSince: docData.breakdownSince } : {},
+    periods: {
+      "24h": sumViewerBreakdownBuckets(docData?.hourly, h24Keys),
+      "7d": sumViewerBreakdownBuckets(docData?.daily, d7Keys),
+      "30d": sumViewerBreakdownBuckets(docData?.daily, d30Keys),
+      all: {
+        authImpressions: Number(docData?.authImpressions) || 0,
+        authViews: Number(docData?.authViews) || 0,
+        authUniqueViewers: Number(docData?.authUniqueViewers) || 0,
+        guestImpressions: Number(docData?.guestImpressions) || 0,
+        guestViews: Number(docData?.guestViews) || 0,
+        guestUniqueViewers: Number(docData?.guestUniqueViewers) || 0
+      }
+    }
+  };
+}
+function sumViewerBreakdownList(breakdowns) {
+  const valid = breakdowns.filter((b) => Boolean(b));
+  if (valid.length === 0) return void 0;
+  const periodKeys = ["24h", "7d", "30d", "all"];
+  const periods = {};
+  for (const pk of periodKeys) {
+    const sum = createZeroViewerSegmentMetrics();
+    for (const item of valid) {
+      const m = item.periods[pk];
+      if (!m) continue;
+      sum.authImpressions += m.authImpressions || 0;
+      sum.authViews += m.authViews || 0;
+      sum.authUniqueViewers += m.authUniqueViewers || 0;
+      sum.guestImpressions += m.guestImpressions || 0;
+      sum.guestViews += m.guestViews || 0;
+      sum.guestUniqueViewers += m.guestUniqueViewers || 0;
+    }
+    periods[pk] = sum;
+  }
+  const sinceCandidates = valid.map((b) => b.breakdownSince).filter((v) => typeof v === "number" && Number.isFinite(v));
+  return {
+    ...sinceCandidates.length > 0 ? { breakdownSince: Math.min(...sinceCandidates) } : {},
+    periods
+  };
+}
+function normalizeCountryCode(raw) {
+  if (!raw || typeof raw !== "string") return void 0;
+  const trimmed = raw.trim();
+  if (!trimmed) return void 0;
+  const upper = trimmed.toUpperCase();
+  if (upper === "GLOBAL" || upper === "WORLDWIDE" || upper === "ONLINE" || upper === "REMOTE") {
+    return void 0;
+  }
+  if (COUNTRY_NAME_TO_CODE[upper]) {
+    return COUNTRY_NAME_TO_CODE[upper];
+  }
+  if (/^[A-Z]{2,3}$/.test(upper)) {
+    return upper;
+  }
+  return void 0;
+}
+function resolveReliableSellerLocation(params) {
+  let country = normalizeCountryCode(params.profileCountry);
+  let region;
+  const rawProfileRegion = typeof params.profileRegion === "string" ? params.profileRegion.trim() : "";
+  if (rawProfileRegion && rawProfileRegion.toLowerCase() !== "global" && rawProfileRegion.toLowerCase() !== "online") {
+    const parts = rawProfileRegion.split(",").map((s) => s.trim()).filter(Boolean);
+    if (parts.length >= 2) {
+      const maybeCountry = normalizeCountryCode(parts[parts.length - 1]);
+      if (maybeCountry && !country) {
+        country = maybeCountry;
+      }
+      region = parts.slice(0, -1).join(", ");
+    } else {
+      region = rawProfileRegion;
+    }
+  }
+  if (!country) {
+    country = normalizeCountryCode(params.listingCountry);
+  }
+  if (!region && typeof params.listingCity === "string") {
+    const cityTrimmed = params.listingCity.trim();
+    if (cityTrimmed && cityTrimmed.toLowerCase() !== "online" && cityTrimmed.toLowerCase() !== "remote" && cityTrimmed.toLowerCase() !== "global") {
+      region = cityTrimmed;
+    }
+  }
+  return { country, region };
+}
+function computeBalancedScore(input) {
+  const {
+    impressions,
+    views,
+    uniqueViewers,
+    categoryBaseline,
+    sellerRatingAvg = 0,
+    sellerRatingCount = 0,
+    listingCreatedAt,
+    nowMs = Date.now()
+  } = input;
+  if (views <= 0 && impressions <= 0) {
+    return {
+      engagementRate: 0,
+      categoryNormalizedScore: 0,
+      freshnessBoost: 0,
+      balancedScore: 0
+    };
+  }
+  const engagementRate = computeEngagementRate(views, impressions);
+  const smoothedEngagement = views / Math.max(impressions + 10, views + 10, 1);
+  const uniqueComponent = Math.log1p(Math.max(0, uniqueViewers)) * 28;
+  const viewsComponent = Math.log1p(Math.max(0, views)) * 8;
+  const engagementComponent = smoothedEngagement * 35;
+  const safeBaseline = Math.max(1, categoryBaseline);
+  const rawDemand = uniqueViewers + views * 0.35;
+  const categoryRatio = rawDemand / safeBaseline;
+  const categoryNormalizedScore = Math.round(Math.log1p(categoryRatio) * 18 * 100) / 100;
+  const reviewComponent = sellerRatingCount > 0 && sellerRatingAvg > 0 ? Math.min(5, sellerRatingAvg) / 5 * Math.min(sellerRatingCount, 10) * 1.2 : 0;
+  let freshnessBoost = 0;
+  if (listingCreatedAt && Number.isFinite(listingCreatedAt) && listingCreatedAt > 0) {
+    const ageDays = Math.max(0, (nowMs - listingCreatedAt) / (24 * 60 * 60 * 1e3));
+    if (ageDays <= 14) {
+      freshnessBoost = Math.round((1 - ageDays / 14) * 12 * 100) / 100;
+    }
+  }
+  const balancedScore = Math.round(
+    (uniqueComponent + viewsComponent + engagementComponent + categoryNormalizedScore + reviewComponent + freshnessBoost) * 100
+  ) / 100;
+  return {
+    engagementRate,
+    categoryNormalizedScore,
+    freshnessBoost,
+    balancedScore
+  };
+}
+function computeListingAchievements(params) {
+  const badges = [];
+  const {
+    curr7d,
+    prev7d,
+    curr30d,
+    listingCreatedAt,
+    nowMs = Date.now(),
+    categoryRank,
+    categoryTotal = 0,
+    globalRank
+  } = params;
+  const ageDays = listingCreatedAt && Number.isFinite(listingCreatedAt) && listingCreatedAt > 0 ? Math.max(0, (nowMs - listingCreatedAt) / (24 * 60 * 60 * 1e3)) : 999;
+  if (curr7d.uniqueViewers >= 5 && prev7d.uniqueViewers > 0 && (curr7d.uniqueViewers - prev7d.uniqueViewers) / prev7d.uniqueViewers >= 0.5 || ageDays <= 14 && curr7d.uniqueViewers >= 5 && curr7d.engagementRate >= 8) {
+    badges.push("rising_listing");
+  }
+  if (curr30d.uniqueViewers >= 25 && curr30d.views >= 35) {
+    badges.push("popular_listing");
+  }
+  if (typeof categoryRank === "number" && (categoryRank === 1 && curr7d.uniqueViewers >= 5 || categoryRank <= 3 && categoryTotal >= 10 && curr30d.uniqueViewers >= 10)) {
+    badges.push("top_in_category");
+  }
+  if (typeof globalRank === "number" && globalRank <= 10 && curr30d.uniqueViewers >= 20 && curr30d.engagementRate >= 5) {
+    badges.push("global_recognition");
+  }
+  return badges;
+}
+function normalizeListingTypeFilter(raw) {
+  if (typeof raw !== "string") return "all";
+  const trimmed = raw.trim().toLowerCase();
+  if (trimmed === "product" || trimmed === "service" || trimmed === "project") {
+    return trimmed;
+  }
+  return "all";
+}
+function buildRankingsFromPublicDocs(params) {
+  const {
+    docs,
+    sellerRatingsMap,
+    scope,
+    period,
+    listingType,
+    category,
+    country,
+    region,
+    nowMs = Date.now(),
+    limitCount = 50
+  } = params;
+  const eligible = docs.filter((d) => !d.optedOut && (!d.status || d.status === "active")).map((d) => {
+    const agg = aggregatePeriodFromBuckets(d, nowMs);
+    const periodMetrics = agg.periods[period];
+    const normalizedType = inferListingType(d.category, d.listingType);
+    return {
+      doc: d,
+      normalizedType,
+      agg,
+      periodMetrics
+    };
+  }).filter((item) => item.periodMetrics.views > 0 || item.periodMetrics.impressions > 0);
+  if (eligible.length === 0) return [];
+  const categoryDemands = /* @__PURE__ */ new Map();
+  for (const item of eligible) {
+    const cat = (item.doc.category || "other").toLowerCase();
+    const arr = categoryDemands.get(cat) || [];
+    arr.push(item.periodMetrics.uniqueViewers + item.periodMetrics.views * 0.35);
+    categoryDemands.set(cat, arr);
+  }
+  const categoryBaselines = /* @__PURE__ */ new Map();
+  for (const [cat, vals] of categoryDemands.entries()) {
+    const sorted = [...vals].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    const median = sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+    categoryBaselines.set(cat, Math.max(1, median));
+  }
+  const scoredAll = eligible.map((item) => {
+    const cat = (item.doc.category || "other").toLowerCase();
+    const baseline = categoryBaselines.get(cat) || 1;
+    const rating = sellerRatingsMap[item.doc.sellerId];
+    const scoreData = computeBalancedScore({
+      impressions: item.periodMetrics.impressions,
+      views: item.periodMetrics.views,
+      uniqueViewers: item.periodMetrics.uniqueViewers,
+      categoryBaseline: baseline,
+      sellerRatingAvg: rating?.avg || 0,
+      sellerRatingCount: rating?.count || 0,
+      listingCreatedAt: item.doc.listingCreatedAt || item.doc.createdAt,
+      nowMs
+    });
+    return {
+      ...item,
+      rating,
+      scoreData
+    };
+  });
+  scoredAll.sort((a, b) => {
+    if (b.scoreData.balancedScore !== a.scoreData.balancedScore) {
+      return b.scoreData.balancedScore - a.scoreData.balancedScore;
+    }
+    return b.periodMetrics.uniqueViewers - a.periodMetrics.uniqueViewers;
+  });
+  const globalRankMap = /* @__PURE__ */ new Map();
+  const categoryLists = /* @__PURE__ */ new Map();
+  scoredAll.forEach((entry, idx) => {
+    globalRankMap.set(entry.doc.listingId, idx + 1);
+    const cat = (entry.doc.category || "other").toLowerCase();
+    const list = categoryLists.get(cat) || [];
+    list.push(entry);
+    categoryLists.set(cat, list);
+  });
+  const categoryRankMap = /* @__PURE__ */ new Map();
+  for (const list of categoryLists.values()) {
+    list.forEach((entry, idx) => {
+      categoryRankMap.set(entry.doc.listingId, { rank: idx + 1, total: list.length });
+    });
+  }
+  const normCountryFilter = normalizeCountryCode(country);
+  const normRegionFilter = region ? region.trim().toLowerCase() : "";
+  const normCategoryFilter = category && category !== "all" ? category.trim().toLowerCase() : "";
+  const normListingTypeFilter = normalizeListingTypeFilter(listingType);
+  const scoped = scoredAll.filter((entry) => {
+    if (normListingTypeFilter !== "all" && entry.normalizedType !== normListingTypeFilter) {
+      return false;
+    }
+    if (scope === "country") {
+      if (!entry.doc.country) return false;
+      if (normCountryFilter && entry.doc.country.toUpperCase() !== normCountryFilter) return false;
+      return true;
+    }
+    if (scope === "regional") {
+      if (!entry.doc.region) return false;
+      if (normRegionFilter && !entry.doc.region.toLowerCase().includes(normRegionFilter)) return false;
+      return true;
+    }
+    if (scope === "category") {
+      if (!normCategoryFilter) return true;
+      return (entry.doc.category || "").toLowerCase() === normCategoryFilter;
+    }
+    return true;
+  });
+  return scoped.slice(0, limitCount).map((entry, idx) => {
+    const catInfo = categoryRankMap.get(entry.doc.listingId);
+    const globalRank = globalRankMap.get(entry.doc.listingId);
+    const achievements = computeListingAchievements({
+      curr7d: entry.agg.periods["7d"],
+      prev7d: entry.agg.prevPeriods["7d"],
+      curr30d: entry.agg.periods["30d"],
+      listingCreatedAt: entry.doc.listingCreatedAt || entry.doc.createdAt,
+      nowMs,
+      categoryRank: catInfo?.rank,
+      categoryTotal: catInfo?.total,
+      globalRank
+    });
+    return {
+      rank: idx + 1,
+      listingId: entry.doc.listingId,
+      title: entry.doc.title,
+      titleGe: entry.doc.titleGe,
+      category: entry.doc.category,
+      listingType: entry.normalizedType,
+      image: entry.doc.image,
+      sellerName: entry.doc.sellerName || "Proton Vendor",
+      country: entry.doc.country,
+      region: entry.doc.region,
+      impressions: entry.periodMetrics.impressions,
+      views: entry.periodMetrics.views,
+      uniqueViewers: entry.periodMetrics.uniqueViewers,
+      engagementRate: entry.scoreData.engagementRate,
+      categoryNormalizedScore: entry.scoreData.categoryNormalizedScore,
+      sellerRatingAvg: entry.rating?.avg,
+      sellerRatingCount: entry.rating?.count,
+      freshnessBoost: entry.scoreData.freshnessBoost,
+      balancedScore: entry.scoreData.balancedScore,
+      achievements,
+      period
+    };
+  });
+}
+function isValidHmacDigest(value) {
+  return typeof value === "string" && /^[a-f0-9]{64}$/.test(value);
+}
+function createEmptySellerAudienceCounters() {
+  return {
+    totalImpressions: 0,
+    totalViews: 0,
+    uniqueViewers: 0,
+    authImpressions: 0,
+    authViews: 0,
+    authUniqueViewers: 0,
+    guestImpressions: 0,
+    guestViews: 0,
+    guestUniqueViewers: 0
+  };
+}
+function createEmptySellerAnalyticsTotalCounters() {
+  return {
+    totalEvents: 0,
+    totalUniqueUsers: 0,
+    authEvents: 0,
+    guestEvents: 0,
+    authUniqueUsers: 0,
+    guestUniqueUsers: 0
+  };
+}
+function createEmptySellerAnalyticsBucket() {
+  const bucket = {};
+  for (const key of SELLER_BUCKET_NUMERIC_KEYS) {
+    bucket[key] = 0;
+  }
+  return bucket;
+}
+function sanitizeSellerAnalyticsBucket(raw) {
+  const sanitized = createEmptySellerAnalyticsBucket();
+  if (!raw || typeof raw !== "object") return sanitized;
+  const src = raw;
+  for (const key of SELLER_BUCKET_NUMERIC_KEYS) {
+    const val = Number(src[key]);
+    sanitized[key] = Number.isFinite(val) && val >= 0 ? val : 0;
+  }
+  return sanitized;
+}
+function pruneSellerHourlyBuckets(hourly, nowMs) {
+  const result = {};
+  if (!hourly || typeof hourly !== "object") return result;
+  const minTs = nowMs - SELLER_HOURLY_BUCKET_RETENTION_HOURS * 60 * 60 * 1e3;
+  const minKey = getHourBucketKey(minTs);
+  for (const [k, v] of Object.entries(hourly)) {
+    if (k >= minKey && v && typeof v === "object") {
+      result[k] = sanitizeSellerAnalyticsBucket(v);
+    }
+  }
+  return result;
+}
+function pruneSellerDailyBuckets(daily, nowMs) {
+  const result = {};
+  if (!daily || typeof daily !== "object") return result;
+  const minTs = nowMs - SELLER_DAILY_BUCKET_RETENTION_DAYS * 24 * 60 * 60 * 1e3;
+  const minKey = getDayBucketKey(minTs);
+  for (const [k, v] of Object.entries(daily)) {
+    if (k >= minKey && v && typeof v === "object") {
+      result[k] = sanitizeSellerAnalyticsBucket(v);
+    }
+  }
+  return result;
+}
+function createEmptySellerAnalyticsDoc(params) {
+  const nowMs = params.nowMs ?? Date.now();
+  return {
+    sellerId: params.sellerId,
+    metadata: {
+      schemaVersion: SELLER_ANALYTICS_SCHEMA_VERSION,
+      ...params.sellerName ? { sellerName: params.sellerName } : {}
+    },
+    optedOut: Boolean(params.optedOut),
+    ...params.country ? { country: params.country } : {},
+    ...params.region ? { region: params.region } : {},
+    funnelTrackingSince: nowMs,
+    audience: createEmptySellerAudienceCounters(),
+    totals: createEmptySellerAnalyticsTotalCounters(),
+    profileViews: 0,
+    uniqueProfileViewers: 0,
+    authProfileViews: 0,
+    guestProfileViews: 0,
+    authUniqueProfileViewers: 0,
+    guestUniqueProfileViewers: 0,
+    listingToSellerClicks: 0,
+    uniqueListingToSellerUsers: 0,
+    authListingToSellerClicks: 0,
+    guestListingToSellerClicks: 0,
+    authUniqueListingToSellerUsers: 0,
+    guestUniqueListingToSellerUsers: 0,
+    contactClicks: 0,
+    uniqueContactClickers: 0,
+    authContactClicks: 0,
+    guestContactClicks: 0,
+    authUniqueContactClickers: 0,
+    guestUniqueContactClickers: 0,
+    orderIntents: 0,
+    uniqueOrderIntentUsers: 0,
+    authOrderIntents: 0,
+    guestOrderIntents: 0,
+    authUniqueOrderIntentUsers: 0,
+    guestUniqueOrderIntentUsers: 0,
+    contactConfirmed: 0,
+    uniqueContactedBuyers: 0,
+    ordersConfirmed: 0,
+    uniqueOrderBuyers: 0,
+    guestToAuthLinks: 0,
+    hourly: {},
+    daily: {},
+    createdAt: nowMs,
+    updatedAt: nowMs
+  };
+}
+function sanitizeSellerViewerDoc(input) {
+  if (!isValidHmacDigest(input?.viewerHash)) {
+    throw new Error("Invalid HMAC viewerHash for seller viewer storage");
+  }
+  const viewerType = input.viewerType === "auth" ? "auth" : "guest";
+  const nowFallback = typeof input.lastSeenAt === "number" && Number.isFinite(input.lastSeenAt) ? input.lastSeenAt : Date.now();
+  const firstSeenAt = typeof input.firstSeenAt === "number" && Number.isFinite(input.firstSeenAt) ? input.firstSeenAt : nowFallback;
+  const clean = {
+    viewerHash: input.viewerHash,
+    viewerType,
+    firstSeenAt,
+    lastSeenAt: nowFallback
+  };
+  for (const field of SELLER_VIEWER_TIMESTAMP_FIELDS) {
+    if (field === "firstSeenAt" || field === "lastSeenAt") continue;
+    const rawVal = input[field];
+    if (typeof rawVal === "number" && Number.isFinite(rawVal) && rawVal > 0) {
+      clean[field] = rawVal;
+    }
+  }
+  return clean;
+}
+function normalizeBoundedUniqueIdList(existing, addition, maxLimit) {
+  const result = [];
+  const seen = /* @__PURE__ */ new Set();
+  if (Array.isArray(existing)) {
+    for (const item of existing) {
+      if (isValidAnalyticsId(item) && !seen.has(item)) {
+        seen.add(item);
+        result.push(item);
+        if (result.length >= maxLimit) return result;
+      }
+    }
+  }
+  if (isValidAnalyticsId(addition) && !seen.has(addition) && result.length < maxLimit) {
+    result.push(addition);
+  }
+  return result;
+}
+function isGuestSessionExpired(doc, nowMs) {
+  if (!doc) return true;
+  if (typeof doc.expiresAt !== "number" || !Number.isFinite(doc.expiresAt)) return true;
+  return doc.expiresAt <= nowMs;
+}
+function mergeGuestSessionActivity(existingDoc, params) {
+  if (!isValidHmacDigest(params.guestHash)) {
+    throw new Error("Invalid HMAC guestHash");
+  }
+  const nowMs = params.nowMs ?? Date.now();
+  const activeExisting = existingDoc && !isGuestSessionExpired(existingDoc, nowMs) ? existingDoc : null;
+  const listingIds = normalizeBoundedUniqueIdList(
+    activeExisting?.listingIds,
+    params.listingId,
+    GUEST_SESSION_MAX_LISTING_IDS
+  );
+  const sellerIds = normalizeBoundedUniqueIdList(
+    activeExisting?.sellerIds,
+    params.sellerId,
+    GUEST_SESSION_MAX_SELLER_IDS
+  );
+  return {
+    guestHash: params.guestHash,
+    listingIds,
+    sellerIds,
+    linkedUid: activeExisting?.linkedUid ?? null,
+    createdAt: activeExisting?.createdAt ?? nowMs,
+    updatedAt: nowMs,
+    linkedAt: activeExisting?.linkedAt ?? null,
+    expiresAt: nowMs + GUEST_SESSION_TTL_MS
+  };
+}
+function evaluateGuestSessionClaim(existingDoc, params) {
+  const nowMs = params.nowMs ?? Date.now();
+  if (!isValidAnalyticsId(params.uid)) {
+    return { status: 400, claimed: false, reason: "invalid_request" };
+  }
+  if (!existingDoc || isGuestSessionExpired(existingDoc, nowMs)) {
+    return { status: 200, claimed: false, reason: "no_guest_session" };
+  }
+  const boundedListingIds = normalizeBoundedUniqueIdList(
+    existingDoc.listingIds,
+    void 0,
+    GUEST_SESSION_MAX_LISTING_IDS
+  );
+  const boundedSellerIds = normalizeBoundedUniqueIdList(
+    existingDoc.sellerIds,
+    void 0,
+    GUEST_SESSION_MAX_SELLER_IDS
+  );
+  if (existingDoc.linkedUid) {
+    if (existingDoc.linkedUid === params.uid) {
+      return {
+        status: 200,
+        claimed: true,
+        idempotent: true,
+        linkedUid: existingDoc.linkedUid,
+        listingIds: boundedListingIds,
+        sellerIds: boundedSellerIds
+      };
+    }
+    return {
+      status: 409,
+      claimed: false,
+      reason: "visitor_already_claimed"
+    };
+  }
+  if (boundedListingIds.length === 0 && boundedSellerIds.length === 0) {
+    return { status: 200, claimed: false, reason: "no_guest_session" };
+  }
+  const nextDoc = {
+    guestHash: existingDoc.guestHash,
+    listingIds: boundedListingIds,
+    sellerIds: boundedSellerIds,
+    linkedUid: params.uid,
+    createdAt: existingDoc.createdAt,
+    updatedAt: nowMs,
+    linkedAt: nowMs,
+    expiresAt: existingDoc.expiresAt
+  };
+  return {
+    status: 200,
+    claimed: true,
+    idempotent: false,
+    linkedUid: params.uid,
+    listingIds: boundedListingIds,
+    sellerIds: boundedSellerIds,
+    nextDoc
+  };
+}
+function buildVerifiedFunnelMarkerId(markerType, sourceId) {
+  if (!isValidAnalyticsId(sourceId)) {
+    throw new Error("Invalid sourceId for verified funnel marker");
+  }
+  const prefix = markerType === "order_confirmed" ? "order_" : "contact_";
+  const markerId = `${prefix}${sourceId}`;
+  if (!isValidAnalyticsId(markerId)) {
+    throw new Error("Verified funnel markerId exceeds 128 characters or contains invalid characters");
+  }
+  return markerId;
+}
+function computeSellerFunnelTransactionUpdate(input) {
+  const nowMs = input.nowMs ?? Date.now();
+  const baseSeller = input.existingSeller ?? createEmptySellerAnalyticsDoc({
+    sellerId: input.sellerId,
+    optedOut: input.sellerMeta?.optedOut,
+    sellerName: input.sellerMeta?.sellerName,
+    country: input.sellerMeta?.country,
+    region: input.sellerMeta?.region,
+    nowMs
+  });
+  const viewerData = input.existingViewer ? { ...input.existingViewer } : {
+    viewerHash: input.viewerHash,
+    viewerType: input.viewerType,
+    firstSeenAt: nowMs,
+    lastSeenAt: nowMs
+  };
+  viewerData.lastSeenAt = nowMs;
+  const hourKey = getHourBucketKey(nowMs);
+  const dayKey = getDayBucketKey(nowMs);
+  const hourly = pruneSellerHourlyBuckets(baseSeller.hourly, nowMs);
+  const daily = pruneSellerDailyBuckets(baseSeller.daily, nowMs);
+  const hBucket = hourly[hourKey] || createEmptySellerAnalyticsBucket();
+  const dBucket = daily[dayKey] || createEmptySellerAnalyticsBucket();
+  const isAuth = input.viewerType === "auth";
+  let uniqueIncremented = false;
+  let counterField;
+  let uniqueField;
+  let authField;
+  let guestField;
+  let authUniqueField;
+  let guestUniqueField;
+  let lastTimestampField;
+  let uniqueViewerCheckField;
+  switch (input.eventType) {
+    case "seller_profile_view":
+      counterField = "profileViews";
+      uniqueField = "uniqueProfileViewers";
+      authField = "authProfileViews";
+      guestField = "guestProfileViews";
+      authUniqueField = "authUniqueProfileViewers";
+      guestUniqueField = "guestUniqueProfileViewers";
+      lastTimestampField = "lastProfileViewAt";
+      uniqueViewerCheckField = "firstProfileViewAt";
+      break;
+    case "listing_to_seller":
+      counterField = "listingToSellerClicks";
+      uniqueField = "uniqueListingToSellerUsers";
+      authField = "authListingToSellerClicks";
+      guestField = "guestListingToSellerClicks";
+      authUniqueField = "authUniqueListingToSellerUsers";
+      guestUniqueField = "guestUniqueListingToSellerUsers";
+      lastTimestampField = "lastListingToSellerAt";
+      uniqueViewerCheckField = "firstListingToSellerAt";
+      break;
+    case "contact_click":
+      counterField = "contactClicks";
+      uniqueField = "uniqueContactClickers";
+      authField = "authContactClicks";
+      guestField = "guestContactClicks";
+      authUniqueField = "authUniqueContactClickers";
+      guestUniqueField = "guestUniqueContactClickers";
+      lastTimestampField = "lastContactClickAt";
+      uniqueViewerCheckField = "firstContactClickAt";
+      break;
+    case "order_intent":
+      counterField = "orderIntents";
+      uniqueField = "uniqueOrderIntentUsers";
+      authField = "authOrderIntents";
+      guestField = "guestOrderIntents";
+      authUniqueField = "authUniqueOrderIntentUsers";
+      guestUniqueField = "guestUniqueOrderIntentUsers";
+      lastTimestampField = "lastOrderIntentAt";
+      uniqueViewerCheckField = "firstOrderIntentAt";
+      break;
+    case "contact_confirmed":
+      counterField = "contactConfirmed";
+      uniqueField = "uniqueContactedBuyers";
+      lastTimestampField = "firstContactConfirmedAt";
+      uniqueViewerCheckField = "firstContactConfirmedAt";
+      break;
+    case "order_confirmed":
+      counterField = "ordersConfirmed";
+      uniqueField = "uniqueOrderBuyers";
+      lastTimestampField = "firstOrderConfirmedAt";
+      uniqueViewerCheckField = "firstOrderConfirmedAt";
+      break;
+    default:
+      return { recorded: false, reason: "invalid_event_type", uniqueIncremented: false };
+  }
+  const isFirstViewerAction = !viewerData[uniqueViewerCheckField];
+  if (isFirstViewerAction) {
+    viewerData[uniqueViewerCheckField] = nowMs;
+    uniqueIncremented = true;
+  }
+  if (lastTimestampField !== uniqueViewerCheckField || isFirstViewerAction) {
+    viewerData[lastTimestampField] = nowMs;
+  }
+  viewerData.firstAudienceAt = viewerData.firstAudienceAt || nowMs;
+  viewerData.lastAudienceAt = nowMs;
+  const cleanViewerDoc = sanitizeSellerViewerDoc(
+    viewerData
+  );
+  const nextSellerDoc = {
+    ...baseSeller,
+    metadata: {
+      schemaVersion: baseSeller.metadata?.schemaVersion || SELLER_ANALYTICS_SCHEMA_VERSION,
+      ...baseSeller.metadata?.sellerName ? { sellerName: baseSeller.metadata.sellerName } : input.sellerMeta?.sellerName ? { sellerName: input.sellerMeta.sellerName } : {},
+      lastEventAt: nowMs
+    },
+    [counterField]: (Number(baseSeller[counterField]) || 0) + 1,
+    ...uniqueIncremented ? { [uniqueField]: (Number(baseSeller[uniqueField]) || 0) + 1 } : {},
+    ...authField ? {
+      [authField]: isAuth ? (Number(baseSeller[authField]) || 0) + 1 : Number(baseSeller[authField]) || 0
+    } : {},
+    ...guestField ? {
+      [guestField]: !isAuth ? (Number(baseSeller[guestField]) || 0) + 1 : Number(baseSeller[guestField]) || 0
+    } : {},
+    ...authUniqueField ? {
+      [authUniqueField]: uniqueIncremented && isAuth ? (Number(baseSeller[authUniqueField]) || 0) + 1 : Number(baseSeller[authUniqueField]) || 0
+    } : {},
+    ...guestUniqueField ? {
+      [guestUniqueField]: uniqueIncremented && !isAuth ? (Number(baseSeller[guestUniqueField]) || 0) + 1 : Number(baseSeller[guestUniqueField]) || 0
+    } : {},
+    audience: {
+      totalImpressions: baseSeller.audience?.totalImpressions || 0,
+      totalViews: baseSeller.audience?.totalViews || 0,
+      uniqueViewers: baseSeller.audience?.uniqueViewers || 0,
+      authImpressions: baseSeller.audience?.authImpressions || 0,
+      authViews: baseSeller.audience?.authViews || 0,
+      authUniqueViewers: baseSeller.audience?.authUniqueViewers || 0,
+      guestImpressions: baseSeller.audience?.guestImpressions || 0,
+      guestViews: baseSeller.audience?.guestViews || 0,
+      guestUniqueViewers: baseSeller.audience?.guestUniqueViewers || 0
+    },
+    totals: {
+      totalEvents: (Number(baseSeller.totals?.totalEvents) || 0) + 1,
+      totalUniqueUsers: (Number(baseSeller.totals?.totalUniqueUsers) || 0) + (uniqueIncremented ? 1 : 0),
+      authEvents: (Number(baseSeller.totals?.authEvents) || 0) + (isAuth ? 1 : 0),
+      guestEvents: (Number(baseSeller.totals?.guestEvents) || 0) + (!isAuth ? 1 : 0),
+      authUniqueUsers: (Number(baseSeller.totals?.authUniqueUsers) || 0) + (uniqueIncremented && isAuth ? 1 : 0),
+      guestUniqueUsers: (Number(baseSeller.totals?.guestUniqueUsers) || 0) + (uniqueIncremented && !isAuth ? 1 : 0)
+    },
+    hourly,
+    daily,
+    updatedAt: nowMs
+  };
+  const applyBucketUpdates = (bucket) => {
+    const cKey = counterField;
+    const uKey = uniqueField;
+    bucket[cKey] = (Number(bucket[cKey]) || 0) + 1;
+    if (uniqueIncremented) {
+      bucket[uKey] = (Number(bucket[uKey]) || 0) + 1;
+    }
+    if (authField && isAuth) {
+      const aKey = authField;
+      bucket[aKey] = (Number(bucket[aKey]) || 0) + 1;
+    }
+    if (guestField && !isAuth) {
+      const gKey = guestField;
+      bucket[gKey] = (Number(bucket[gKey]) || 0) + 1;
+    }
+    if (uniqueIncremented && authUniqueField && isAuth) {
+      const auKey = authUniqueField;
+      bucket[auKey] = (Number(bucket[auKey]) || 0) + 1;
+    }
+    if (uniqueIncremented && guestUniqueField && !isAuth) {
+      const guKey = guestUniqueField;
+      bucket[guKey] = (Number(bucket[guKey]) || 0) + 1;
+    }
+    bucket.totalEvents = (Number(bucket.totalEvents) || 0) + 1;
+    bucket.authEvents = (Number(bucket.authEvents) || 0) + (isAuth ? 1 : 0);
+    bucket.guestEvents = (Number(bucket.guestEvents) || 0) + (!isAuth ? 1 : 0);
+    if (uniqueIncremented) {
+      bucket.uniqueUsers = (Number(bucket.uniqueUsers) || 0) + 1;
+      if (isAuth) {
+        bucket.authUniqueUsers = (Number(bucket.authUniqueUsers) || 0) + 1;
+      } else {
+        bucket.guestUniqueUsers = (Number(bucket.guestUniqueUsers) || 0) + 1;
+      }
+    }
+  };
+  applyBucketUpdates(hBucket);
+  applyBucketUpdates(dBucket);
+  hourly[hourKey] = hBucket;
+  daily[dayKey] = dBucket;
+  return {
+    recorded: true,
+    uniqueIncremented,
+    nextSellerDoc,
+    nextViewerDoc: cleanViewerDoc
+  };
+}
+var BOT_USER_AGENT_PATTERN, IMPRESSION_COOLDOWN_MS, VIEW_COOLDOWN_MS, COUNTRY_NAME_TO_CODE, SELLER_DAILY_BUCKET_RETENTION_DAYS, SELLER_HOURLY_BUCKET_RETENTION_HOURS, GUEST_SESSION_MAX_LISTING_IDS, GUEST_SESSION_MAX_SELLER_IDS, GUEST_SESSION_TTL_DAYS, GUEST_SESSION_TTL_MS, SELLER_ANALYTICS_SCHEMA_VERSION, SELLER_BUCKET_NUMERIC_KEYS, SELLER_VIEWER_TIMESTAMP_FIELDS;
+var init_marketAnalyticsUtils = __esm({
+  "src/lib/marketAnalyticsUtils.ts"() {
+    "use strict";
+    init_listingClassification();
+    BOT_USER_AGENT_PATTERN = /bot|crawler|spider|slurp|mediapartners|headless|puppeteer|playwright|selenium|phantom|curl|wget|python-requests|httpclient|axios\/|node-fetch|postman|insomnia|scrapy|lighthouse|pingdom|uptimerobot/i;
+    IMPRESSION_COOLDOWN_MS = 10 * 60 * 1e3;
+    VIEW_COOLDOWN_MS = 5 * 60 * 1e3;
+    COUNTRY_NAME_TO_CODE = {
+      GE: "GEO",
+      GEO: "GEO",
+      GEORGIA: "GEO",
+      "\u10E1\u10D0\u10E5\u10D0\u10E0\u10D7\u10D5\u10D4\u10DA\u10DD": "GEO",
+      US: "USA",
+      USA: "USA",
+      "UNITED STATES": "USA",
+      DE: "DEU",
+      DEU: "DEU",
+      GERMANY: "DEU",
+      CN: "CHN",
+      CHN: "CHN",
+      CHINA: "CHN",
+      JP: "JPN",
+      JPN: "JPN",
+      JAPAN: "JPN",
+      GB: "GBR",
+      UK: "GBR",
+      GBR: "GBR",
+      "UNITED KINGDOM": "GBR",
+      FR: "FRA",
+      FRA: "FRA",
+      FRANCE: "FRA",
+      EE: "EST",
+      EST: "EST",
+      ESTONIA: "EST",
+      IL: "ISR",
+      ISR: "ISR",
+      ISRAEL: "ISR",
+      SG: "SGP",
+      SGP: "SGP",
+      SINGAPORE: "SGP",
+      AE: "VAE",
+      UAE: "VAE",
+      VAE: "VAE"
+    };
+    SELLER_DAILY_BUCKET_RETENTION_DAYS = 62;
+    SELLER_HOURLY_BUCKET_RETENTION_HOURS = 52;
+    GUEST_SESSION_MAX_LISTING_IDS = 50;
+    GUEST_SESSION_MAX_SELLER_IDS = 30;
+    GUEST_SESSION_TTL_DAYS = 30;
+    GUEST_SESSION_TTL_MS = GUEST_SESSION_TTL_DAYS * 24 * 60 * 60 * 1e3;
+    SELLER_ANALYTICS_SCHEMA_VERSION = 1;
+    SELLER_BUCKET_NUMERIC_KEYS = [
+      "profileViews",
+      "uniqueProfileViewers",
+      "authProfileViews",
+      "guestProfileViews",
+      "authUniqueProfileViewers",
+      "guestUniqueProfileViewers",
+      "listingToSellerClicks",
+      "uniqueListingToSellerUsers",
+      "authListingToSellerClicks",
+      "guestListingToSellerClicks",
+      "authUniqueListingToSellerUsers",
+      "guestUniqueListingToSellerUsers",
+      "contactClicks",
+      "uniqueContactClickers",
+      "authContactClicks",
+      "guestContactClicks",
+      "authUniqueContactClickers",
+      "guestUniqueContactClickers",
+      "orderIntents",
+      "uniqueOrderIntentUsers",
+      "authOrderIntents",
+      "guestOrderIntents",
+      "authUniqueOrderIntentUsers",
+      "guestUniqueOrderIntentUsers",
+      "contactConfirmed",
+      "uniqueContactedBuyers",
+      "ordersConfirmed",
+      "uniqueOrderBuyers",
+      "guestToAuthLinks",
+      "audienceImpressions",
+      "audienceViews",
+      "audienceUniqueViewers",
+      "authAudienceImpressions",
+      "authAudienceViews",
+      "authAudienceUniqueViewers",
+      "guestAudienceImpressions",
+      "guestAudienceViews",
+      "guestAudienceUniqueViewers",
+      "totalEvents",
+      "uniqueUsers",
+      "authEvents",
+      "guestEvents",
+      "authUniqueUsers",
+      "guestUniqueUsers"
+    ];
+    SELLER_VIEWER_TIMESTAMP_FIELDS = [
+      "firstSeenAt",
+      "lastSeenAt",
+      "firstProfileViewAt",
+      "lastProfileViewAt",
+      "firstListingToSellerAt",
+      "lastListingToSellerAt",
+      "firstContactClickAt",
+      "lastContactClickAt",
+      "firstOrderIntentAt",
+      "lastOrderIntentAt",
+      "firstContactConfirmedAt",
+      "firstOrderConfirmedAt",
+      "firstAudienceAt",
+      "lastAudienceAt"
+    ];
+  }
+});
+
+// src/lib/analyticsServer.ts
+var analyticsServer_exports = {};
+__export(analyticsServer_exports, {
+  ANALYTICS_CACHE_TTL_MS: () => ANALYTICS_CACHE_TTL_MS,
+  AnalyticsConfigError: () => AnalyticsConfigError,
+  CONFIRMED_ORDER_ALLOWED_STATUSES: () => CONFIRMED_ORDER_ALLOWED_STATUSES,
+  DEFAULT_CURSOR_BATCH_SIZE: () => DEFAULT_CURSOR_BATCH_SIZE,
+  DEFAULT_CURSOR_MAX_PAGES: () => DEFAULT_CURSOR_MAX_PAGES,
+  DEV_FALLBACK_ANALYTICS_SALT: () => DEV_FALLBACK_ANALYTICS_SALT,
+  FirestoreAdminAnalyticsRepository: () => FirestoreAdminAnalyticsRepository,
+  MIN_ANALYTICS_SALT_LENGTH: () => MIN_ANALYTICS_SALT_LENGTH,
+  MarketAnalyticsService: () => MarketAnalyticsService,
+  OPT_OUT_BATCH_CHUNK_SIZE: () => OPT_OUT_BATCH_CHUNK_SIZE,
+  SELLER_SCOPED_CURSOR_MAX_PAGES: () => SELLER_SCOPED_CURSOR_MAX_PAGES,
+  getAdminFirestoreInstance: () => getAdminFirestoreInstance,
+  isAdminCredentialsError: () => isAdminCredentialsError,
+  isProductionRuntime: () => isProductionRuntime,
+  parseServiceAccountJson: () => parseServiceAccountJson,
+  resetAdminFirestoreCacheForTests: () => resetAdminFirestoreCacheForTests,
+  scanCollectionWithCursor: () => scanCollectionWithCursor
+});
+import crypto from "crypto";
+function parseTimestampMs(val) {
+  if (typeof val === "number" && Number.isFinite(val)) return val;
+  if (val && typeof val.toMillis === "function") return val.toMillis();
+  if (val && typeof val.seconds === "number") return val.seconds * 1e3;
+  return Date.now();
+}
+function isProductionRuntime() {
+  return process.env.NODE_ENV === "production" || Boolean(process.env.VERCEL);
+}
+function parseServiceAccountJson(rawSaJson) {
+  let cleaned = rawSaJson.trim();
+  if (cleaned.startsWith("'") && cleaned.endsWith("'") || cleaned.startsWith('"') && cleaned.endsWith('"')) {
+    const inner = cleaned.slice(1, -1).trim();
+    if (inner.startsWith("{")) {
+      cleaned = inner;
+    } else if (cleaned.startsWith('"')) {
+      try {
+        const unwrapped = JSON.parse(cleaned);
+        if (typeof unwrapped === "string" && unwrapped.trim().startsWith("{")) {
+          cleaned = unwrapped.trim();
+        }
+      } catch {
+      }
+    }
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch {
+    throw new AnalyticsConfigError(
+      "analytics/admin-credentials-invalid",
+      "Server Firebase Admin service account JSON is malformed."
+    );
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new AnalyticsConfigError(
+      "analytics/admin-credentials-invalid",
+      "Server Firebase Admin service account JSON must be an object."
+    );
+  }
+  if (typeof parsed.project_id !== "string" || parsed.project_id.trim() !== "proton-core-ai") {
+    throw new AnalyticsConfigError(
+      "analytics/admin-credentials-invalid",
+      "Server Firebase Admin service account JSON project_id must match proton-core-ai."
+    );
+  }
+  if (typeof parsed.client_email !== "string" || !parsed.client_email.includes("@")) {
+    throw new AnalyticsConfigError(
+      "analytics/admin-credentials-invalid",
+      "Server Firebase Admin service account JSON is missing a valid client_email."
+    );
+  }
+  if (typeof parsed.private_key !== "string" || !parsed.private_key.trim()) {
+    throw new AnalyticsConfigError(
+      "analytics/admin-credentials-invalid",
+      "Server Firebase Admin service account JSON is missing a valid private_key."
+    );
+  }
+  const normalizedKey = parsed.private_key.replace(/\\n/g, "\n").trim();
+  if (!normalizedKey.includes("-----BEGIN ") || !normalizedKey.includes("-----END ")) {
+    throw new AnalyticsConfigError(
+      "analytics/admin-credentials-invalid",
+      "Server Firebase Admin private_key is not valid PEM format."
+    );
+  }
+  return {
+    ...parsed,
+    private_key: `${normalizedKey}
+`
+  };
+}
+async function resetAdminFirestoreCacheForTests() {
+  cachedAdminFirestore = null;
+  try {
+    const { getApps, deleteApp } = await import("firebase-admin/app");
+    const existing = getApps().find((a) => a.name === "proton-analytics-admin");
+    if (existing) {
+      await deleteApp(existing);
+    }
+  } catch {
+  }
+}
+async function getAdminFirestoreInstance() {
+  if (cachedAdminFirestore) return cachedAdminFirestore;
+  const { initializeApp, getApps, cert } = await import("firebase-admin/app");
+  const { getFirestore } = await import("firebase-admin/firestore");
+  const PRIMARY_PROJECT_ID = "proton-core-ai";
+  const databaseId = process.env.FIRESTORE_DATABASE_ID || "ai-studio-01dfb83a-da41-4952-8647-6368b0e05d51";
+  const appName = "proton-analytics-admin";
+  let app2 = getApps().find((a) => a.name === appName);
+  if (!app2) {
+    const rawSaJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+    if (typeof rawSaJson === "string" && rawSaJson.trim().length > 0) {
+      const parsed = parseServiceAccountJson(rawSaJson);
+      try {
+        app2 = initializeApp(
+          {
+            credential: cert({
+              projectId: PRIMARY_PROJECT_ID,
+              clientEmail: parsed.client_email,
+              privateKey: parsed.private_key
+            }),
+            projectId: PRIMARY_PROJECT_ID
+          },
+          appName
+        );
+      } catch {
+        console.error("[MarketAnalytics] Failed to initialize Firebase Admin credential from FIREBASE_SERVICE_ACCOUNT_JSON.");
+        throw new AnalyticsConfigError(
+          "analytics/admin-credentials-invalid",
+          "Server Firebase Admin service account credential or private key is invalid."
+        );
+      }
+    } else {
+      app2 = initializeApp({ projectId: PRIMARY_PROJECT_ID }, appName);
+    }
+  }
+  cachedAdminFirestore = getFirestore(app2, databaseId);
+  return cachedAdminFirestore;
+}
+async function scanCollectionWithCursor(params) {
+  const batchSize = Math.max(1, Math.min(1e3, params.batchSize ?? DEFAULT_CURSOR_BATCH_SIZE));
+  const maxPages = Math.max(1, params.maxPages ?? DEFAULT_CURSOR_MAX_PAGES);
+  const label = params.label || "collection";
+  const items = [];
+  const seenIds = /* @__PURE__ */ new Set();
+  let lastDoc = null;
+  let prevCursorId = null;
+  let pagesRead = 0;
+  let truncated = false;
+  let truncationReason;
+  while (true) {
+    if (pagesRead >= maxPages) {
+      truncated = true;
+      truncationReason = `cursor_max_pages_exceeded:${maxPages}`;
+      console.error(
+        `[MarketAnalytics] Incomplete scan for ${label}: reached safety limit of ${maxPages} pages (${items.length} docs read).`
+      );
+      break;
+    }
+    let q = params.collectionRef.orderBy(params.documentIdField);
+    if (params.selectFields && params.selectFields.length > 0 && typeof q.select === "function") {
+      q = q.select(...params.selectFields);
+    }
+    if (lastDoc) {
+      q = q.startAfter(lastDoc);
+    }
+    q = q.limit(batchSize);
+    const snap = await q.get();
+    pagesRead += 1;
+    const batchDocs = Array.isArray(snap?.docs) ? snap.docs : [];
+    if (batchDocs.length === 0) {
+      break;
+    }
+    let addedInBatch = 0;
+    for (const d of batchDocs) {
+      if (!d || !d.id || seenIds.has(d.id)) {
+        continue;
+      }
+      seenIds.add(d.id);
+      items.push({ id: d.id, data: d.data() || {} });
+      addedInBatch += 1;
+    }
+    const nextLastDoc = batchDocs[batchDocs.length - 1];
+    if (!nextLastDoc || !nextLastDoc.id || nextLastDoc.id === prevCursorId || addedInBatch === 0) {
+      if (batchDocs.length >= batchSize) {
+        truncated = true;
+        truncationReason = "cursor_stalled_loop_guard";
+        console.error(
+          `[MarketAnalytics] Cursor pagination loop guard triggered for ${label} at docId=${nextLastDoc?.id || "unknown"} (${items.length} docs read).`
+        );
+      }
+      break;
+    }
+    prevCursorId = nextLastDoc.id;
+    lastDoc = nextLastDoc;
+    if (batchDocs.length < batchSize) {
+      break;
+    }
+  }
+  return { items, truncated, truncationReason };
+}
+function isAdminCredentialsError(err) {
+  if (err instanceof AnalyticsConfigError) return true;
+  const code = String(err?.code || "");
+  const msg = String(err?.message || err || "");
+  return err?.code === 7 || err?.code === 16 || code === "analytics/admin-credentials-missing" || code === "analytics/admin-credentials-invalid" || code === "analytics/salt-missing" || msg.includes("PERMISSION_DENIED") || msg.includes("Could not load the default credentials") || msg.includes("UNAUTHENTICATED") || msg.includes("Failed to parse private key") || msg.includes("Invalid PEM");
+}
+var CONFIRMED_ORDER_ALLOWED_STATUSES, DEV_FALLBACK_ANALYTICS_SALT, MIN_ANALYTICS_SALT_LENGTH, AnalyticsConfigError, cachedAdminFirestore, DEFAULT_CURSOR_BATCH_SIZE, DEFAULT_CURSOR_MAX_PAGES, SELLER_SCOPED_CURSOR_MAX_PAGES, OPT_OUT_BATCH_CHUNK_SIZE, ANALYTICS_CACHE_TTL_MS, FirestoreAdminAnalyticsRepository, MarketAnalyticsService;
+var init_analyticsServer = __esm({
+  "src/lib/analyticsServer.ts"() {
+    "use strict";
+    init_marketAnalyticsUtils();
+    init_listingClassification();
+    CONFIRMED_ORDER_ALLOWED_STATUSES = /* @__PURE__ */ new Set([
+      "pending",
+      "booked",
+      "processing",
+      "in_progress",
+      "shipped",
+      "delivered",
+      "completed"
+    ]);
+    DEV_FALLBACK_ANALYTICS_SALT = "proton-market-analytics-v1-salt";
+    MIN_ANALYTICS_SALT_LENGTH = 32;
+    AnalyticsConfigError = class extends Error {
+      code;
+      statusCode;
+      constructor(code, message, statusCode = 503) {
+        super(message);
+        this.name = "AnalyticsConfigError";
+        this.code = code;
+        this.statusCode = statusCode;
+      }
+    };
+    cachedAdminFirestore = null;
+    DEFAULT_CURSOR_BATCH_SIZE = 500;
+    DEFAULT_CURSOR_MAX_PAGES = 200;
+    SELLER_SCOPED_CURSOR_MAX_PAGES = 40;
+    OPT_OUT_BATCH_CHUNK_SIZE = 200;
+    ANALYTICS_CACHE_TTL_MS = 3e4;
+    FirestoreAdminAnalyticsRepository = class {
+      publicDocsCache = null;
+      ratingsCache = null;
+      rankMapsCache = null;
+      cacheTtlMs;
+      constructor(options) {
+        this.cacheTtlMs = options?.cacheTtlMs ?? ANALYTICS_CACHE_TTL_MS;
+      }
+      invalidateCaches() {
+        this.publicDocsCache = null;
+        this.ratingsCache = null;
+        this.rankMapsCache = null;
+      }
+      async getListing(listingId) {
+        const db = await getAdminFirestoreInstance();
+        const snap = await db.collection("listings").doc(listingId).get();
+        if (!snap.exists) return null;
+        const data = snap.data() || {};
+        return {
+          id: snap.id,
+          sellerId: data.sellerId,
+          sellerName: data.sellerName || data.authorName,
+          title: data.title || data.titleGe || "Untitled",
+          titleGe: data.titleGe,
+          category: data.category || "other",
+          listingType: inferListingType(data.category, data.listingType),
+          image: Array.isArray(data.images) && data.images[0] ? data.images[0] : data.image,
+          status: data.status,
+          country: data.country,
+          city: data.city,
+          createdAt: parseTimestampMs(data.createdAt),
+          isDemo: data.isDemo,
+          isSeed: data.isSeed,
+          isMock: data.isMock
+        };
+      }
+      async getOrderForAnalytics(orderId) {
+        if (!isValidAnalyticsId(orderId)) return null;
+        const db = await getAdminFirestoreInstance();
+        const snap = await db.collection("orders").doc(orderId).get();
+        if (!snap.exists) return null;
+        const data = snap.data() || {};
+        return {
+          id: snap.id,
+          listingId: typeof data.listingId === "string" ? data.listingId : "",
+          buyerId: typeof data.buyerId === "string" ? data.buyerId : "",
+          sellerId: typeof data.sellerId === "string" ? data.sellerId : "",
+          status: typeof data.status === "string" ? data.status : "",
+          orderType: typeof data.orderType === "string" ? data.orderType : void 0
+        };
+      }
+      async getMarketMessageForAnalytics(messageId) {
+        if (!isValidAnalyticsId(messageId)) return null;
+        const db = await getAdminFirestoreInstance();
+        const snap = await db.collection("market_messages").doc(messageId).get();
+        if (!snap.exists) return null;
+        const data = snap.data() || {};
+        return {
+          id: snap.id,
+          listingId: typeof data.listingId === "string" ? data.listingId : void 0,
+          conversationId: typeof data.conversationId === "string" ? data.conversationId : void 0,
+          senderId: typeof data.senderId === "string" ? data.senderId : "",
+          receiverId: typeof data.receiverId === "string" ? data.receiverId : void 0,
+          buyerId: typeof data.buyerId === "string" ? data.buyerId : void 0,
+          sellerId: typeof data.sellerId === "string" ? data.sellerId : "",
+          participants: Array.isArray(data.participants) ? data.participants.filter((p) => typeof p === "string") : void 0
+        };
+      }
+      async getSellerForAnalytics(sellerId) {
+        if (!isValidAnalyticsId(sellerId)) return null;
+        const db = await getAdminFirestoreInstance();
+        const [userSnap, prefSnap] = await Promise.all([
+          db.collection("users").doc(sellerId).get(),
+          db.collection("seller_competition_prefs").doc(sellerId).get().catch(() => null)
+        ]);
+        const pData = prefSnap?.exists ? prefSnap.data() || {} : {};
+        if (userSnap.exists) {
+          const uData = userSnap.data() || {};
+          if (uData.deleted === true || uData.status === "deleted" || uData.isDemo || uData.isSeed || uData.isMock) {
+            return null;
+          }
+          const loc = resolveReliableSellerLocation({
+            profileCountry: uData.country,
+            profileRegion: uData.region
+          });
+          return {
+            id: sellerId,
+            exists: true,
+            sellerName: typeof uData.displayName === "string" && uData.displayName.trim() ? uData.displayName.trim() : typeof uData.name === "string" && uData.name.trim() ? uData.name.trim() : typeof uData.sellerName === "string" && uData.sellerName.trim() ? uData.sellerName.trim() : void 0,
+            country: loc.country,
+            region: loc.region,
+            optedOut: Boolean(pData.optedOut ?? uData.competitionOptOut)
+          };
+        }
+        const listingsSnap = await db.collection("listings").where("sellerId", "==", sellerId).limit(5).get();
+        const validListingDoc = (listingsSnap.docs || []).find((d) => {
+          const data = d.data() || {};
+          return !data.isDemo && !data.isSeed && !data.isMock && data.status !== "deleted";
+        });
+        if (!validListingDoc) {
+          return null;
+        }
+        const lData = validListingDoc.data() || {};
+        return {
+          id: sellerId,
+          exists: true,
+          sellerName: lData.sellerName || lData.authorName,
+          optedOut: Boolean(pData.optedOut)
+        };
+      }
+      async getSellerProfileLocation(sellerId) {
+        const db = await getAdminFirestoreInstance();
+        const [userSnap, prefSnap] = await Promise.all([
+          db.collection("users").doc(sellerId).get().catch(() => null),
+          db.collection("seller_competition_prefs").doc(sellerId).get().catch(() => null)
+        ]);
+        const uData = userSnap?.exists ? userSnap.data() || {} : {};
+        const pData = prefSnap?.exists ? prefSnap.data() || {} : {};
+        const loc = resolveReliableSellerLocation({
+          profileCountry: uData.country,
+          profileRegion: uData.region
+        });
+        return {
+          country: loc.country,
+          region: loc.region,
+          optedOut: Boolean(pData.optedOut ?? uData.competitionOptOut)
+        };
+      }
+      mapListingDocToRecord(id, data) {
+        return {
+          id,
+          sellerId: data.sellerId,
+          sellerName: data.sellerName || data.authorName,
+          title: data.title || data.titleGe || "Untitled",
+          titleGe: data.titleGe,
+          category: data.category || "other",
+          listingType: inferListingType(data.category, data.listingType),
+          image: Array.isArray(data.images) && data.images[0] ? data.images[0] : data.image,
+          status: data.status,
+          country: data.country,
+          city: data.city,
+          createdAt: parseTimestampMs(data.createdAt),
+          isDemo: data.isDemo,
+          isSeed: data.isSeed,
+          isMock: data.isMock
+        };
+      }
+      async getSellerListingsWithMeta(sellerId) {
+        const db = await getAdminFirestoreInstance();
+        const { FieldPath } = await import("firebase-admin/firestore");
+        const scan = await scanCollectionWithCursor({
+          collectionRef: db.collection("listings").where("sellerId", "==", sellerId),
+          documentIdField: FieldPath.documentId(),
+          batchSize: DEFAULT_CURSOR_BATCH_SIZE,
+          maxPages: SELLER_SCOPED_CURSOR_MAX_PAGES,
+          label: `listings:seller:${sellerId}`
+        });
+        return {
+          listings: scan.items.map((item) => this.mapListingDocToRecord(item.id, item.data)),
+          truncated: scan.truncated,
+          ...scan.truncationReason ? { truncationReason: scan.truncationReason } : {}
+        };
+      }
+      async getSellerListings(sellerId) {
+        const res = await this.getSellerListingsWithMeta(sellerId);
+        return res.listings;
+      }
+      async getListingAnalyticsDoc(listingId) {
+        const db = await getAdminFirestoreInstance();
+        const snap = await db.collection("listing_analytics").doc(listingId).get();
+        if (!snap.exists) return null;
+        return snap.data();
+      }
+      async getSellerListingAnalyticsMap(sellerId) {
+        const db = await getAdminFirestoreInstance();
+        const { FieldPath } = await import("firebase-admin/firestore");
+        const scan = await scanCollectionWithCursor({
+          collectionRef: db.collection("listing_analytics").where("sellerId", "==", sellerId),
+          documentIdField: FieldPath.documentId(),
+          batchSize: DEFAULT_CURSOR_BATCH_SIZE,
+          maxPages: SELLER_SCOPED_CURSOR_MAX_PAGES,
+          label: `listing_analytics:seller:${sellerId}`
+        });
+        const docsByListingId = /* @__PURE__ */ new Map();
+        for (const item of scan.items) {
+          docsByListingId.set(item.id, item.data);
+        }
+        return {
+          docsByListingId,
+          truncated: scan.truncated,
+          ...scan.truncationReason ? { truncationReason: scan.truncationReason } : {}
+        };
+      }
+      async getAllPublicAnalyticsDocsWithMeta() {
+        const now = Date.now();
+        if (this.cacheTtlMs > 0 && this.publicDocsCache && this.publicDocsCache.expiresAt > now) {
+          return this.publicDocsCache.value;
+        }
+        const db = await getAdminFirestoreInstance();
+        const { FieldPath } = await import("firebase-admin/firestore");
+        const scan = await scanCollectionWithCursor({
+          collectionRef: db.collection("listing_analytics_public"),
+          documentIdField: FieldPath.documentId(),
+          batchSize: DEFAULT_CURSOR_BATCH_SIZE,
+          maxPages: DEFAULT_CURSOR_MAX_PAGES,
+          label: "listing_analytics_public"
+        });
+        const result = {
+          docs: scan.items.map((item) => item.data),
+          truncated: scan.truncated,
+          ...scan.truncationReason ? { truncationReason: scan.truncationReason } : {}
+        };
+        if (this.cacheTtlMs > 0 && !result.truncated) {
+          this.publicDocsCache = { expiresAt: now + this.cacheTtlMs, value: result };
+        }
+        return result;
+      }
+      async getAllPublicAnalyticsDocs() {
+        const res = await this.getAllPublicAnalyticsDocsWithMeta();
+        return res.docs;
+      }
+      async getSellerRatingsMapWithMeta() {
+        const now = Date.now();
+        if (this.cacheTtlMs > 0 && this.ratingsCache && this.ratingsCache.expiresAt > now) {
+          return this.ratingsCache.value;
+        }
+        const db = await getAdminFirestoreInstance();
+        const { FieldPath } = await import("firebase-admin/firestore");
+        const scan = await scanCollectionWithCursor({
+          collectionRef: db.collection("seller_reviews"),
+          documentIdField: FieldPath.documentId(),
+          batchSize: DEFAULT_CURSOR_BATCH_SIZE,
+          maxPages: DEFAULT_CURSOR_MAX_PAGES,
+          selectFields: ["sellerId", "rating"],
+          label: "seller_reviews"
+        });
+        const agg = {};
+        for (const item of scan.items) {
+          const r = item.data || {};
+          if (r.sellerId && typeof r.rating === "number" && r.rating >= 1 && r.rating <= 5) {
+            if (!agg[r.sellerId]) agg[r.sellerId] = { sum: 0, count: 0 };
+            agg[r.sellerId].sum += r.rating;
+            agg[r.sellerId].count += 1;
+          }
+        }
+        const ratings = {};
+        for (const [sid, v] of Object.entries(agg)) {
+          ratings[sid] = { avg: Math.round(v.sum / v.count * 10) / 10, count: v.count };
+        }
+        const result = {
+          ratings,
+          truncated: scan.truncated,
+          ...scan.truncationReason ? { truncationReason: scan.truncationReason } : {}
+        };
+        if (this.cacheTtlMs > 0 && !result.truncated) {
+          this.ratingsCache = { expiresAt: now + this.cacheTtlMs, value: result };
+        }
+        return result;
+      }
+      async getSellerRatingsMap() {
+        const res = await this.getSellerRatingsMapWithMeta();
+        return res.ratings;
+      }
+      async getAggregatedRankMaps(nowMs = Date.now()) {
+        const now = Date.now();
+        if (this.cacheTtlMs > 0 && this.rankMapsCache && this.rankMapsCache.expiresAt > now) {
+          return this.rankMapsCache.value;
+        }
+        const warnings = [];
+        let truncated = false;
+        const [publicScan, ratingsScan] = await Promise.all([
+          this.getAllPublicAnalyticsDocsWithMeta().catch((err) => {
+            console.error("[MarketAnalytics] Failed to load public docs for seller stats:", err);
+            truncated = true;
+            warnings.push("public_docs_read_failed");
+            return { docs: [], truncated: true, truncationReason: "public_docs_read_failed" };
+          }),
+          this.getSellerRatingsMapWithMeta().catch((err) => {
+            console.error("[MarketAnalytics] Failed to load seller ratings for seller stats:", err);
+            truncated = true;
+            warnings.push("ratings_read_failed");
+            return { ratings: {}, truncated: true, truncationReason: "ratings_read_failed" };
+          })
+        ]);
+        if (publicScan.truncated) {
+          truncated = true;
+          if (publicScan.truncationReason && !warnings.includes(publicScan.truncationReason)) {
+            warnings.push(publicScan.truncationReason);
+          } else if (!publicScan.truncationReason && warnings.length === 0) {
+            warnings.push("public_docs_truncated");
+          }
+        }
+        if (ratingsScan.truncated) {
+          truncated = true;
+          if (ratingsScan.truncationReason && !warnings.includes(ratingsScan.truncationReason)) {
+            warnings.push(ratingsScan.truncationReason);
+          } else if (!ratingsScan.truncationReason && warnings.length === 0) {
+            warnings.push("seller_ratings_truncated");
+          }
+        }
+        const globalRankings = buildRankingsFromPublicDocs({
+          docs: publicScan.docs,
+          sellerRatingsMap: ratingsScan.ratings,
+          scope: "global",
+          period: "30d",
+          nowMs,
+          limitCount: Math.max(300, publicScan.docs.length)
+        });
+        const globalRankMap = new Map(globalRankings.map((r) => [r.listingId, r.rank]));
+        const catRankMap = /* @__PURE__ */ new Map();
+        const byCat = /* @__PURE__ */ new Map();
+        for (const r of globalRankings) {
+          const cat = (r.category || "other").toLowerCase();
+          const arr = byCat.get(cat) || [];
+          arr.push(r);
+          byCat.set(cat, arr);
+        }
+        for (const arr of byCat.values()) {
+          arr.forEach((r, idx) => catRankMap.set(r.listingId, { rank: idx + 1, total: arr.length }));
+        }
+        const result = {
+          globalRankMap,
+          catRankMap,
+          truncated,
+          warnings
+        };
+        if (this.cacheTtlMs > 0 && !truncated) {
+          this.rankMapsCache = { expiresAt: now + this.cacheTtlMs, value: result };
+        }
+        return result;
+      }
+      async recordEventTransaction(params) {
+        const db = await getAdminFirestoreInstance();
+        const { listing, sellerLocation, viewerHash, viewerType, eventType, nowMs } = params;
+        const analyticsRef = db.collection("listing_analytics").doc(listing.id);
+        const viewerRef = analyticsRef.collection("viewers").doc(viewerHash);
+        const publicRef = db.collection("listing_analytics_public").doc(listing.id);
+        const loc = resolveReliableSellerLocation({
+          profileCountry: sellerLocation.country,
+          profileRegion: sellerLocation.region,
+          listingCountry: listing.country,
+          listingCity: listing.city
+        });
+        return db.runTransaction(async (tx) => {
+          const [analyticsSnap, viewerSnap] = await Promise.all([
+            tx.get(analyticsRef),
+            tx.get(viewerRef)
+          ]);
+          const viewerData = viewerSnap.exists ? viewerSnap.data() : { viewerHash, viewerType };
+          if (eventType === "impression") {
+            if (viewerData.lastImpressionAt && nowMs - viewerData.lastImpressionAt < IMPRESSION_COOLDOWN_MS) {
+              return { recorded: false, reason: "impression_cooldown", uniqueIncremented: false };
+            }
+          } else {
+            if (viewerData.lastViewAt && nowMs - viewerData.lastViewAt < VIEW_COOLDOWN_MS) {
+              return { recorded: false, reason: "view_cooldown", uniqueIncremented: false };
+            }
+          }
+          const existingDoc = analyticsSnap.exists ? analyticsSnap.data() || {} : {};
+          const hourKey = getHourBucketKey(nowMs);
+          const dayKey = getDayBucketKey(nowMs);
+          const hourly = pruneHourlyBuckets(existingDoc.hourly, nowMs);
+          const daily = pruneDailyBuckets(existingDoc.daily, nowMs);
+          const hBucket = hourly[hourKey] || {
+            impressions: 0,
+            views: 0,
+            uniqueViewers: 0,
+            authImpressions: 0,
+            authViews: 0,
+            authUniqueViewers: 0,
+            guestImpressions: 0,
+            guestViews: 0,
+            guestUniqueViewers: 0
+          };
+          const dBucket = daily[dayKey] || {
+            impressions: 0,
+            views: 0,
+            uniqueViewers: 0,
+            authImpressions: 0,
+            authViews: 0,
+            authUniqueViewers: 0,
+            guestImpressions: 0,
+            guestViews: 0,
+            guestUniqueViewers: 0
+          };
+          const isAuthViewer = viewerType === "auth";
+          let impressions = Number(existingDoc.impressions) || 0;
+          let views = Number(existingDoc.views) || 0;
+          let uniqueViewers = Number(existingDoc.uniqueViewers) || 0;
+          let authImpressions = Number(existingDoc.authImpressions) || 0;
+          let authViews = Number(existingDoc.authViews) || 0;
+          let authUniqueViewers = Number(existingDoc.authUniqueViewers) || 0;
+          let guestImpressions = Number(existingDoc.guestImpressions) || 0;
+          let guestViews = Number(existingDoc.guestViews) || 0;
+          let guestUniqueViewers = Number(existingDoc.guestUniqueViewers) || 0;
+          let uniqueIncremented = false;
+          if (eventType === "impression") {
+            impressions += 1;
+            hBucket.impressions += 1;
+            dBucket.impressions += 1;
+            if (isAuthViewer) {
+              authImpressions += 1;
+              hBucket.authImpressions = (Number(hBucket.authImpressions) || 0) + 1;
+              dBucket.authImpressions = (Number(dBucket.authImpressions) || 0) + 1;
+            } else {
+              guestImpressions += 1;
+              hBucket.guestImpressions = (Number(hBucket.guestImpressions) || 0) + 1;
+              dBucket.guestImpressions = (Number(dBucket.guestImpressions) || 0) + 1;
+            }
+            viewerData.firstImpressionAt = viewerData.firstImpressionAt || nowMs;
+            viewerData.lastImpressionAt = nowMs;
+          } else {
+            views += 1;
+            hBucket.views += 1;
+            dBucket.views += 1;
+            if (isAuthViewer) {
+              authViews += 1;
+              hBucket.authViews = (Number(hBucket.authViews) || 0) + 1;
+              dBucket.authViews = (Number(dBucket.authViews) || 0) + 1;
+            } else {
+              guestViews += 1;
+              hBucket.guestViews = (Number(hBucket.guestViews) || 0) + 1;
+              dBucket.guestViews = (Number(dBucket.guestViews) || 0) + 1;
+            }
+            if (!viewerData.firstViewedAt) {
+              uniqueViewers += 1;
+              hBucket.uniqueViewers += 1;
+              dBucket.uniqueViewers += 1;
+              if (isAuthViewer) {
+                authUniqueViewers += 1;
+                hBucket.authUniqueViewers = (Number(hBucket.authUniqueViewers) || 0) + 1;
+                dBucket.authUniqueViewers = (Number(dBucket.authUniqueViewers) || 0) + 1;
+              } else {
+                guestUniqueViewers += 1;
+                hBucket.guestUniqueViewers = (Number(hBucket.guestUniqueViewers) || 0) + 1;
+                dBucket.guestUniqueViewers = (Number(dBucket.guestUniqueViewers) || 0) + 1;
+              }
+              viewerData.firstViewedAt = nowMs;
+              uniqueIncremented = true;
+            }
+            viewerData.lastViewAt = nowMs;
+          }
+          hourly[hourKey] = hBucket;
+          daily[dayKey] = dBucket;
+          const breakdownSince = typeof existingDoc.breakdownSince === "number" && Number.isFinite(existingDoc.breakdownSince) ? existingDoc.breakdownSince : nowMs;
+          const optedOut = Boolean(sellerLocation.optedOut ?? existingDoc.optedOut);
+          const normalizedListingType = inferListingType(listing.category, listing.listingType);
+          const nextAnalyticsDoc = {
+            listingId: listing.id,
+            sellerId: listing.sellerId,
+            title: listing.title,
+            ...listing.titleGe ? { titleGe: listing.titleGe } : {},
+            category: listing.category,
+            listingType: normalizedListingType,
+            ...listing.image ? { image: listing.image } : {},
+            status: listing.status || "active",
+            sellerName: listing.sellerName || "Proton Vendor",
+            ...loc.country ? { country: loc.country } : {},
+            ...loc.region ? { region: loc.region } : {},
+            optedOut,
+            impressions,
+            views,
+            uniqueViewers,
+            authImpressions,
+            authViews,
+            authUniqueViewers,
+            guestImpressions,
+            guestViews,
+            guestUniqueViewers,
+            breakdownSince,
+            hourly,
+            daily,
+            createdAt: Number(existingDoc.createdAt) || nowMs,
+            listingCreatedAt: parseTimestampMs(listing.createdAt),
+            updatedAt: nowMs
+          };
+          tx.set(viewerRef, viewerData, { merge: true });
+          tx.set(analyticsRef, nextAnalyticsDoc);
+          if (!optedOut && (!listing.status || listing.status === "active")) {
+            tx.set(publicRef, nextAnalyticsDoc);
+          } else {
+            tx.delete(publicRef);
+          }
+          return { recorded: true, uniqueIncremented };
+        }).then((res) => {
+          if (res.recorded) {
+            this.publicDocsCache = null;
+            this.rankMapsCache = null;
+          }
+          return res;
+        });
+      }
+      async setSellerCompetitionOptOut(sellerId, optedOut, nowMs) {
+        const db = await getAdminFirestoreInstance();
+        const { FieldPath } = await import("firebase-admin/firestore");
+        await db.collection("seller_competition_prefs").doc(sellerId).set({ optedOut, updatedAt: nowMs }, { merge: true });
+        await db.collection("users").doc(sellerId).set({ competitionOptOut: optedOut }, { merge: true });
+        const sellerAnalyticsRef = db.collection("seller_analytics").doc(sellerId);
+        const sellerAnalyticsSnap = await sellerAnalyticsRef.get().catch(() => null);
+        if (sellerAnalyticsSnap?.exists) {
+          await sellerAnalyticsRef.set({ optedOut, updatedAt: nowMs }, { merge: true });
+        }
+        const scan = await scanCollectionWithCursor({
+          collectionRef: db.collection("listing_analytics").where("sellerId", "==", sellerId),
+          documentIdField: FieldPath.documentId(),
+          batchSize: DEFAULT_CURSOR_BATCH_SIZE,
+          maxPages: SELLER_SCOPED_CURSOR_MAX_PAGES,
+          label: `optout:listing_analytics:seller:${sellerId}`
+        });
+        if (scan.truncated) {
+          throw new Error(
+            `Failed to complete competition opt-out update: listing analytics scan was truncated (${scan.truncationReason || "cursor_max_pages_exceeded"}). Some listings may not have been updated.`
+          );
+        }
+        for (let i = 0; i < scan.items.length; i += OPT_OUT_BATCH_CHUNK_SIZE) {
+          const chunk = scan.items.slice(i, i + OPT_OUT_BATCH_CHUNK_SIZE);
+          const batch = db.batch();
+          for (const item of chunk) {
+            const data = item.data;
+            const normalizedType = inferListingType(data.category, data.listingType);
+            const docRef = db.collection("listing_analytics").doc(item.id);
+            batch.set(
+              docRef,
+              { optedOut, listingType: normalizedType, updatedAt: nowMs },
+              { merge: true }
+            );
+            const pubRef = db.collection("listing_analytics_public").doc(item.id);
+            if (optedOut || data.status && data.status !== "active") {
+              batch.delete(pubRef);
+            } else {
+              batch.set(pubRef, {
+                ...data,
+                listingType: normalizedType,
+                optedOut: false,
+                updatedAt: nowMs
+              });
+            }
+          }
+          await batch.commit();
+        }
+        this.invalidateCaches();
+      }
+      // ============================================================================
+      // PHASE 2B: SELLER ANALYTICS FOUNDATION REPOSITORY METHODS
+      // ============================================================================
+      async getSellerAnalyticsDoc(sellerId) {
+        if (!isValidAnalyticsId(sellerId)) return null;
+        const db = await getAdminFirestoreInstance();
+        const snap = await db.collection("seller_analytics").doc(sellerId).get();
+        if (!snap.exists) return null;
+        return snap.data();
+      }
+      async ensureSellerAnalyticsDoc(params) {
+        if (!isValidAnalyticsId(params.sellerId)) {
+          throw new Error("Invalid sellerId for seller_analytics");
+        }
+        const db = await getAdminFirestoreInstance();
+        const ref = db.collection("seller_analytics").doc(params.sellerId);
+        return db.runTransaction(async (tx) => {
+          const snap = await tx.get(ref);
+          if (snap.exists) {
+            return snap.data();
+          }
+          const initialDoc = createEmptySellerAnalyticsDoc(params);
+          tx.set(ref, initialDoc);
+          return initialDoc;
+        });
+      }
+      async getSellerViewerDoc(sellerId, sellerViewerHash) {
+        if (!isValidAnalyticsId(sellerId) || !isValidHmacDigest(sellerViewerHash)) return null;
+        const db = await getAdminFirestoreInstance();
+        const snap = await db.collection("seller_analytics").doc(sellerId).collection("viewers").doc(sellerViewerHash).get();
+        if (!snap.exists) return null;
+        return snap.data();
+      }
+      async upsertSellerViewerDoc(sellerId, viewerDoc) {
+        if (!isValidAnalyticsId(sellerId)) {
+          throw new Error("Invalid sellerId for seller viewer storage");
+        }
+        const cleanDoc = sanitizeSellerViewerDoc(viewerDoc);
+        const db = await getAdminFirestoreInstance();
+        const ref = db.collection("seller_analytics").doc(sellerId).collection("viewers").doc(cleanDoc.viewerHash);
+        await ref.set(cleanDoc, { merge: true });
+        return cleanDoc;
+      }
+      async getGuestSessionIndex(guestHash) {
+        if (!isValidHmacDigest(guestHash)) return null;
+        const db = await getAdminFirestoreInstance();
+        const snap = await db.collection("analytics_guest_sessions").doc(guestHash).get();
+        if (!snap.exists) return null;
+        return snap.data();
+      }
+      async recordGuestSessionActivity(params) {
+        if (!isValidHmacDigest(params.guestHash)) {
+          throw new Error("Invalid guestHash");
+        }
+        const db = await getAdminFirestoreInstance();
+        const ref = db.collection("analytics_guest_sessions").doc(params.guestHash);
+        const nowMs = params.nowMs ?? Date.now();
+        return db.runTransaction(async (tx) => {
+          const snap = await tx.get(ref);
+          const existing = snap.exists ? snap.data() : null;
+          const nextDoc = mergeGuestSessionActivity(existing, {
+            guestHash: params.guestHash,
+            listingId: params.listingId,
+            sellerId: params.sellerId,
+            nowMs
+          });
+          tx.set(ref, nextDoc);
+          return nextDoc;
+        });
+      }
+      async claimGuestSession(params) {
+        if (!isValidHmacDigest(params.guestHash) || !isValidAnalyticsId(params.uid)) {
+          return { status: 400, claimed: false, reason: "invalid_request" };
+        }
+        const db = await getAdminFirestoreInstance();
+        const ref = db.collection("analytics_guest_sessions").doc(params.guestHash);
+        const nowMs = params.nowMs ?? Date.now();
+        return db.runTransaction(async (tx) => {
+          const snap = await tx.get(ref);
+          const existing = snap.exists ? snap.data() : null;
+          const evaluation = evaluateGuestSessionClaim(existing, {
+            uid: params.uid,
+            nowMs
+          });
+          if (evaluation.claimed && !evaluation.idempotent && evaluation.nextDoc) {
+            tx.set(ref, evaluation.nextDoc);
+          }
+          const { nextDoc: _unused, ...publicResult } = evaluation;
+          return publicResult;
+        });
+      }
+      async getVerifiedFunnelMarker(markerId) {
+        if (!isValidAnalyticsId(markerId)) return null;
+        const db = await getAdminFirestoreInstance();
+        const snap = await db.collection("analytics_verified_markers").doc(markerId).get();
+        if (!snap.exists) return null;
+        return snap.data();
+      }
+      async claimVerifiedFunnelMarker(params) {
+        if (!isValidAnalyticsId(params.sellerId) || !isValidHmacDigest(params.buyerHash)) {
+          throw new Error("Invalid sellerId or buyerHash for verified funnel marker");
+        }
+        if (params.listingId !== void 0 && !isValidAnalyticsId(params.listingId)) {
+          throw new Error("Invalid listingId for verified funnel marker");
+        }
+        const markerId = buildVerifiedFunnelMarkerId(params.markerType, params.sourceId);
+        const nowMs = params.nowMs ?? Date.now();
+        const db = await getAdminFirestoreInstance();
+        const ref = db.collection("analytics_verified_markers").doc(markerId);
+        return db.runTransaction(async (tx) => {
+          const snap = await tx.get(ref);
+          if (snap.exists) {
+            return { created: false, duplicate: true, markerId };
+          }
+          const markerDoc = {
+            markerId,
+            markerType: params.markerType,
+            sellerId: params.sellerId,
+            buyerHash: params.buyerHash,
+            sourceId: params.sourceId,
+            ...params.listingId ? { listingId: params.listingId } : {},
+            recordedAt: nowMs
+          };
+          tx.set(ref, markerDoc);
+          return { created: true, duplicate: false, markerId };
+        });
+      }
+      async recordSellerFunnelEvent(params) {
+        if (!isValidAnalyticsId(params.sellerId) || !isValidHmacDigest(params.viewerHash)) {
+          throw new Error("Invalid sellerId or viewerHash for seller funnel event");
+        }
+        const db = await getAdminFirestoreInstance();
+        const nowMs = params.nowMs ?? Date.now();
+        const sellerRef = db.collection("seller_analytics").doc(params.sellerId);
+        const viewerRef = sellerRef.collection("viewers").doc(params.viewerHash);
+        return db.runTransaction(async (tx) => {
+          const [sellerSnap, viewerSnap] = await Promise.all([
+            tx.get(sellerRef),
+            tx.get(viewerRef)
+          ]);
+          const existingSeller = sellerSnap.exists ? sellerSnap.data() : null;
+          const existingViewer = viewerSnap.exists ? viewerSnap.data() : null;
+          const mutation = computeSellerFunnelTransactionUpdate({
+            sellerId: params.sellerId,
+            eventType: params.eventType,
+            viewerHash: params.viewerHash,
+            viewerType: params.viewerType,
+            existingSeller,
+            existingViewer,
+            sellerMeta: params.sellerMeta,
+            nowMs
+          });
+          if (!mutation.recorded || !mutation.nextSellerDoc || !mutation.nextViewerDoc) {
+            return { recorded: false, reason: mutation.reason };
+          }
+          tx.set(viewerRef, mutation.nextViewerDoc, { merge: true });
+          tx.set(sellerRef, mutation.nextSellerDoc);
+          return { recorded: true };
+        });
+      }
+    };
+    MarketAnalyticsService = class {
+      repo;
+      explicitSalt;
+      // In-memory short burst IP+listing guard to prevent rotating-token spam WITHOUT storing raw IPs in DB
+      ipListingThrottle = /* @__PURE__ */ new Map();
+      constructor(repo, salt) {
+        this.repo = repo || new FirestoreAdminAnalyticsRepository();
+        if (typeof salt === "string" && salt.length > 0) {
+          this.explicitSalt = salt;
+        }
+      }
+      resolveEffectiveSalt() {
+        if (this.explicitSalt) {
+          return this.explicitSalt;
+        }
+        if (isProductionRuntime()) {
+          const prodSalt = (process.env.ANALYTICS_HASH_SALT || "").trim();
+          if (!prodSalt || prodSalt.length < MIN_ANALYTICS_SALT_LENGTH || prodSalt === DEV_FALLBACK_ANALYTICS_SALT) {
+            throw new AnalyticsConfigError(
+              "analytics/salt-missing",
+              "Server analytics hash salt (ANALYTICS_HASH_SALT) is missing or insufficiently strong for production."
+            );
+          }
+          return prodSalt;
+        }
+        const devSalt = (process.env.ANALYTICS_HASH_SALT || process.env.ANALYTICS_SALT || "").trim();
+        return devSalt || DEV_FALLBACK_ANALYTICS_SALT;
+      }
+      computeViewerHash(listingId, identityKey) {
+        const activeSalt = this.resolveEffectiveSalt();
+        return crypto.createHmac("sha256", activeSalt).update(`${listingId}:${identityKey}`).digest("hex");
+      }
+      /**
+       * Server-only HMAC hash for seller_analytics/{sellerId}/viewers/{sellerViewerHash}.
+       * Never persisted with raw IP, visitorToken, or User-Agent.
+       */
+      computeSellerViewerHash(sellerId, identityKey) {
+        if (!isValidAnalyticsId(sellerId)) {
+          throw new Error("Invalid sellerId for seller viewer hash");
+        }
+        const activeSalt = this.resolveEffectiveSalt();
+        return crypto.createHmac("sha256", activeSalt).update(`seller:${sellerId}:${identityKey}`).digest("hex");
+      }
+      /**
+       * Server-only HMAC hash for analytics_guest_sessions/{guestHash}.
+       */
+      computeGuestSessionHash(visitorToken) {
+        if (typeof visitorToken !== "string" || visitorToken.length < 8 || visitorToken.length > 128 || !/^[a-zA-Z0-9_-]+$/.test(visitorToken)) {
+          throw new Error("Invalid visitorToken for guest session hash");
+        }
+        const activeSalt = this.resolveEffectiveSalt();
+        return crypto.createHmac("sha256", activeSalt).update(`guest_session:${visitorToken}`).digest("hex");
+      }
+      /**
+       * Server-only HMAC hash for buyer identity in verified funnel markers.
+       */
+      computeBuyerIdentityHash(buyerUid) {
+        if (!isValidAnalyticsId(buyerUid)) {
+          throw new Error("Invalid buyerUid for verified marker hash");
+        }
+        const activeSalt = this.resolveEffectiveSalt();
+        return crypto.createHmac("sha256", activeSalt).update(`buyer:${buyerUid}`).digest("hex");
+      }
+      checkInMemoryIpGuard(clientIp, listingId, eventType, nowMs, activeSalt) {
+        if (!clientIp) return true;
+        const keyHash = crypto.createHmac("sha256", activeSalt).update(`${clientIp}:${listingId}:${eventType}`).digest("hex").slice(0, 24);
+        const prev = this.ipListingThrottle.get(keyHash);
+        const minGap = eventType === "impression" ? 15e3 : 1e4;
+        if (prev && nowMs - prev < minGap) {
+          return false;
+        }
+        this.ipListingThrottle.set(keyHash, nowMs);
+        if (this.ipListingThrottle.size > 5e3) {
+          const cutoff = nowMs - 6e4;
+          for (const [k, ts] of this.ipListingThrottle.entries()) {
+            if (ts < cutoff) this.ipListingThrottle.delete(k);
+          }
+        }
+        return true;
+      }
+      async recordListingEvent(params) {
+        const nowMs = params.nowMs ?? Date.now();
+        if (isBotUserAgent(params.userAgent)) {
+          return { status: 200, body: { recorded: false, reason: "bot_filtered" } };
+        }
+        if (!isValidAnalyticsId(params.listingId)) {
+          return { status: 400, body: { error: "Invalid listingId", code: "analytics/invalid-listing-id" } };
+        }
+        if (params.eventType !== "impression" && params.eventType !== "view") {
+          return { status: 400, body: { error: "Invalid eventType", code: "analytics/invalid-event-type" } };
+        }
+        let viewerType;
+        let identityKey;
+        if (params.verifiedUid && isValidAnalyticsId(params.verifiedUid)) {
+          viewerType = "auth";
+          identityKey = `auth:${params.verifiedUid}`;
+        } else {
+          if (typeof params.visitorToken !== "string" || params.visitorToken.length < 8 || params.visitorToken.length > 128 || !/^[a-zA-Z0-9_-]+$/.test(params.visitorToken)) {
+            return { status: 400, body: { error: "Valid visitorToken required for guest telemetry", code: "analytics/invalid-visitor-token" } };
+          }
+          viewerType = "guest";
+          identityKey = `guest:${params.visitorToken}`;
+        }
+        let activeSalt;
+        try {
+          activeSalt = this.resolveEffectiveSalt();
+        } catch (err) {
+          if (err instanceof AnalyticsConfigError && err.code === "analytics/salt-missing") {
+            return {
+              status: 503,
+              body: {
+                recorded: false,
+                code: "analytics/salt-missing",
+                error: err.message
+              }
+            };
+          }
+          throw err;
+        }
+        if (!this.checkInMemoryIpGuard(params.clientIp, params.listingId, params.eventType, nowMs, activeSalt)) {
+          return { status: 200, body: { recorded: false, reason: "rate_throttled" } };
+        }
+        const listing = await this.repo.getListing(params.listingId);
+        if (!listing || listing.isDemo || listing.isSeed || listing.isMock || listing.status === "deleted") {
+          return { status: 404, body: { error: "Listing not found", code: "analytics/listing-not-found" } };
+        }
+        if (params.verifiedUid && params.verifiedUid === listing.sellerId) {
+          return { status: 200, body: { recorded: false, reason: "owner_excluded" } };
+        }
+        const sellerLocation = await this.repo.getSellerProfileLocation(listing.sellerId);
+        const viewerHash = this.computeViewerHash(listing.id, identityKey);
+        const txResult = await this.repo.recordEventTransaction({
+          listing,
+          sellerLocation,
+          viewerHash,
+          viewerType,
+          eventType: params.eventType,
+          nowMs
+        });
+        return {
+          status: 200,
+          body: {
+            recorded: txResult.recorded,
+            ...txResult.reason ? { reason: txResult.reason } : {},
+            uniqueIncremented: txResult.uniqueIncremented
+          }
+        };
+      }
+      async getSellerStats(params) {
+        const nowMs = params.nowMs ?? Date.now();
+        const { verifiedUid, listingId } = params;
+        if (listingId !== void 0) {
+          if (!isValidAnalyticsId(listingId)) {
+            return { status: 400, body: { error: "Invalid listingId", code: "analytics/invalid-listing-id" } };
+          }
+          const listing = await this.repo.getListing(listingId);
+          if (!listing) {
+            return { status: 404, body: { error: "Listing not found", code: "analytics/listing-not-found" } };
+          }
+          if (listing.sellerId !== verifiedUid) {
+            return { status: 403, body: { error: "Forbidden: Only listing owner can read private analytics", code: "analytics/forbidden" } };
+          }
+          const rawDoc = await this.repo.getListingAnalyticsDoc(listingId);
+          const stats = await this.buildSingleListingStats(listing, rawDoc, nowMs);
+          return { status: 200, body: { listing: stats } };
+        }
+        const [listingsResult, sellerPref] = await Promise.all([
+          this.repo.getSellerListingsWithMeta ? this.repo.getSellerListingsWithMeta(verifiedUid) : this.repo.getSellerListings(verifiedUid).then((listings) => ({
+            listings,
+            truncated: false
+          })),
+          this.repo.getSellerProfileLocation(verifiedUid)
+        ]);
+        const realListings = listingsResult.listings.filter(
+          (l) => !l.isDemo && !l.isSeed && !l.isMock && l.status !== "deleted"
+        );
+        let listingsTruncated = Boolean(listingsResult.truncated);
+        let listingsTruncationReason = listingsResult.truncationReason;
+        let analyticsTruncated = false;
+        let analyticsTruncationReason;
+        let globalRankMap = /* @__PURE__ */ new Map();
+        let catRankMap = /* @__PURE__ */ new Map();
+        if (realListings.length > 0 && !sellerPref.optedOut) {
+          if (this.repo.getAggregatedRankMaps) {
+            const rankMaps = await this.repo.getAggregatedRankMaps(nowMs);
+            globalRankMap = rankMaps.globalRankMap;
+            catRankMap = rankMaps.catRankMap;
+            if (rankMaps.truncated) {
+              analyticsTruncated = true;
+              analyticsTruncationReason = rankMaps.warnings?.[0] || "rank_maps_truncated";
+            }
+          } else {
+            const [publicDocs, ratingsMap] = await Promise.all([
+              this.repo.getAllPublicAnalyticsDocs().catch((err) => {
+                console.error("[MarketAnalytics] Failed to load public docs for seller stats:", err);
+                return [];
+              }),
+              this.repo.getSellerRatingsMap().catch((err) => {
+                console.error("[MarketAnalytics] Failed to load seller ratings for seller stats:", err);
+                return {};
+              })
+            ]);
+            const globalRankings = buildRankingsFromPublicDocs({
+              docs: publicDocs,
+              sellerRatingsMap: ratingsMap,
+              scope: "global",
+              period: "30d",
+              nowMs,
+              limitCount: Math.max(300, publicDocs.length)
+            });
+            globalRankMap = new Map(globalRankings.map((r) => [r.listingId, r.rank]));
+            const byCat = /* @__PURE__ */ new Map();
+            for (const r of globalRankings) {
+              const cat = (r.category || "other").toLowerCase();
+              const arr = byCat.get(cat) || [];
+              arr.push(r);
+              byCat.set(cat, arr);
+            }
+            for (const arr of byCat.values()) {
+              arr.forEach((r, idx) => catRankMap.set(r.listingId, { rank: idx + 1, total: arr.length }));
+            }
+          }
+        }
+        let analyticsDocs;
+        if (realListings.length === 0) {
+          analyticsDocs = [];
+        } else if (this.repo.getSellerListingAnalyticsMap) {
+          const sellerAnalyticsScan = await this.repo.getSellerListingAnalyticsMap(verifiedUid);
+          analyticsDocs = realListings.map((l) => sellerAnalyticsScan.docsByListingId.get(l.id) ?? null);
+          if (sellerAnalyticsScan.truncated) {
+            analyticsTruncated = true;
+            analyticsTruncationReason = sellerAnalyticsScan.truncationReason || "seller_analytics_scan_truncated";
+          }
+        } else {
+          analyticsDocs = await Promise.all(
+            realListings.map((l) => this.repo.getListingAnalyticsDoc(l.id))
+          );
+        }
+        const isPartialData = listingsTruncated || analyticsTruncated;
+        const truncationReason = listingsTruncationReason || analyticsTruncationReason;
+        const listingStats = realListings.map((listing, idx) => {
+          const rawDoc = analyticsDocs[idx];
+          const agg = aggregatePeriodFromBuckets(
+            rawDoc || { impressions: 0, views: 0, uniqueViewers: 0 },
+            nowMs
+          );
+          const viewerBreakdown = aggregateViewerBreakdownFromDoc(rawDoc, nowMs);
+          const catInfo = catRankMap.get(listing.id);
+          const achievements = computeListingAchievements({
+            curr7d: agg.periods["7d"],
+            prev7d: agg.prevPeriods["7d"],
+            curr30d: agg.periods["30d"],
+            listingCreatedAt: parseTimestampMs(listing.createdAt),
+            nowMs,
+            categoryRank: catInfo?.rank,
+            categoryTotal: catInfo?.total,
+            globalRank: globalRankMap.get(listing.id)
+          });
+          return {
+            listingId: listing.id,
+            title: listing.title,
+            titleGe: listing.titleGe,
+            category: listing.category,
+            listingType: inferListingType(listing.category, listing.listingType),
+            image: listing.image,
+            status: listing.status || "active",
+            optedOut: Boolean(sellerPref.optedOut ?? rawDoc?.optedOut),
+            createdAt: parseTimestampMs(listing.createdAt),
+            updatedAt: rawDoc?.updatedAt || 0,
+            periods: agg.periods,
+            comparisons: agg.comparisons,
+            achievements,
+            ...viewerBreakdown ? { viewerBreakdown } : {}
+          };
+        });
+        const periodKeys = ["24h", "7d", "30d", "all"];
+        const periodTotals = {};
+        for (const pk of periodKeys) {
+          periodTotals[pk] = sumPeriodMetricsList(listingStats.map((s) => s.periods[pk]));
+        }
+        const compKeys = ["24h", "7d", "30d"];
+        const periodComparisons = {};
+        for (const ck of compKeys) {
+          const sumDelta = (field) => listingStats.reduce((acc, s) => acc + s.comparisons[ck][field], 0);
+          const impDelta = sumDelta("impressionsDelta");
+          const vDelta = sumDelta("viewsDelta");
+          const uDelta = sumDelta("uniqueViewersDelta");
+          const currP = periodTotals[ck];
+          const prevImp = Math.max(0, currP.impressions - impDelta);
+          const prevViews = Math.max(0, currP.views - vDelta);
+          const prevUniq = Math.max(0, currP.uniqueViewers - uDelta);
+          const prevEng = prevImp > 0 ? Math.min(100, Math.round(prevViews / prevImp * 1e3) / 10) : 0;
+          const pct = (c, p) => p <= 0 ? c > 0 ? 100 : null : Math.round((c - p) / p * 1e3) / 10;
+          periodComparisons[ck] = {
+            impressionsDelta: impDelta,
+            viewsDelta: vDelta,
+            uniqueViewersDelta: uDelta,
+            engagementRateDelta: Math.round((currP.engagementRate - prevEng) * 10) / 10,
+            impressionsChangePct: pct(currP.impressions, prevImp),
+            viewsChangePct: pct(currP.views, prevViews),
+            uniqueViewersChangePct: pct(currP.uniqueViewers, prevUniq)
+          };
+        }
+        const earnedAchievements = [];
+        for (const s of listingStats) {
+          for (const badge of s.achievements) {
+            earnedAchievements.push({
+              id: badge,
+              listingId: s.listingId,
+              listingTitle: s.title,
+              listingTitleGe: s.titleGe,
+              category: s.category
+            });
+          }
+        }
+        const overviewBreakdown = sumViewerBreakdownList(listingStats.map((s) => s.viewerBreakdown));
+        const overview = {
+          totalImpressions: periodTotals.all.impressions,
+          totalViews: periodTotals.all.views,
+          totalUniqueViewers: periodTotals.all.uniqueViewers,
+          engagementRate: periodTotals.all.engagementRate,
+          periodTotals,
+          periodComparisons,
+          listings: listingStats,
+          competitionOptOut: Boolean(sellerPref.optedOut),
+          earnedAchievements,
+          ...overviewBreakdown ? { viewerBreakdown: overviewBreakdown } : {},
+          isPartialData,
+          ...truncationReason ? { truncationReason } : {}
+        };
+        return { status: 200, body: { overview } };
+      }
+      async buildSingleListingStats(listing, rawDoc, nowMs) {
+        const agg = aggregatePeriodFromBuckets(
+          rawDoc || { impressions: 0, views: 0, uniqueViewers: 0 },
+          nowMs
+        );
+        const viewerBreakdown = aggregateViewerBreakdownFromDoc(rawDoc, nowMs);
+        const achievements = computeListingAchievements({
+          curr7d: agg.periods["7d"],
+          prev7d: agg.prevPeriods["7d"],
+          curr30d: agg.periods["30d"],
+          listingCreatedAt: parseTimestampMs(listing.createdAt),
+          nowMs
+        });
+        return {
+          listingId: listing.id,
+          title: listing.title,
+          titleGe: listing.titleGe,
+          category: listing.category,
+          listingType: inferListingType(listing.category, listing.listingType),
+          image: listing.image,
+          status: listing.status || "active",
+          optedOut: Boolean(rawDoc?.optedOut),
+          createdAt: parseTimestampMs(listing.createdAt),
+          updatedAt: rawDoc?.updatedAt || 0,
+          periods: agg.periods,
+          comparisons: agg.comparisons,
+          achievements,
+          ...viewerBreakdown ? { viewerBreakdown } : {}
+        };
+      }
+      async getRankings(params) {
+        const scope = params.scope === "country" || params.scope === "category" || params.scope === "regional" || params.scope === "listingType" ? params.scope : "global";
+        const period = params.period === "30d" ? "30d" : "7d";
+        const listingType = normalizeListingTypeFilter(params.listingType);
+        const nowMs = params.nowMs ?? Date.now();
+        const [publicScan, ratingsScan] = await Promise.all([
+          this.repo.getAllPublicAnalyticsDocsWithMeta ? this.repo.getAllPublicAnalyticsDocsWithMeta() : this.repo.getAllPublicAnalyticsDocs().then((docs) => ({ docs, truncated: false })),
+          this.repo.getSellerRatingsMapWithMeta ? this.repo.getSellerRatingsMapWithMeta() : this.repo.getSellerRatingsMap().then((ratings) => ({ ratings, truncated: false })).catch((err) => {
+            console.error("[MarketAnalytics] Failed to load seller ratings map for rankings:", err);
+            return { ratings: {}, truncated: true, truncationReason: "ratings_read_failed" };
+          })
+        ]);
+        const publicDocs = publicScan.docs;
+        const sellerRatingsMap = ratingsScan.ratings;
+        const warnings = [];
+        if (publicScan.truncated) {
+          warnings.push(publicScan.truncationReason || "public_docs_truncated");
+        }
+        if (ratingsScan.truncated) {
+          warnings.push(ratingsScan.truncationReason || "seller_ratings_truncated");
+        }
+        const isPartialData = warnings.length > 0;
+        if (isPartialData) {
+          console.error("[MarketAnalytics] Rankings computed on partial data:", warnings.join(", "));
+        }
+        const rankings = buildRankingsFromPublicDocs({
+          docs: publicDocs,
+          sellerRatingsMap,
+          scope,
+          period,
+          listingType,
+          category: params.category,
+          country: params.country,
+          region: params.region,
+          nowMs
+        });
+        const availableCountries = Array.from(
+          new Set(publicDocs.filter((d) => !d.optedOut && d.country).map((d) => d.country))
+        ).sort();
+        const availableRegions = Array.from(
+          new Set(publicDocs.filter((d) => !d.optedOut && d.region).map((d) => d.region))
+        ).sort();
+        return {
+          status: 200,
+          body: {
+            scope,
+            period,
+            listingType,
+            rankings,
+            availableCountries,
+            availableRegions,
+            isPartialData,
+            dataCompleteness: {
+              isComplete: !isPartialData,
+              publicDocsTruncated: publicScan.truncated,
+              ratingsTruncated: ratingsScan.truncated,
+              warnings
+            }
+          }
+        };
+      }
+      async updateCompetitionOptOut(params) {
+        await this.repo.setSellerCompetitionOptOut(
+          params.verifiedUid,
+          Boolean(params.optedOut),
+          params.nowMs ?? Date.now()
+        );
+        return {
+          status: 200,
+          body: {
+            success: true,
+            optedOut: Boolean(params.optedOut)
+          }
+        };
+      }
+      // Phase 2B Server Foundation Operations (no public HTTP endpoints exposed yet)
+      async getSellerAnalyticsDoc(sellerId) {
+        if (!isValidAnalyticsId(sellerId) || !this.repo.getSellerAnalyticsDoc) {
+          return null;
+        }
+        return this.repo.getSellerAnalyticsDoc(sellerId);
+      }
+      async ensureSellerAnalyticsDoc(params) {
+        if (!this.repo.ensureSellerAnalyticsDoc) {
+          throw new Error("Repository does not implement ensureSellerAnalyticsDoc");
+        }
+        return this.repo.ensureSellerAnalyticsDoc(params);
+      }
+      async claimGuestSessionForUser(params) {
+        if (!this.repo.claimGuestSession) {
+          throw new Error("Repository does not implement claimGuestSession");
+        }
+        if (!isValidAnalyticsId(params.uid)) {
+          return { status: 400, claimed: false, reason: "invalid_request" };
+        }
+        let guestHash;
+        try {
+          guestHash = this.computeGuestSessionHash(params.visitorToken);
+        } catch {
+          return { status: 400, claimed: false, reason: "invalid_request" };
+        }
+        return this.repo.claimGuestSession({
+          guestHash,
+          uid: params.uid,
+          nowMs: params.nowMs ?? Date.now()
+        });
+      }
+      async claimVerifiedFunnelMarker(params) {
+        if (!this.repo.claimVerifiedFunnelMarker) {
+          throw new Error("Repository does not implement claimVerifiedFunnelMarker");
+        }
+        const buyerHash = this.computeBuyerIdentityHash(params.buyerUid);
+        return this.repo.claimVerifiedFunnelMarker({
+          markerType: params.markerType,
+          sourceId: params.sourceId,
+          sellerId: params.sellerId,
+          buyerHash,
+          listingId: params.listingId,
+          nowMs: params.nowMs ?? Date.now()
+        });
+      }
+      async recordSellerFunnelEvent(params) {
+        const nowMs = params.nowMs ?? Date.now();
+        const validEventTypes = [
+          "seller_profile_view",
+          "listing_to_seller",
+          "contact_click",
+          "contact_confirmed",
+          "order_intent",
+          "order_confirmed"
+        ];
+        if (!validEventTypes.includes(params.eventType)) {
+          return { status: 400, body: { error: "Invalid eventType", code: "analytics/invalid-event-type" } };
+        }
+        const isConfirmedEvent = params.eventType === "contact_confirmed" || params.eventType === "order_confirmed";
+        if (isConfirmedEvent) {
+          if (!params.verifiedUid || !isValidAnalyticsId(params.verifiedUid)) {
+            return {
+              status: 401,
+              body: {
+                recorded: false,
+                error: "Unauthorized: Authentication required for confirmed funnel events",
+                code: "analytics/auth-required"
+              }
+            };
+          }
+        }
+        if (isBotUserAgent(params.userAgent)) {
+          return { status: 200, body: { recorded: false, reason: "bot_filtered" } };
+        }
+        if (!isValidAnalyticsId(params.sellerId)) {
+          return { status: 400, body: { error: "Invalid sellerId", code: "analytics/invalid-seller-id" } };
+        }
+        let viewerType;
+        let identityKey;
+        if (params.verifiedUid && isValidAnalyticsId(params.verifiedUid)) {
+          viewerType = "auth";
+          identityKey = `auth:${params.verifiedUid}`;
+        } else {
+          if (typeof params.visitorToken !== "string" || params.visitorToken.length < 8 || params.visitorToken.length > 128 || !/^[a-zA-Z0-9_-]+$/.test(params.visitorToken)) {
+            return { status: 400, body: { error: "Valid visitorToken required for guest telemetry", code: "analytics/invalid-visitor-token" } };
+          }
+          viewerType = "guest";
+          identityKey = `guest:${params.visitorToken}`;
+        }
+        try {
+          this.resolveEffectiveSalt();
+        } catch (err) {
+          if (err instanceof AnalyticsConfigError && err.code === "analytics/salt-missing") {
+            return {
+              status: 503,
+              body: {
+                recorded: false,
+                code: "analytics/salt-missing",
+                error: err.message
+              }
+            };
+          }
+          throw err;
+        }
+        let targetSellerId = String(params.sellerId);
+        let targetListingId;
+        let sellerMeta;
+        if (isConfirmedEvent) {
+          targetListingId = typeof params.listingId === "string" ? params.listingId : void 0;
+          const verifiedUid = params.verifiedUid;
+          if (typeof params.sourceId !== "string" || !isValidAnalyticsId(params.sourceId)) {
+            return {
+              status: 400,
+              body: {
+                recorded: false,
+                error: "Valid sourceId required for confirmed funnel markers",
+                code: "analytics/invalid-source-id"
+              }
+            };
+          }
+          const sourceId = params.sourceId;
+          if (params.eventType === "order_confirmed") {
+            if (!this.repo.getOrderForAnalytics) {
+              throw new Error("Repository does not implement getOrderForAnalytics");
+            }
+            const order = await this.repo.getOrderForAnalytics(sourceId);
+            if (!order) {
+              return {
+                status: 404,
+                body: {
+                  recorded: false,
+                  error: "Order not found",
+                  code: "analytics/order-not-found"
+                }
+              };
+            }
+            if (order.buyerId !== verifiedUid) {
+              return {
+                status: 403,
+                body: {
+                  recorded: false,
+                  error: "Forbidden: Order does not belong to authenticated buyer",
+                  code: "analytics/order-buyer-mismatch"
+                }
+              };
+            }
+            if (!isValidAnalyticsId(order.sellerId) || order.sellerId === verifiedUid) {
+              return {
+                status: 400,
+                body: {
+                  recorded: false,
+                  error: "Invalid order seller",
+                  code: "analytics/invalid-order-seller"
+                }
+              };
+            }
+            if (order.sellerId !== targetSellerId) {
+              return {
+                status: 403,
+                body: {
+                  recorded: false,
+                  error: "Forbidden: sellerId does not match authoritative order seller",
+                  code: "analytics/seller-mismatch"
+                }
+              };
+            }
+            if (typeof params.listingId === "string" && params.listingId.length > 0 && order.listingId !== params.listingId) {
+              return {
+                status: 400,
+                body: {
+                  recorded: false,
+                  error: "listingId does not match authoritative order listing",
+                  code: "analytics/listing-mismatch"
+                }
+              };
+            }
+            const normalizedStatus = String(order.status || "").trim().toLowerCase();
+            if (!CONFIRMED_ORDER_ALLOWED_STATUSES.has(normalizedStatus)) {
+              return {
+                status: 400,
+                body: {
+                  recorded: false,
+                  error: "Order status is not eligible for confirmation",
+                  code: "analytics/invalid-order-status"
+                }
+              };
+            }
+            targetSellerId = order.sellerId;
+            targetListingId = isValidAnalyticsId(order.listingId) ? order.listingId : void 0;
+          } else {
+            if (!this.repo.getMarketMessageForAnalytics) {
+              throw new Error("Repository does not implement getMarketMessageForAnalytics");
+            }
+            const message = await this.repo.getMarketMessageForAnalytics(sourceId);
+            if (!message) {
+              return {
+                status: 404,
+                body: {
+                  recorded: false,
+                  error: "Message not found",
+                  code: "analytics/message-not-found"
+                }
+              };
+            }
+            if (message.senderId !== verifiedUid) {
+              return {
+                status: 403,
+                body: {
+                  recorded: false,
+                  error: "Forbidden: Message does not belong to authenticated sender",
+                  code: "analytics/message-sender-mismatch"
+                }
+              };
+            }
+            if (!isValidAnalyticsId(message.sellerId) || message.sellerId === verifiedUid) {
+              return {
+                status: 400,
+                body: {
+                  recorded: false,
+                  error: "Invalid message seller",
+                  code: "analytics/invalid-message-seller"
+                }
+              };
+            }
+            if (message.sellerId !== targetSellerId) {
+              return {
+                status: 403,
+                body: {
+                  recorded: false,
+                  error: "Forbidden: sellerId does not match authoritative message seller",
+                  code: "analytics/seller-mismatch"
+                }
+              };
+            }
+            if (message.buyerId && message.buyerId !== verifiedUid) {
+              return {
+                status: 403,
+                body: {
+                  recorded: false,
+                  error: "Forbidden: Message buyerId does not match authenticated user",
+                  code: "analytics/message-buyer-mismatch"
+                }
+              };
+            }
+            if (message.receiverId && message.receiverId !== message.sellerId) {
+              return {
+                status: 403,
+                body: {
+                  recorded: false,
+                  error: "Forbidden: Message receiver does not match seller",
+                  code: "analytics/message-receiver-mismatch"
+                }
+              };
+            }
+            if (Array.isArray(message.participants) && (!message.participants.includes(verifiedUid) || !message.participants.includes(message.sellerId))) {
+              return {
+                status: 403,
+                body: {
+                  recorded: false,
+                  error: "Forbidden: Message participants do not match sender and seller",
+                  code: "analytics/message-participants-mismatch"
+                }
+              };
+            }
+            if (typeof params.listingId === "string" && params.listingId.length > 0 && message.listingId !== params.listingId) {
+              return {
+                status: 400,
+                body: {
+                  recorded: false,
+                  error: "listingId does not match authoritative message listing",
+                  code: "analytics/listing-mismatch"
+                }
+              };
+            }
+            targetSellerId = message.sellerId;
+            targetListingId = message.listingId && isValidAnalyticsId(message.listingId) ? message.listingId : void 0;
+          }
+          if (verifiedUid === targetSellerId) {
+            return { status: 200, body: { recorded: false, reason: "owner_excluded" } };
+          }
+          const markerType = params.eventType === "order_confirmed" ? "order_confirmed" : "contact_confirmed";
+          const buyerHash = this.computeBuyerIdentityHash(verifiedUid);
+          if (this.repo.claimVerifiedFunnelMarker) {
+            const markerRes = await this.repo.claimVerifiedFunnelMarker({
+              markerType,
+              sourceId,
+              sellerId: targetSellerId,
+              buyerHash,
+              listingId: targetListingId,
+              nowMs
+            });
+            if (markerRes.duplicate) {
+              return { status: 200, body: { recorded: false, reason: "duplicate_verified_marker" } };
+            }
+          }
+        } else {
+          if (!this.repo.getSellerForAnalytics) {
+            throw new Error("Repository does not implement getSellerForAnalytics");
+          }
+          const seller = await this.repo.getSellerForAnalytics(targetSellerId);
+          if (!seller || !seller.exists || seller.deleted || seller.isDemo || seller.isSeed || seller.isMock) {
+            return {
+              status: 404,
+              body: {
+                recorded: false,
+                error: "Seller not found",
+                code: "analytics/seller-not-found"
+              }
+            };
+          }
+          sellerMeta = {
+            optedOut: seller.optedOut,
+            sellerName: seller.sellerName,
+            country: seller.country,
+            region: seller.region
+          };
+          const rawListingId = params.listingId;
+          if (params.eventType === "listing_to_seller") {
+            if (rawListingId === void 0 || rawListingId === null || rawListingId === "") {
+              return {
+                status: 400,
+                body: {
+                  recorded: false,
+                  error: "listingId is required for listing_to_seller events",
+                  code: "analytics/listing-id-required"
+                }
+              };
+            }
+          }
+          if (rawListingId !== void 0 && rawListingId !== null) {
+            if (!isValidAnalyticsId(rawListingId)) {
+              return {
+                status: 400,
+                body: {
+                  recorded: false,
+                  error: "Invalid listingId",
+                  code: "analytics/invalid-listing-id"
+                }
+              };
+            }
+            const listing = await this.repo.getListing(rawListingId);
+            const normalizedListingStatus = typeof listing?.status === "string" ? listing.status.trim().toLowerCase() : "";
+            if (!listing || listing.isDemo || listing.isSeed || listing.isMock || normalizedListingStatus === "deleted") {
+              return {
+                status: 404,
+                body: {
+                  recorded: false,
+                  error: "Listing not found",
+                  code: "analytics/listing-not-found"
+                }
+              };
+            }
+            if (normalizedListingStatus !== "" && normalizedListingStatus !== "active") {
+              return {
+                status: 400,
+                body: {
+                  recorded: false,
+                  error: "Listing is not active",
+                  code: "analytics/listing-not-active"
+                }
+              };
+            }
+            if (listing.sellerId !== targetSellerId) {
+              return {
+                status: 403,
+                body: {
+                  recorded: false,
+                  error: "Forbidden: Listing does not belong to target seller",
+                  code: "analytics/listing-seller-mismatch"
+                }
+              };
+            }
+            targetListingId = listing.id;
+          }
+          if (params.verifiedUid && params.verifiedUid === targetSellerId) {
+            return { status: 200, body: { recorded: false, reason: "owner_excluded" } };
+          }
+        }
+        const viewerHash = this.computeSellerViewerHash(targetSellerId, identityKey);
+        if (!this.repo.recordSellerFunnelEvent) {
+          throw new Error("Repository does not implement recordSellerFunnelEvent");
+        }
+        const txResult = await this.repo.recordSellerFunnelEvent({
+          sellerId: targetSellerId,
+          eventType: params.eventType,
+          viewerHash,
+          viewerType,
+          nowMs,
+          listingId: targetListingId,
+          sourceId: typeof params.sourceId === "string" ? params.sourceId : void 0,
+          ...sellerMeta ? { sellerMeta } : {}
+        });
+        return {
+          status: 200,
+          body: {
+            recorded: txResult.recorded,
+            ...txResult.reason ? { reason: txResult.reason } : {}
+          }
+        };
+      }
+    };
+  }
+});
+
 // src/serverApp.ts
 import dotenv from "dotenv";
 import express from "express";
@@ -850,2936 +3847,272 @@ async function detectClipIssues(caption, duration, sampledBrightness, appLanguag
   }
 }
 
-// src/lib/analyticsServer.ts
-import crypto from "crypto";
+// src/serverApp.ts
+init_analyticsServer();
 
-// src/lib/listingClassification.ts
-var PRODUCT_CATEGORY_IDS = [
-  "newyear",
-  "phones",
-  "technics",
-  "family-technic",
-  "garden",
-  "furniture",
-  "hunting",
-  "music",
-  "kids",
-  "fashion",
-  "building",
-  "village",
-  "animals",
-  "sport",
-  "business",
-  "book",
-  "art"
-];
-var SERVICE_CATEGORY_IDS = [
-  "service",
-  "rent",
-  "audience-growth"
-];
-var PROJECT_ASSET_CATEGORY_IDS = [
-  "social-accounts",
-  "youtube-channels",
-  "digital-projects"
-];
-var JOB_CATEGORY_IDS = [
-  "project-jobs"
-];
-var COLLABORATION_CATEGORY_IDS = [
-  "collaboration"
-];
-var PROJECT_CATEGORY_IDS = [
-  "project-jobs",
-  "social-accounts",
-  "youtube-channels",
-  "collaboration",
-  "digital-projects"
-];
-var ALL_ACTIVE_CATEGORY_IDS = [
-  ...PRODUCT_CATEGORY_IDS,
-  ...SERVICE_CATEGORY_IDS,
-  ...PROJECT_CATEGORY_IDS
-];
-var PRODUCT_CATEGORY_SET = new Set(PRODUCT_CATEGORY_IDS);
-var SERVICE_CATEGORY_SET = new Set(SERVICE_CATEGORY_IDS);
-var PROJECT_ASSET_CATEGORY_SET = new Set(PROJECT_ASSET_CATEGORY_IDS);
-var JOB_CATEGORY_SET = new Set(JOB_CATEGORY_IDS);
-var COLLABORATION_CATEGORY_SET = new Set(COLLABORATION_CATEGORY_IDS);
-var PROJECT_CATEGORY_SET = new Set(PROJECT_CATEGORY_IDS);
-var normalizeCategoryId = (category) => typeof category === "string" ? category.trim().toLowerCase() : "";
-var normalizeExplicitListingType = (listingType) => {
-  if (typeof listingType !== "string") return null;
-  const normalized = listingType.trim().toLowerCase();
-  if (normalized === "product" || normalized === "service" || normalized === "project") {
-    return normalized;
-  }
-  return null;
-};
-var classifyListing = (item) => {
-  if (!item) return null;
-  const cat = normalizeCategoryId(item.category);
-  const explicit = normalizeExplicitListingType(item.listingType);
-  if (SERVICE_CATEGORY_SET.has(cat) || cat === "services") {
-    return "service";
-  }
-  if (PROJECT_ASSET_CATEGORY_SET.has(cat) || cat === "digital" || normalizeCategoryId(item.listingType) === "digital") {
-    return "project_asset";
-  }
-  if (JOB_CATEGORY_SET.has(cat)) {
-    return "job";
-  }
-  if (COLLABORATION_CATEGORY_SET.has(cat)) {
-    return "collaboration";
-  }
-  if (PRODUCT_CATEGORY_SET.has(cat)) {
-    return "product";
-  }
-  if (explicit === "service") return "service";
-  if (explicit === "project") return "project";
-  if (explicit === "product") return "product";
-  if (cat === "project" || PROJECT_CATEGORY_SET.has(cat)) return "project";
-  return "product";
-};
-var inferListingType = (category, explicitListingType) => {
-  const classification = classifyListing({ category, listingType: explicitListingType });
-  if (classification === "service") return "service";
-  if (classification === "project_asset" || classification === "job" || classification === "collaboration" || classification === "project") {
-    return "project";
-  }
-  return "product";
-};
-
-// src/lib/marketAnalyticsUtils.ts
-var BOT_USER_AGENT_PATTERN = /bot|crawler|spider|slurp|mediapartners|headless|puppeteer|playwright|selenium|phantom|curl|wget|python-requests|httpclient|axios\/|node-fetch|postman|insomnia|scrapy|lighthouse|pingdom|uptimerobot/i;
-var IMPRESSION_COOLDOWN_MS = 10 * 60 * 1e3;
-var VIEW_COOLDOWN_MS = 5 * 60 * 1e3;
-function isBotUserAgent(userAgent) {
-  if (!userAgent || typeof userAgent !== "string") return true;
-  const trimmed = userAgent.trim();
-  if (trimmed.length < 8) return true;
-  return BOT_USER_AGENT_PATTERN.test(trimmed);
+// src/lib/marketListingMeta.ts
+import fs from "fs";
+import path from "path";
+var DEFAULT_ROBOT_IMAGE = "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?auto=format&fit=crop&w=1200&h=630&q=80";
+var DEFAULT_TITLE = "Proton \u2014 \u10EA\u10D8\u10E4\u10E0\u10E3\u10DA\u10D8 \u10E1\u10D0\u10EE\u10DA\u10D8 \u10D3\u10D0 AI \u10E1\u10D8\u10E1\u10E2\u10D4\u10DB\u10D4\u10D1\u10D8\u10E1 \u10F0\u10D0\u10D1\u10D8 / Digital House & AI Hub";
+var DEFAULT_DESC = "Proton \u10D0\u10E0\u10D8\u10E1 \u10D0\u10D3\u10D0\u10DB\u10D8\u10D0\u10DC\u10D4\u10D1\u10D8\u10E1\u10D0 \u10D3\u10D0 \u10D9\u10DD\u10DB\u10DE\u10D0\u10DC\u10D8\u10D4\u10D1\u10D8\u10E1\u10D7\u10D5\u10D8\u10E1 \u10E8\u10D4\u10E5\u10DB\u10DC\u10D8\u10DA\u10D8 \u10DB\u10E0\u10D0\u10D5\u10D0\u10DA\u10E4\u10E3\u10DC\u10E5\u10EA\u10D8\u10E3\u10E0\u10D8 \u10EA\u10D8\u10E4\u10E0\u10E3\u10DA\u10D8 \u10E1\u10D8\u10D5\u10E0\u10EA\u10D4 \u2014 Digital House, \u10E1\u10D0\u10D3\u10D0\u10EA \u10D2\u10D0\u10D4\u10E0\u10D7\u10D8\u10D0\u10DC\u10D4\u10D1\u10E3\u10DA\u10D8\u10D0 AI \u10D3\u10D0\u10DB\u10EE\u10DB\u10D0\u10E0\u10D4\u10D4\u10D1\u10D8, \u10DD\u10E0\u10D2\u10D0\u10DC\u10D8\u10D6\u10D0\u10E2\u10DD\u10E0\u10D4\u10D1\u10D8 \u10D3\u10D0 \u10D0\u10D5\u10E2\u10DD\u10DB\u10D0\u10E2\u10D8\u10D6\u10D0\u10EA\u10D8\u10D8\u10E1 \u10D8\u10DC\u10E1\u10E2\u10E0\u10E3\u10DB\u10D4\u10DC\u10E2\u10D4\u10D1\u10D8.";
+var PREVIEW_CACHE = /* @__PURE__ */ new Map();
+var CACHE_TTL_MS = 60 * 1e3;
+function escapeHtml(str) {
+  if (!str) return "";
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
-function isValidAnalyticsId(id) {
-  return typeof id === "string" && id.length >= 1 && id.length <= 128 && /^[a-zA-Z0-9_-]+$/.test(id);
+function cleanText(raw, maxLen = 180) {
+  if (!raw || typeof raw !== "string") return "";
+  const cleaned = raw.replace(/[\r\n\t]+/g, " ").replace(/\s+/g, " ").trim();
+  if (cleaned.length <= maxLen) return cleaned;
+  return cleaned.substring(0, maxLen - 3).trim() + "...";
 }
-function getHourBucketKey(tsMs) {
-  const d = new Date(tsMs);
-  const year = d.getUTCFullYear();
-  const month = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(d.getUTCDate()).padStart(2, "0");
-  const hour = String(d.getUTCHours()).padStart(2, "0");
-  return `${year}-${month}-${day}T${hour}`;
-}
-function getDayBucketKey(tsMs) {
-  const d = new Date(tsMs);
-  const year = d.getUTCFullYear();
-  const month = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(d.getUTCDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-function sanitizeBucketCounter(v) {
-  const bucket = {
-    impressions: Number(v.impressions) || 0,
-    views: Number(v.views) || 0,
-    uniqueViewers: Number(v.uniqueViewers) || 0
-  };
-  if (typeof v.authImpressions === "number" || typeof v.authViews === "number" || typeof v.authUniqueViewers === "number" || typeof v.guestImpressions === "number" || typeof v.guestViews === "number" || typeof v.guestUniqueViewers === "number") {
-    bucket.authImpressions = Number(v.authImpressions) || 0;
-    bucket.authViews = Number(v.authViews) || 0;
-    bucket.authUniqueViewers = Number(v.authUniqueViewers) || 0;
-    bucket.guestImpressions = Number(v.guestImpressions) || 0;
-    bucket.guestViews = Number(v.guestViews) || 0;
-    bucket.guestUniqueViewers = Number(v.guestUniqueViewers) || 0;
-  }
-  return bucket;
-}
-function pruneHourlyBuckets(hourly, nowMs) {
-  const result = {};
-  if (!hourly || typeof hourly !== "object") return result;
-  const minTs = nowMs - 52 * 60 * 60 * 1e3;
-  const minKey = getHourBucketKey(minTs);
-  for (const [k, v] of Object.entries(hourly)) {
-    if (k >= minKey && v && typeof v === "object") {
-      result[k] = sanitizeBucketCounter(v);
-    }
-  }
-  return result;
-}
-function pruneDailyBuckets(daily, nowMs) {
-  const result = {};
-  if (!daily || typeof daily !== "object") return result;
-  const minTs = nowMs - 62 * 24 * 60 * 60 * 1e3;
-  const minKey = getDayBucketKey(minTs);
-  for (const [k, v] of Object.entries(daily)) {
-    if (k >= minKey && v && typeof v === "object") {
-      result[k] = sanitizeBucketCounter(v);
-    }
-  }
-  return result;
-}
-function computeEngagementRate(views, impressions) {
-  if (!Number.isFinite(views) || !Number.isFinite(impressions) || views <= 0 || impressions <= 0) {
-    return 0;
-  }
-  const raw = views / impressions * 100;
-  return Math.min(100, Math.round(raw * 10) / 10);
-}
-function sumBucketKeys(buckets, keys) {
-  let impressions = 0;
-  let views = 0;
-  let uniqueViewers = 0;
-  if (buckets) {
-    for (const key of keys) {
-      const b = buckets[key];
-      if (b) {
-        impressions += Number(b.impressions) || 0;
-        views += Number(b.views) || 0;
-        uniqueViewers += Number(b.uniqueViewers) || 0;
-      }
-    }
-  }
-  return {
-    impressions,
-    views,
-    uniqueViewers,
-    engagementRate: computeEngagementRate(views, impressions)
-  };
-}
-function computeComparison(curr, prev) {
-  const pct = (c, p) => {
-    if (p <= 0) return c > 0 ? 100 : null;
-    return Math.round((c - p) / p * 1e3) / 10;
-  };
-  return {
-    impressionsDelta: curr.impressions - prev.impressions,
-    viewsDelta: curr.views - prev.views,
-    uniqueViewersDelta: curr.uniqueViewers - prev.uniqueViewers,
-    engagementRateDelta: Math.round((curr.engagementRate - prev.engagementRate) * 10) / 10,
-    impressionsChangePct: pct(curr.impressions, prev.impressions),
-    viewsChangePct: pct(curr.views, prev.views),
-    uniqueViewersChangePct: pct(curr.uniqueViewers, prev.uniqueViewers)
-  };
-}
-function buildHourWindowKeys(nowMs, offsetHoursStart, count) {
-  const keys = [];
-  for (let i = 0; i < count; i++) {
-    keys.push(getHourBucketKey(nowMs - (offsetHoursStart + i) * 60 * 60 * 1e3));
-  }
-  return keys;
-}
-function buildDayWindowKeys(nowMs, offsetDaysStart, count) {
-  const keys = [];
-  for (let i = 0; i < count; i++) {
-    keys.push(getDayBucketKey(nowMs - (offsetDaysStart + i) * 24 * 60 * 60 * 1e3));
-  }
-  return keys;
-}
-function aggregatePeriodFromBuckets(docData, nowMs = Date.now()) {
-  const h24Keys = buildHourWindowKeys(nowMs, 0, 24);
-  const prevH24Keys = buildHourWindowKeys(nowMs, 24, 24);
-  const d7Keys = buildDayWindowKeys(nowMs, 0, 7);
-  const prevD7Keys = buildDayWindowKeys(nowMs, 7, 7);
-  const d30Keys = buildDayWindowKeys(nowMs, 0, 30);
-  const prevD30Keys = buildDayWindowKeys(nowMs, 30, 30);
-  const m24h = sumBucketKeys(docData.hourly, h24Keys);
-  const prev24h = sumBucketKeys(docData.hourly, prevH24Keys);
-  const m7d = sumBucketKeys(docData.daily, d7Keys);
-  const prev7d = sumBucketKeys(docData.daily, prevD7Keys);
-  const m30d = sumBucketKeys(docData.daily, d30Keys);
-  const prev30d = sumBucketKeys(docData.daily, prevD30Keys);
-  const totalImpressions = Number(docData.impressions) || 0;
-  const totalViews = Number(docData.views) || 0;
-  const totalUniqueViewers = Number(docData.uniqueViewers) || 0;
-  const mAll = {
-    impressions: totalImpressions,
-    views: totalViews,
-    uniqueViewers: totalUniqueViewers,
-    engagementRate: computeEngagementRate(totalViews, totalImpressions)
-  };
-  return {
-    periods: {
-      "24h": m24h,
-      "7d": m7d,
-      "30d": m30d,
-      "all": mAll
-    },
-    comparisons: {
-      "24h": computeComparison(m24h, prev24h),
-      "7d": computeComparison(m7d, prev7d),
-      "30d": computeComparison(m30d, prev30d)
-    },
-    prevPeriods: {
-      "24h": prev24h,
-      "7d": prev7d,
-      "30d": prev30d
-    }
-  };
-}
-function sumPeriodMetricsList(list) {
-  let impressions = 0;
-  let views = 0;
-  let uniqueViewers = 0;
-  for (const item of list) {
-    impressions += item.impressions || 0;
-    views += item.views || 0;
-    uniqueViewers += item.uniqueViewers || 0;
-  }
-  return {
-    impressions,
-    views,
-    uniqueViewers,
-    engagementRate: computeEngagementRate(views, impressions)
-  };
-}
-function createZeroViewerSegmentMetrics() {
-  return {
-    authImpressions: 0,
-    authViews: 0,
-    authUniqueViewers: 0,
-    guestImpressions: 0,
-    guestViews: 0,
-    guestUniqueViewers: 0
-  };
-}
-function sumViewerBreakdownBuckets(buckets, keys) {
-  const totals = createZeroViewerSegmentMetrics();
-  if (!buckets) return totals;
-  for (const key of keys) {
-    const b = buckets[key];
-    if (!b) continue;
-    totals.authImpressions += Number(b.authImpressions) || 0;
-    totals.authViews += Number(b.authViews) || 0;
-    totals.authUniqueViewers += Number(b.authUniqueViewers) || 0;
-    totals.guestImpressions += Number(b.guestImpressions) || 0;
-    totals.guestViews += Number(b.guestViews) || 0;
-    totals.guestUniqueViewers += Number(b.guestUniqueViewers) || 0;
-  }
-  return totals;
-}
-function hasRecordedViewerBreakdown(docData) {
-  if (!docData) return false;
-  if (typeof docData.breakdownSince === "number" && Number.isFinite(docData.breakdownSince)) {
-    return true;
-  }
-  return typeof docData.authImpressions === "number" || typeof docData.authViews === "number" || typeof docData.authUniqueViewers === "number" || typeof docData.guestImpressions === "number" || typeof docData.guestViews === "number" || typeof docData.guestUniqueViewers === "number";
-}
-function aggregateViewerBreakdownFromDoc(docData, nowMs = Date.now()) {
-  if (!hasRecordedViewerBreakdown(docData)) {
-    return void 0;
-  }
-  const h24Keys = buildHourWindowKeys(nowMs, 0, 24);
-  const d7Keys = buildDayWindowKeys(nowMs, 0, 7);
-  const d30Keys = buildDayWindowKeys(nowMs, 0, 30);
-  return {
-    ...typeof docData?.breakdownSince === "number" && Number.isFinite(docData.breakdownSince) ? { breakdownSince: docData.breakdownSince } : {},
-    periods: {
-      "24h": sumViewerBreakdownBuckets(docData?.hourly, h24Keys),
-      "7d": sumViewerBreakdownBuckets(docData?.daily, d7Keys),
-      "30d": sumViewerBreakdownBuckets(docData?.daily, d30Keys),
-      all: {
-        authImpressions: Number(docData?.authImpressions) || 0,
-        authViews: Number(docData?.authViews) || 0,
-        authUniqueViewers: Number(docData?.authUniqueViewers) || 0,
-        guestImpressions: Number(docData?.guestImpressions) || 0,
-        guestViews: Number(docData?.guestViews) || 0,
-        guestUniqueViewers: Number(docData?.guestUniqueViewers) || 0
-      }
-    }
-  };
-}
-function sumViewerBreakdownList(breakdowns) {
-  const valid = breakdowns.filter((b) => Boolean(b));
-  if (valid.length === 0) return void 0;
-  const periodKeys = ["24h", "7d", "30d", "all"];
-  const periods = {};
-  for (const pk of periodKeys) {
-    const sum = createZeroViewerSegmentMetrics();
-    for (const item of valid) {
-      const m = item.periods[pk];
-      if (!m) continue;
-      sum.authImpressions += m.authImpressions || 0;
-      sum.authViews += m.authViews || 0;
-      sum.authUniqueViewers += m.authUniqueViewers || 0;
-      sum.guestImpressions += m.guestImpressions || 0;
-      sum.guestViews += m.guestViews || 0;
-      sum.guestUniqueViewers += m.guestUniqueViewers || 0;
-    }
-    periods[pk] = sum;
-  }
-  const sinceCandidates = valid.map((b) => b.breakdownSince).filter((v) => typeof v === "number" && Number.isFinite(v));
-  return {
-    ...sinceCandidates.length > 0 ? { breakdownSince: Math.min(...sinceCandidates) } : {},
-    periods
-  };
-}
-var COUNTRY_NAME_TO_CODE = {
-  GE: "GEO",
-  GEO: "GEO",
-  GEORGIA: "GEO",
-  "\u10E1\u10D0\u10E5\u10D0\u10E0\u10D7\u10D5\u10D4\u10DA\u10DD": "GEO",
-  US: "USA",
-  USA: "USA",
-  "UNITED STATES": "USA",
-  DE: "DEU",
-  DEU: "DEU",
-  GERMANY: "DEU",
-  CN: "CHN",
-  CHN: "CHN",
-  CHINA: "CHN",
-  JP: "JPN",
-  JPN: "JPN",
-  JAPAN: "JPN",
-  GB: "GBR",
-  UK: "GBR",
-  GBR: "GBR",
-  "UNITED KINGDOM": "GBR",
-  FR: "FRA",
-  FRA: "FRA",
-  FRANCE: "FRA",
-  EE: "EST",
-  EST: "EST",
-  ESTONIA: "EST",
-  IL: "ISR",
-  ISR: "ISR",
-  ISRAEL: "ISR",
-  SG: "SGP",
-  SGP: "SGP",
-  SINGAPORE: "SGP",
-  AE: "VAE",
-  UAE: "VAE",
-  VAE: "VAE"
-};
-function normalizeCountryCode(raw) {
-  if (!raw || typeof raw !== "string") return void 0;
-  const trimmed = raw.trim();
-  if (!trimmed) return void 0;
-  const upper = trimmed.toUpperCase();
-  if (upper === "GLOBAL" || upper === "WORLDWIDE" || upper === "ONLINE" || upper === "REMOTE") {
-    return void 0;
-  }
-  if (COUNTRY_NAME_TO_CODE[upper]) {
-    return COUNTRY_NAME_TO_CODE[upper];
-  }
-  if (/^[A-Z]{2,3}$/.test(upper)) {
-    return upper;
+function extractRestField(val) {
+  if (!val || typeof val !== "object") return void 0;
+  if ("stringValue" in val) return val.stringValue;
+  if ("integerValue" in val) return parseInt(val.integerValue, 10);
+  if ("doubleValue" in val) return Number(val.doubleValue);
+  if ("booleanValue" in val) return Boolean(val.booleanValue);
+  if ("arrayValue" in val) {
+    const list = val.arrayValue?.values || [];
+    return list.map(extractRestField);
   }
   return void 0;
 }
-function resolveReliableSellerLocation(params) {
-  let country = normalizeCountryCode(params.profileCountry);
-  let region;
-  const rawProfileRegion = typeof params.profileRegion === "string" ? params.profileRegion.trim() : "";
-  if (rawProfileRegion && rawProfileRegion.toLowerCase() !== "global" && rawProfileRegion.toLowerCase() !== "online") {
-    const parts = rawProfileRegion.split(",").map((s) => s.trim()).filter(Boolean);
-    if (parts.length >= 2) {
-      const maybeCountry = normalizeCountryCode(parts[parts.length - 1]);
-      if (maybeCountry && !country) {
-        country = maybeCountry;
-      }
-      region = parts.slice(0, -1).join(", ");
-    } else {
-      region = rawProfileRegion;
-    }
+async function fetchListingPreviewData(listingId) {
+  const cleanId = typeof listingId === "string" ? listingId.trim() : "";
+  if (!cleanId || !/^[a-zA-Z0-9_-]{1,128}$/.test(cleanId)) {
+    return null;
   }
-  if (!country) {
-    country = normalizeCountryCode(params.listingCountry);
+  const cached = PREVIEW_CACHE.get(cleanId);
+  const now = Date.now();
+  if (cached && cached.expiresAt > now) {
+    return cached.data;
   }
-  if (!region && typeof params.listingCity === "string") {
-    const cityTrimmed = params.listingCity.trim();
-    if (cityTrimmed && cityTrimmed.toLowerCase() !== "online" && cityTrimmed.toLowerCase() !== "remote" && cityTrimmed.toLowerCase() !== "global") {
-      region = cityTrimmed;
-    }
-  }
-  return { country, region };
-}
-function computeBalancedScore(input) {
-  const {
-    impressions,
-    views,
-    uniqueViewers,
-    categoryBaseline,
-    sellerRatingAvg = 0,
-    sellerRatingCount = 0,
-    listingCreatedAt,
-    nowMs = Date.now()
-  } = input;
-  if (views <= 0 && impressions <= 0) {
-    return {
-      engagementRate: 0,
-      categoryNormalizedScore: 0,
-      freshnessBoost: 0,
-      balancedScore: 0
-    };
-  }
-  const engagementRate = computeEngagementRate(views, impressions);
-  const smoothedEngagement = views / Math.max(impressions + 10, views + 10, 1);
-  const uniqueComponent = Math.log1p(Math.max(0, uniqueViewers)) * 28;
-  const viewsComponent = Math.log1p(Math.max(0, views)) * 8;
-  const engagementComponent = smoothedEngagement * 35;
-  const safeBaseline = Math.max(1, categoryBaseline);
-  const rawDemand = uniqueViewers + views * 0.35;
-  const categoryRatio = rawDemand / safeBaseline;
-  const categoryNormalizedScore = Math.round(Math.log1p(categoryRatio) * 18 * 100) / 100;
-  const reviewComponent = sellerRatingCount > 0 && sellerRatingAvg > 0 ? Math.min(5, sellerRatingAvg) / 5 * Math.min(sellerRatingCount, 10) * 1.2 : 0;
-  let freshnessBoost = 0;
-  if (listingCreatedAt && Number.isFinite(listingCreatedAt) && listingCreatedAt > 0) {
-    const ageDays = Math.max(0, (nowMs - listingCreatedAt) / (24 * 60 * 60 * 1e3));
-    if (ageDays <= 14) {
-      freshnessBoost = Math.round((1 - ageDays / 14) * 12 * 100) / 100;
-    }
-  }
-  const balancedScore = Math.round(
-    (uniqueComponent + viewsComponent + engagementComponent + categoryNormalizedScore + reviewComponent + freshnessBoost) * 100
-  ) / 100;
-  return {
-    engagementRate,
-    categoryNormalizedScore,
-    freshnessBoost,
-    balancedScore
-  };
-}
-function computeListingAchievements(params) {
-  const badges = [];
-  const {
-    curr7d,
-    prev7d,
-    curr30d,
-    listingCreatedAt,
-    nowMs = Date.now(),
-    categoryRank,
-    categoryTotal = 0,
-    globalRank
-  } = params;
-  const ageDays = listingCreatedAt && Number.isFinite(listingCreatedAt) && listingCreatedAt > 0 ? Math.max(0, (nowMs - listingCreatedAt) / (24 * 60 * 60 * 1e3)) : 999;
-  if (curr7d.uniqueViewers >= 5 && prev7d.uniqueViewers > 0 && (curr7d.uniqueViewers - prev7d.uniqueViewers) / prev7d.uniqueViewers >= 0.5 || ageDays <= 14 && curr7d.uniqueViewers >= 5 && curr7d.engagementRate >= 8) {
-    badges.push("rising_listing");
-  }
-  if (curr30d.uniqueViewers >= 25 && curr30d.views >= 35) {
-    badges.push("popular_listing");
-  }
-  if (typeof categoryRank === "number" && (categoryRank === 1 && curr7d.uniqueViewers >= 5 || categoryRank <= 3 && categoryTotal >= 10 && curr30d.uniqueViewers >= 10)) {
-    badges.push("top_in_category");
-  }
-  if (typeof globalRank === "number" && globalRank <= 10 && curr30d.uniqueViewers >= 20 && curr30d.engagementRate >= 5) {
-    badges.push("global_recognition");
-  }
-  return badges;
-}
-function normalizeListingTypeFilter(raw) {
-  if (typeof raw !== "string") return "all";
-  const trimmed = raw.trim().toLowerCase();
-  if (trimmed === "product" || trimmed === "service" || trimmed === "project") {
-    return trimmed;
-  }
-  return "all";
-}
-function buildRankingsFromPublicDocs(params) {
-  const {
-    docs,
-    sellerRatingsMap,
-    scope,
-    period,
-    listingType,
-    category,
-    country,
-    region,
-    nowMs = Date.now(),
-    limitCount = 50
-  } = params;
-  const eligible = docs.filter((d) => !d.optedOut && (!d.status || d.status === "active")).map((d) => {
-    const agg = aggregatePeriodFromBuckets(d, nowMs);
-    const periodMetrics = agg.periods[period];
-    const normalizedType = inferListingType(d.category, d.listingType);
-    return {
-      doc: d,
-      normalizedType,
-      agg,
-      periodMetrics
-    };
-  }).filter((item) => item.periodMetrics.views > 0 || item.periodMetrics.impressions > 0);
-  if (eligible.length === 0) return [];
-  const categoryDemands = /* @__PURE__ */ new Map();
-  for (const item of eligible) {
-    const cat = (item.doc.category || "other").toLowerCase();
-    const arr = categoryDemands.get(cat) || [];
-    arr.push(item.periodMetrics.uniqueViewers + item.periodMetrics.views * 0.35);
-    categoryDemands.set(cat, arr);
-  }
-  const categoryBaselines = /* @__PURE__ */ new Map();
-  for (const [cat, vals] of categoryDemands.entries()) {
-    const sorted = [...vals].sort((a, b) => a - b);
-    const mid = Math.floor(sorted.length / 2);
-    const median = sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
-    categoryBaselines.set(cat, Math.max(1, median));
-  }
-  const scoredAll = eligible.map((item) => {
-    const cat = (item.doc.category || "other").toLowerCase();
-    const baseline = categoryBaselines.get(cat) || 1;
-    const rating = sellerRatingsMap[item.doc.sellerId];
-    const scoreData = computeBalancedScore({
-      impressions: item.periodMetrics.impressions,
-      views: item.periodMetrics.views,
-      uniqueViewers: item.periodMetrics.uniqueViewers,
-      categoryBaseline: baseline,
-      sellerRatingAvg: rating?.avg || 0,
-      sellerRatingCount: rating?.count || 0,
-      listingCreatedAt: item.doc.listingCreatedAt || item.doc.createdAt,
-      nowMs
-    });
-    return {
-      ...item,
-      rating,
-      scoreData
-    };
-  });
-  scoredAll.sort((a, b) => {
-    if (b.scoreData.balancedScore !== a.scoreData.balancedScore) {
-      return b.scoreData.balancedScore - a.scoreData.balancedScore;
-    }
-    return b.periodMetrics.uniqueViewers - a.periodMetrics.uniqueViewers;
-  });
-  const globalRankMap = /* @__PURE__ */ new Map();
-  const categoryLists = /* @__PURE__ */ new Map();
-  scoredAll.forEach((entry, idx) => {
-    globalRankMap.set(entry.doc.listingId, idx + 1);
-    const cat = (entry.doc.category || "other").toLowerCase();
-    const list = categoryLists.get(cat) || [];
-    list.push(entry);
-    categoryLists.set(cat, list);
-  });
-  const categoryRankMap = /* @__PURE__ */ new Map();
-  for (const list of categoryLists.values()) {
-    list.forEach((entry, idx) => {
-      categoryRankMap.set(entry.doc.listingId, { rank: idx + 1, total: list.length });
-    });
-  }
-  const normCountryFilter = normalizeCountryCode(country);
-  const normRegionFilter = region ? region.trim().toLowerCase() : "";
-  const normCategoryFilter = category && category !== "all" ? category.trim().toLowerCase() : "";
-  const normListingTypeFilter = normalizeListingTypeFilter(listingType);
-  const scoped = scoredAll.filter((entry) => {
-    if (normListingTypeFilter !== "all" && entry.normalizedType !== normListingTypeFilter) {
-      return false;
-    }
-    if (scope === "country") {
-      if (!entry.doc.country) return false;
-      if (normCountryFilter && entry.doc.country.toUpperCase() !== normCountryFilter) return false;
-      return true;
-    }
-    if (scope === "regional") {
-      if (!entry.doc.region) return false;
-      if (normRegionFilter && !entry.doc.region.toLowerCase().includes(normRegionFilter)) return false;
-      return true;
-    }
-    if (scope === "category") {
-      if (!normCategoryFilter) return true;
-      return (entry.doc.category || "").toLowerCase() === normCategoryFilter;
-    }
-    return true;
-  });
-  return scoped.slice(0, limitCount).map((entry, idx) => {
-    const catInfo = categoryRankMap.get(entry.doc.listingId);
-    const globalRank = globalRankMap.get(entry.doc.listingId);
-    const achievements = computeListingAchievements({
-      curr7d: entry.agg.periods["7d"],
-      prev7d: entry.agg.prevPeriods["7d"],
-      curr30d: entry.agg.periods["30d"],
-      listingCreatedAt: entry.doc.listingCreatedAt || entry.doc.createdAt,
-      nowMs,
-      categoryRank: catInfo?.rank,
-      categoryTotal: catInfo?.total,
-      globalRank
-    });
-    return {
-      rank: idx + 1,
-      listingId: entry.doc.listingId,
-      title: entry.doc.title,
-      titleGe: entry.doc.titleGe,
-      category: entry.doc.category,
-      listingType: entry.normalizedType,
-      image: entry.doc.image,
-      sellerName: entry.doc.sellerName || "Proton Vendor",
-      country: entry.doc.country,
-      region: entry.doc.region,
-      impressions: entry.periodMetrics.impressions,
-      views: entry.periodMetrics.views,
-      uniqueViewers: entry.periodMetrics.uniqueViewers,
-      engagementRate: entry.scoreData.engagementRate,
-      categoryNormalizedScore: entry.scoreData.categoryNormalizedScore,
-      sellerRatingAvg: entry.rating?.avg,
-      sellerRatingCount: entry.rating?.count,
-      freshnessBoost: entry.scoreData.freshnessBoost,
-      balancedScore: entry.scoreData.balancedScore,
-      achievements,
-      period
-    };
-  });
-}
-var SELLER_DAILY_BUCKET_RETENTION_DAYS = 62;
-var SELLER_HOURLY_BUCKET_RETENTION_HOURS = 52;
-var GUEST_SESSION_MAX_LISTING_IDS = 50;
-var GUEST_SESSION_MAX_SELLER_IDS = 30;
-var GUEST_SESSION_TTL_DAYS = 30;
-var GUEST_SESSION_TTL_MS = GUEST_SESSION_TTL_DAYS * 24 * 60 * 60 * 1e3;
-var SELLER_ANALYTICS_SCHEMA_VERSION = 1;
-var SELLER_BUCKET_NUMERIC_KEYS = [
-  "profileViews",
-  "uniqueProfileViewers",
-  "authProfileViews",
-  "guestProfileViews",
-  "authUniqueProfileViewers",
-  "guestUniqueProfileViewers",
-  "listingToSellerClicks",
-  "uniqueListingToSellerUsers",
-  "authListingToSellerClicks",
-  "guestListingToSellerClicks",
-  "authUniqueListingToSellerUsers",
-  "guestUniqueListingToSellerUsers",
-  "contactClicks",
-  "uniqueContactClickers",
-  "authContactClicks",
-  "guestContactClicks",
-  "authUniqueContactClickers",
-  "guestUniqueContactClickers",
-  "orderIntents",
-  "uniqueOrderIntentUsers",
-  "authOrderIntents",
-  "guestOrderIntents",
-  "authUniqueOrderIntentUsers",
-  "guestUniqueOrderIntentUsers",
-  "contactConfirmed",
-  "uniqueContactedBuyers",
-  "ordersConfirmed",
-  "uniqueOrderBuyers",
-  "guestToAuthLinks",
-  "audienceImpressions",
-  "audienceViews",
-  "audienceUniqueViewers",
-  "authAudienceImpressions",
-  "authAudienceViews",
-  "authAudienceUniqueViewers",
-  "guestAudienceImpressions",
-  "guestAudienceViews",
-  "guestAudienceUniqueViewers",
-  "totalEvents",
-  "uniqueUsers",
-  "authEvents",
-  "guestEvents",
-  "authUniqueUsers",
-  "guestUniqueUsers"
-];
-function isValidHmacDigest(value) {
-  return typeof value === "string" && /^[a-f0-9]{64}$/.test(value);
-}
-function createEmptySellerAudienceCounters() {
-  return {
-    totalImpressions: 0,
-    totalViews: 0,
-    uniqueViewers: 0,
-    authImpressions: 0,
-    authViews: 0,
-    authUniqueViewers: 0,
-    guestImpressions: 0,
-    guestViews: 0,
-    guestUniqueViewers: 0
-  };
-}
-function createEmptySellerAnalyticsTotalCounters() {
-  return {
-    totalEvents: 0,
-    totalUniqueUsers: 0,
-    authEvents: 0,
-    guestEvents: 0,
-    authUniqueUsers: 0,
-    guestUniqueUsers: 0
-  };
-}
-function createEmptySellerAnalyticsBucket() {
-  const bucket = {};
-  for (const key of SELLER_BUCKET_NUMERIC_KEYS) {
-    bucket[key] = 0;
-  }
-  return bucket;
-}
-function sanitizeSellerAnalyticsBucket(raw) {
-  const sanitized = createEmptySellerAnalyticsBucket();
-  if (!raw || typeof raw !== "object") return sanitized;
-  const src = raw;
-  for (const key of SELLER_BUCKET_NUMERIC_KEYS) {
-    const val = Number(src[key]);
-    sanitized[key] = Number.isFinite(val) && val >= 0 ? val : 0;
-  }
-  return sanitized;
-}
-function pruneSellerHourlyBuckets(hourly, nowMs) {
-  const result = {};
-  if (!hourly || typeof hourly !== "object") return result;
-  const minTs = nowMs - SELLER_HOURLY_BUCKET_RETENTION_HOURS * 60 * 60 * 1e3;
-  const minKey = getHourBucketKey(minTs);
-  for (const [k, v] of Object.entries(hourly)) {
-    if (k >= minKey && v && typeof v === "object") {
-      result[k] = sanitizeSellerAnalyticsBucket(v);
-    }
-  }
-  return result;
-}
-function pruneSellerDailyBuckets(daily, nowMs) {
-  const result = {};
-  if (!daily || typeof daily !== "object") return result;
-  const minTs = nowMs - SELLER_DAILY_BUCKET_RETENTION_DAYS * 24 * 60 * 60 * 1e3;
-  const minKey = getDayBucketKey(minTs);
-  for (const [k, v] of Object.entries(daily)) {
-    if (k >= minKey && v && typeof v === "object") {
-      result[k] = sanitizeSellerAnalyticsBucket(v);
-    }
-  }
-  return result;
-}
-function createEmptySellerAnalyticsDoc(params) {
-  const nowMs = params.nowMs ?? Date.now();
-  return {
-    sellerId: params.sellerId,
-    metadata: {
-      schemaVersion: SELLER_ANALYTICS_SCHEMA_VERSION,
-      ...params.sellerName ? { sellerName: params.sellerName } : {}
-    },
-    optedOut: Boolean(params.optedOut),
-    ...params.country ? { country: params.country } : {},
-    ...params.region ? { region: params.region } : {},
-    funnelTrackingSince: nowMs,
-    audience: createEmptySellerAudienceCounters(),
-    totals: createEmptySellerAnalyticsTotalCounters(),
-    profileViews: 0,
-    uniqueProfileViewers: 0,
-    authProfileViews: 0,
-    guestProfileViews: 0,
-    authUniqueProfileViewers: 0,
-    guestUniqueProfileViewers: 0,
-    listingToSellerClicks: 0,
-    uniqueListingToSellerUsers: 0,
-    authListingToSellerClicks: 0,
-    guestListingToSellerClicks: 0,
-    authUniqueListingToSellerUsers: 0,
-    guestUniqueListingToSellerUsers: 0,
-    contactClicks: 0,
-    uniqueContactClickers: 0,
-    authContactClicks: 0,
-    guestContactClicks: 0,
-    authUniqueContactClickers: 0,
-    guestUniqueContactClickers: 0,
-    orderIntents: 0,
-    uniqueOrderIntentUsers: 0,
-    authOrderIntents: 0,
-    guestOrderIntents: 0,
-    authUniqueOrderIntentUsers: 0,
-    guestUniqueOrderIntentUsers: 0,
-    contactConfirmed: 0,
-    uniqueContactedBuyers: 0,
-    ordersConfirmed: 0,
-    uniqueOrderBuyers: 0,
-    guestToAuthLinks: 0,
-    hourly: {},
-    daily: {},
-    createdAt: nowMs,
-    updatedAt: nowMs
-  };
-}
-var SELLER_VIEWER_TIMESTAMP_FIELDS = [
-  "firstSeenAt",
-  "lastSeenAt",
-  "firstProfileViewAt",
-  "lastProfileViewAt",
-  "firstListingToSellerAt",
-  "lastListingToSellerAt",
-  "firstContactClickAt",
-  "lastContactClickAt",
-  "firstOrderIntentAt",
-  "lastOrderIntentAt",
-  "firstContactConfirmedAt",
-  "firstOrderConfirmedAt",
-  "firstAudienceAt",
-  "lastAudienceAt"
-];
-function sanitizeSellerViewerDoc(input) {
-  if (!isValidHmacDigest(input?.viewerHash)) {
-    throw new Error("Invalid HMAC viewerHash for seller viewer storage");
-  }
-  const viewerType = input.viewerType === "auth" ? "auth" : "guest";
-  const nowFallback = typeof input.lastSeenAt === "number" && Number.isFinite(input.lastSeenAt) ? input.lastSeenAt : Date.now();
-  const firstSeenAt = typeof input.firstSeenAt === "number" && Number.isFinite(input.firstSeenAt) ? input.firstSeenAt : nowFallback;
-  const clean = {
-    viewerHash: input.viewerHash,
-    viewerType,
-    firstSeenAt,
-    lastSeenAt: nowFallback
-  };
-  for (const field of SELLER_VIEWER_TIMESTAMP_FIELDS) {
-    if (field === "firstSeenAt" || field === "lastSeenAt") continue;
-    const rawVal = input[field];
-    if (typeof rawVal === "number" && Number.isFinite(rawVal) && rawVal > 0) {
-      clean[field] = rawVal;
-    }
-  }
-  return clean;
-}
-function normalizeBoundedUniqueIdList(existing, addition, maxLimit) {
-  const result = [];
-  const seen = /* @__PURE__ */ new Set();
-  if (Array.isArray(existing)) {
-    for (const item of existing) {
-      if (isValidAnalyticsId(item) && !seen.has(item)) {
-        seen.add(item);
-        result.push(item);
-        if (result.length >= maxLimit) return result;
-      }
-    }
-  }
-  if (isValidAnalyticsId(addition) && !seen.has(addition) && result.length < maxLimit) {
-    result.push(addition);
-  }
-  return result;
-}
-function isGuestSessionExpired(doc, nowMs) {
-  if (!doc) return true;
-  if (typeof doc.expiresAt !== "number" || !Number.isFinite(doc.expiresAt)) return true;
-  return doc.expiresAt <= nowMs;
-}
-function mergeGuestSessionActivity(existingDoc, params) {
-  if (!isValidHmacDigest(params.guestHash)) {
-    throw new Error("Invalid HMAC guestHash");
-  }
-  const nowMs = params.nowMs ?? Date.now();
-  const activeExisting = existingDoc && !isGuestSessionExpired(existingDoc, nowMs) ? existingDoc : null;
-  const listingIds = normalizeBoundedUniqueIdList(
-    activeExisting?.listingIds,
-    params.listingId,
-    GUEST_SESSION_MAX_LISTING_IDS
-  );
-  const sellerIds = normalizeBoundedUniqueIdList(
-    activeExisting?.sellerIds,
-    params.sellerId,
-    GUEST_SESSION_MAX_SELLER_IDS
-  );
-  return {
-    guestHash: params.guestHash,
-    listingIds,
-    sellerIds,
-    linkedUid: activeExisting?.linkedUid ?? null,
-    createdAt: activeExisting?.createdAt ?? nowMs,
-    updatedAt: nowMs,
-    linkedAt: activeExisting?.linkedAt ?? null,
-    expiresAt: nowMs + GUEST_SESSION_TTL_MS
-  };
-}
-function evaluateGuestSessionClaim(existingDoc, params) {
-  const nowMs = params.nowMs ?? Date.now();
-  if (!isValidAnalyticsId(params.uid)) {
-    return { status: 400, claimed: false, reason: "invalid_request" };
-  }
-  if (!existingDoc || isGuestSessionExpired(existingDoc, nowMs)) {
-    return { status: 200, claimed: false, reason: "no_guest_session" };
-  }
-  const boundedListingIds = normalizeBoundedUniqueIdList(
-    existingDoc.listingIds,
-    void 0,
-    GUEST_SESSION_MAX_LISTING_IDS
-  );
-  const boundedSellerIds = normalizeBoundedUniqueIdList(
-    existingDoc.sellerIds,
-    void 0,
-    GUEST_SESSION_MAX_SELLER_IDS
-  );
-  if (existingDoc.linkedUid) {
-    if (existingDoc.linkedUid === params.uid) {
-      return {
-        status: 200,
-        claimed: true,
-        idempotent: true,
-        linkedUid: existingDoc.linkedUid,
-        listingIds: boundedListingIds,
-        sellerIds: boundedSellerIds
-      };
-    }
-    return {
-      status: 409,
-      claimed: false,
-      reason: "visitor_already_claimed"
-    };
-  }
-  if (boundedListingIds.length === 0 && boundedSellerIds.length === 0) {
-    return { status: 200, claimed: false, reason: "no_guest_session" };
-  }
-  const nextDoc = {
-    guestHash: existingDoc.guestHash,
-    listingIds: boundedListingIds,
-    sellerIds: boundedSellerIds,
-    linkedUid: params.uid,
-    createdAt: existingDoc.createdAt,
-    updatedAt: nowMs,
-    linkedAt: nowMs,
-    expiresAt: existingDoc.expiresAt
-  };
-  return {
-    status: 200,
-    claimed: true,
-    idempotent: false,
-    linkedUid: params.uid,
-    listingIds: boundedListingIds,
-    sellerIds: boundedSellerIds,
-    nextDoc
-  };
-}
-function buildVerifiedFunnelMarkerId(markerType, sourceId) {
-  if (!isValidAnalyticsId(sourceId)) {
-    throw new Error("Invalid sourceId for verified funnel marker");
-  }
-  const prefix = markerType === "order_confirmed" ? "order_" : "contact_";
-  const markerId = `${prefix}${sourceId}`;
-  if (!isValidAnalyticsId(markerId)) {
-    throw new Error("Verified funnel markerId exceeds 128 characters or contains invalid characters");
-  }
-  return markerId;
-}
-function computeSellerFunnelTransactionUpdate(input) {
-  const nowMs = input.nowMs ?? Date.now();
-  const baseSeller = input.existingSeller ?? createEmptySellerAnalyticsDoc({
-    sellerId: input.sellerId,
-    optedOut: input.sellerMeta?.optedOut,
-    sellerName: input.sellerMeta?.sellerName,
-    country: input.sellerMeta?.country,
-    region: input.sellerMeta?.region,
-    nowMs
-  });
-  const viewerData = input.existingViewer ? { ...input.existingViewer } : {
-    viewerHash: input.viewerHash,
-    viewerType: input.viewerType,
-    firstSeenAt: nowMs,
-    lastSeenAt: nowMs
-  };
-  viewerData.lastSeenAt = nowMs;
-  const hourKey = getHourBucketKey(nowMs);
-  const dayKey = getDayBucketKey(nowMs);
-  const hourly = pruneSellerHourlyBuckets(baseSeller.hourly, nowMs);
-  const daily = pruneSellerDailyBuckets(baseSeller.daily, nowMs);
-  const hBucket = hourly[hourKey] || createEmptySellerAnalyticsBucket();
-  const dBucket = daily[dayKey] || createEmptySellerAnalyticsBucket();
-  const isAuth = input.viewerType === "auth";
-  let uniqueIncremented = false;
-  let counterField;
-  let uniqueField;
-  let authField;
-  let guestField;
-  let authUniqueField;
-  let guestUniqueField;
-  let lastTimestampField;
-  let uniqueViewerCheckField;
-  switch (input.eventType) {
-    case "seller_profile_view":
-      counterField = "profileViews";
-      uniqueField = "uniqueProfileViewers";
-      authField = "authProfileViews";
-      guestField = "guestProfileViews";
-      authUniqueField = "authUniqueProfileViewers";
-      guestUniqueField = "guestUniqueProfileViewers";
-      lastTimestampField = "lastProfileViewAt";
-      uniqueViewerCheckField = "firstProfileViewAt";
-      break;
-    case "listing_to_seller":
-      counterField = "listingToSellerClicks";
-      uniqueField = "uniqueListingToSellerUsers";
-      authField = "authListingToSellerClicks";
-      guestField = "guestListingToSellerClicks";
-      authUniqueField = "authUniqueListingToSellerUsers";
-      guestUniqueField = "guestUniqueListingToSellerUsers";
-      lastTimestampField = "lastListingToSellerAt";
-      uniqueViewerCheckField = "firstListingToSellerAt";
-      break;
-    case "contact_click":
-      counterField = "contactClicks";
-      uniqueField = "uniqueContactClickers";
-      authField = "authContactClicks";
-      guestField = "guestContactClicks";
-      authUniqueField = "authUniqueContactClickers";
-      guestUniqueField = "guestUniqueContactClickers";
-      lastTimestampField = "lastContactClickAt";
-      uniqueViewerCheckField = "firstContactClickAt";
-      break;
-    case "order_intent":
-      counterField = "orderIntents";
-      uniqueField = "uniqueOrderIntentUsers";
-      authField = "authOrderIntents";
-      guestField = "guestOrderIntents";
-      authUniqueField = "authUniqueOrderIntentUsers";
-      guestUniqueField = "guestUniqueOrderIntentUsers";
-      lastTimestampField = "lastOrderIntentAt";
-      uniqueViewerCheckField = "firstOrderIntentAt";
-      break;
-    case "contact_confirmed":
-      counterField = "contactConfirmed";
-      uniqueField = "uniqueContactedBuyers";
-      lastTimestampField = "firstContactConfirmedAt";
-      uniqueViewerCheckField = "firstContactConfirmedAt";
-      break;
-    case "order_confirmed":
-      counterField = "ordersConfirmed";
-      uniqueField = "uniqueOrderBuyers";
-      lastTimestampField = "firstOrderConfirmedAt";
-      uniqueViewerCheckField = "firstOrderConfirmedAt";
-      break;
-    default:
-      return { recorded: false, reason: "invalid_event_type", uniqueIncremented: false };
-  }
-  const isFirstViewerAction = !viewerData[uniqueViewerCheckField];
-  if (isFirstViewerAction) {
-    viewerData[uniqueViewerCheckField] = nowMs;
-    uniqueIncremented = true;
-  }
-  if (lastTimestampField !== uniqueViewerCheckField || isFirstViewerAction) {
-    viewerData[lastTimestampField] = nowMs;
-  }
-  viewerData.firstAudienceAt = viewerData.firstAudienceAt || nowMs;
-  viewerData.lastAudienceAt = nowMs;
-  const cleanViewerDoc = sanitizeSellerViewerDoc(
-    viewerData
-  );
-  const nextSellerDoc = {
-    ...baseSeller,
-    metadata: {
-      schemaVersion: baseSeller.metadata?.schemaVersion || SELLER_ANALYTICS_SCHEMA_VERSION,
-      ...baseSeller.metadata?.sellerName ? { sellerName: baseSeller.metadata.sellerName } : input.sellerMeta?.sellerName ? { sellerName: input.sellerMeta.sellerName } : {},
-      lastEventAt: nowMs
-    },
-    [counterField]: (Number(baseSeller[counterField]) || 0) + 1,
-    ...uniqueIncremented ? { [uniqueField]: (Number(baseSeller[uniqueField]) || 0) + 1 } : {},
-    ...authField ? {
-      [authField]: isAuth ? (Number(baseSeller[authField]) || 0) + 1 : Number(baseSeller[authField]) || 0
-    } : {},
-    ...guestField ? {
-      [guestField]: !isAuth ? (Number(baseSeller[guestField]) || 0) + 1 : Number(baseSeller[guestField]) || 0
-    } : {},
-    ...authUniqueField ? {
-      [authUniqueField]: uniqueIncremented && isAuth ? (Number(baseSeller[authUniqueField]) || 0) + 1 : Number(baseSeller[authUniqueField]) || 0
-    } : {},
-    ...guestUniqueField ? {
-      [guestUniqueField]: uniqueIncremented && !isAuth ? (Number(baseSeller[guestUniqueField]) || 0) + 1 : Number(baseSeller[guestUniqueField]) || 0
-    } : {},
-    audience: {
-      totalImpressions: baseSeller.audience?.totalImpressions || 0,
-      totalViews: baseSeller.audience?.totalViews || 0,
-      uniqueViewers: baseSeller.audience?.uniqueViewers || 0,
-      authImpressions: baseSeller.audience?.authImpressions || 0,
-      authViews: baseSeller.audience?.authViews || 0,
-      authUniqueViewers: baseSeller.audience?.authUniqueViewers || 0,
-      guestImpressions: baseSeller.audience?.guestImpressions || 0,
-      guestViews: baseSeller.audience?.guestViews || 0,
-      guestUniqueViewers: baseSeller.audience?.guestUniqueViewers || 0
-    },
-    totals: {
-      totalEvents: (Number(baseSeller.totals?.totalEvents) || 0) + 1,
-      totalUniqueUsers: (Number(baseSeller.totals?.totalUniqueUsers) || 0) + (uniqueIncremented ? 1 : 0),
-      authEvents: (Number(baseSeller.totals?.authEvents) || 0) + (isAuth ? 1 : 0),
-      guestEvents: (Number(baseSeller.totals?.guestEvents) || 0) + (!isAuth ? 1 : 0),
-      authUniqueUsers: (Number(baseSeller.totals?.authUniqueUsers) || 0) + (uniqueIncremented && isAuth ? 1 : 0),
-      guestUniqueUsers: (Number(baseSeller.totals?.guestUniqueUsers) || 0) + (uniqueIncremented && !isAuth ? 1 : 0)
-    },
-    hourly,
-    daily,
-    updatedAt: nowMs
-  };
-  const applyBucketUpdates = (bucket) => {
-    const cKey = counterField;
-    const uKey = uniqueField;
-    bucket[cKey] = (Number(bucket[cKey]) || 0) + 1;
-    if (uniqueIncremented) {
-      bucket[uKey] = (Number(bucket[uKey]) || 0) + 1;
-    }
-    if (authField && isAuth) {
-      const aKey = authField;
-      bucket[aKey] = (Number(bucket[aKey]) || 0) + 1;
-    }
-    if (guestField && !isAuth) {
-      const gKey = guestField;
-      bucket[gKey] = (Number(bucket[gKey]) || 0) + 1;
-    }
-    if (uniqueIncremented && authUniqueField && isAuth) {
-      const auKey = authUniqueField;
-      bucket[auKey] = (Number(bucket[auKey]) || 0) + 1;
-    }
-    if (uniqueIncremented && guestUniqueField && !isAuth) {
-      const guKey = guestUniqueField;
-      bucket[guKey] = (Number(bucket[guKey]) || 0) + 1;
-    }
-    bucket.totalEvents = (Number(bucket.totalEvents) || 0) + 1;
-    bucket.authEvents = (Number(bucket.authEvents) || 0) + (isAuth ? 1 : 0);
-    bucket.guestEvents = (Number(bucket.guestEvents) || 0) + (!isAuth ? 1 : 0);
-    if (uniqueIncremented) {
-      bucket.uniqueUsers = (Number(bucket.uniqueUsers) || 0) + 1;
-      if (isAuth) {
-        bucket.authUniqueUsers = (Number(bucket.authUniqueUsers) || 0) + 1;
-      } else {
-        bucket.guestUniqueUsers = (Number(bucket.guestUniqueUsers) || 0) + 1;
-      }
-    }
-  };
-  applyBucketUpdates(hBucket);
-  applyBucketUpdates(dBucket);
-  hourly[hourKey] = hBucket;
-  daily[dayKey] = dBucket;
-  return {
-    recorded: true,
-    uniqueIncremented,
-    nextSellerDoc,
-    nextViewerDoc: cleanViewerDoc
-  };
-}
-
-// src/lib/analyticsServer.ts
-var CONFIRMED_ORDER_ALLOWED_STATUSES = /* @__PURE__ */ new Set([
-  "pending",
-  "booked",
-  "processing",
-  "in_progress",
-  "shipped",
-  "delivered",
-  "completed"
-]);
-function parseTimestampMs(val) {
-  if (typeof val === "number" && Number.isFinite(val)) return val;
-  if (val && typeof val.toMillis === "function") return val.toMillis();
-  if (val && typeof val.seconds === "number") return val.seconds * 1e3;
-  return Date.now();
-}
-var DEV_FALLBACK_ANALYTICS_SALT = "proton-market-analytics-v1-salt";
-var MIN_ANALYTICS_SALT_LENGTH = 32;
-var AnalyticsConfigError = class extends Error {
-  code;
-  statusCode;
-  constructor(code, message, statusCode = 503) {
-    super(message);
-    this.name = "AnalyticsConfigError";
-    this.code = code;
-    this.statusCode = statusCode;
-  }
-};
-function isProductionRuntime() {
-  return process.env.NODE_ENV === "production" || Boolean(process.env.VERCEL);
-}
-function parseServiceAccountJson(rawSaJson) {
-  let cleaned = rawSaJson.trim();
-  if (cleaned.startsWith("'") && cleaned.endsWith("'") || cleaned.startsWith('"') && cleaned.endsWith('"')) {
-    const inner = cleaned.slice(1, -1).trim();
-    if (inner.startsWith("{")) {
-      cleaned = inner;
-    } else if (cleaned.startsWith('"')) {
-      try {
-        const unwrapped = JSON.parse(cleaned);
-        if (typeof unwrapped === "string" && unwrapped.trim().startsWith("{")) {
-          cleaned = unwrapped.trim();
-        }
-      } catch {
-      }
-    }
-  }
-  let parsed;
+  let result = null;
   try {
-    parsed = JSON.parse(cleaned);
+    const { getAdminFirestoreInstance: getAdminFirestoreInstance2 } = await Promise.resolve().then(() => (init_analyticsServer(), analyticsServer_exports));
+    const dbAdmin = await getAdminFirestoreInstance2();
+    if (dbAdmin) {
+      const snap = await dbAdmin.collection("listings").doc(cleanId).get();
+      if (snap.exists) {
+        const raw = snap.data() || {};
+        if (raw.status !== "deleted") {
+          const imageCandidate = raw.image || Array.isArray(raw.images) && raw.images[0] || "";
+          result = {
+            id: cleanId,
+            title: raw.title || raw.titleGe || raw.titleEn || "Market Item",
+            description: raw.description || raw.descriptionGe || "",
+            image: imageCandidate && typeof imageCandidate === "string" && imageCandidate.startsWith("http") ? imageCandidate : DEFAULT_ROBOT_IMAGE,
+            price: Number.isFinite(Number(raw.price)) ? Number(raw.price) : void 0,
+            currency: raw.currency || "USD",
+            category: raw.category,
+            city: raw.city,
+            country: raw.country,
+            status: raw.status || "active"
+          };
+        }
+      }
+    }
   } catch {
-    throw new AnalyticsConfigError(
-      "analytics/admin-credentials-invalid",
-      "Server Firebase Admin service account JSON is malformed."
-    );
   }
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw new AnalyticsConfigError(
-      "analytics/admin-credentials-invalid",
-      "Server Firebase Admin service account JSON must be an object."
-    );
-  }
-  if (typeof parsed.project_id !== "string" || parsed.project_id.trim() !== "proton-core-ai") {
-    throw new AnalyticsConfigError(
-      "analytics/admin-credentials-invalid",
-      "Server Firebase Admin service account JSON project_id must match proton-core-ai."
-    );
-  }
-  if (typeof parsed.client_email !== "string" || !parsed.client_email.includes("@")) {
-    throw new AnalyticsConfigError(
-      "analytics/admin-credentials-invalid",
-      "Server Firebase Admin service account JSON is missing a valid client_email."
-    );
-  }
-  if (typeof parsed.private_key !== "string" || !parsed.private_key.trim()) {
-    throw new AnalyticsConfigError(
-      "analytics/admin-credentials-invalid",
-      "Server Firebase Admin service account JSON is missing a valid private_key."
-    );
-  }
-  const normalizedKey = parsed.private_key.replace(/\\n/g, "\n").trim();
-  if (!normalizedKey.includes("-----BEGIN ") || !normalizedKey.includes("-----END ")) {
-    throw new AnalyticsConfigError(
-      "analytics/admin-credentials-invalid",
-      "Server Firebase Admin private_key is not valid PEM format."
-    );
-  }
-  return {
-    ...parsed,
-    private_key: `${normalizedKey}
-`
-  };
-}
-var cachedAdminFirestore = null;
-async function getAdminFirestoreInstance() {
-  if (cachedAdminFirestore) return cachedAdminFirestore;
-  const { initializeApp, getApps, cert } = await import("firebase-admin/app");
-  const { getFirestore } = await import("firebase-admin/firestore");
-  const PRIMARY_PROJECT_ID = "proton-core-ai";
-  const databaseId = process.env.FIRESTORE_DATABASE_ID || "ai-studio-01dfb83a-da41-4952-8647-6368b0e05d51";
-  const appName = "proton-analytics-admin";
-  let app2 = getApps().find((a) => a.name === appName);
-  if (!app2) {
-    const rawSaJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-    if (typeof rawSaJson === "string" && rawSaJson.trim().length > 0) {
-      const parsed = parseServiceAccountJson(rawSaJson);
-      try {
-        app2 = initializeApp(
-          {
-            credential: cert({
-              projectId: PRIMARY_PROJECT_ID,
-              clientEmail: parsed.client_email,
-              privateKey: parsed.private_key
-            }),
-            projectId: PRIMARY_PROJECT_ID
-          },
-          appName
-        );
-      } catch {
-        console.error("[MarketAnalytics] Failed to initialize Firebase Admin credential from FIREBASE_SERVICE_ACCOUNT_JSON.");
-        throw new AnalyticsConfigError(
-          "analytics/admin-credentials-invalid",
-          "Server Firebase Admin service account credential or private key is invalid."
-        );
-      }
-    } else {
-      app2 = initializeApp({ projectId: PRIMARY_PROJECT_ID }, appName);
-    }
-  }
-  cachedAdminFirestore = getFirestore(app2, databaseId);
-  return cachedAdminFirestore;
-}
-var DEFAULT_CURSOR_BATCH_SIZE = 500;
-var DEFAULT_CURSOR_MAX_PAGES = 200;
-var SELLER_SCOPED_CURSOR_MAX_PAGES = 40;
-var OPT_OUT_BATCH_CHUNK_SIZE = 200;
-var ANALYTICS_CACHE_TTL_MS = 3e4;
-async function scanCollectionWithCursor(params) {
-  const batchSize = Math.max(1, Math.min(1e3, params.batchSize ?? DEFAULT_CURSOR_BATCH_SIZE));
-  const maxPages = Math.max(1, params.maxPages ?? DEFAULT_CURSOR_MAX_PAGES);
-  const label = params.label || "collection";
-  const items = [];
-  const seenIds = /* @__PURE__ */ new Set();
-  let lastDoc = null;
-  let prevCursorId = null;
-  let pagesRead = 0;
-  let truncated = false;
-  let truncationReason;
-  while (true) {
-    if (pagesRead >= maxPages) {
-      truncated = true;
-      truncationReason = `cursor_max_pages_exceeded:${maxPages}`;
-      console.error(
-        `[MarketAnalytics] Incomplete scan for ${label}: reached safety limit of ${maxPages} pages (${items.length} docs read).`
-      );
-      break;
-    }
-    let q = params.collectionRef.orderBy(params.documentIdField);
-    if (params.selectFields && params.selectFields.length > 0 && typeof q.select === "function") {
-      q = q.select(...params.selectFields);
-    }
-    if (lastDoc) {
-      q = q.startAfter(lastDoc);
-    }
-    q = q.limit(batchSize);
-    const snap = await q.get();
-    pagesRead += 1;
-    const batchDocs = Array.isArray(snap?.docs) ? snap.docs : [];
-    if (batchDocs.length === 0) {
-      break;
-    }
-    let addedInBatch = 0;
-    for (const d of batchDocs) {
-      if (!d || !d.id || seenIds.has(d.id)) {
-        continue;
-      }
-      seenIds.add(d.id);
-      items.push({ id: d.id, data: d.data() || {} });
-      addedInBatch += 1;
-    }
-    const nextLastDoc = batchDocs[batchDocs.length - 1];
-    if (!nextLastDoc || !nextLastDoc.id || nextLastDoc.id === prevCursorId || addedInBatch === 0) {
-      if (batchDocs.length >= batchSize) {
-        truncated = true;
-        truncationReason = "cursor_stalled_loop_guard";
-        console.error(
-          `[MarketAnalytics] Cursor pagination loop guard triggered for ${label} at docId=${nextLastDoc?.id || "unknown"} (${items.length} docs read).`
-        );
-      }
-      break;
-    }
-    prevCursorId = nextLastDoc.id;
-    lastDoc = nextLastDoc;
-    if (batchDocs.length < batchSize) {
-      break;
-    }
-  }
-  return { items, truncated, truncationReason };
-}
-var FirestoreAdminAnalyticsRepository = class {
-  publicDocsCache = null;
-  ratingsCache = null;
-  rankMapsCache = null;
-  cacheTtlMs;
-  constructor(options) {
-    this.cacheTtlMs = options?.cacheTtlMs ?? ANALYTICS_CACHE_TTL_MS;
-  }
-  invalidateCaches() {
-    this.publicDocsCache = null;
-    this.ratingsCache = null;
-    this.rankMapsCache = null;
-  }
-  async getListing(listingId) {
-    const db = await getAdminFirestoreInstance();
-    const snap = await db.collection("listings").doc(listingId).get();
-    if (!snap.exists) return null;
-    const data = snap.data() || {};
-    return {
-      id: snap.id,
-      sellerId: data.sellerId,
-      sellerName: data.sellerName || data.authorName,
-      title: data.title || data.titleGe || "Untitled",
-      titleGe: data.titleGe,
-      category: data.category || "other",
-      listingType: inferListingType(data.category, data.listingType),
-      image: Array.isArray(data.images) && data.images[0] ? data.images[0] : data.image,
-      status: data.status,
-      country: data.country,
-      city: data.city,
-      createdAt: parseTimestampMs(data.createdAt),
-      isDemo: data.isDemo,
-      isSeed: data.isSeed,
-      isMock: data.isMock
-    };
-  }
-  async getOrderForAnalytics(orderId) {
-    if (!isValidAnalyticsId(orderId)) return null;
-    const db = await getAdminFirestoreInstance();
-    const snap = await db.collection("orders").doc(orderId).get();
-    if (!snap.exists) return null;
-    const data = snap.data() || {};
-    return {
-      id: snap.id,
-      listingId: typeof data.listingId === "string" ? data.listingId : "",
-      buyerId: typeof data.buyerId === "string" ? data.buyerId : "",
-      sellerId: typeof data.sellerId === "string" ? data.sellerId : "",
-      status: typeof data.status === "string" ? data.status : "",
-      orderType: typeof data.orderType === "string" ? data.orderType : void 0
-    };
-  }
-  async getMarketMessageForAnalytics(messageId) {
-    if (!isValidAnalyticsId(messageId)) return null;
-    const db = await getAdminFirestoreInstance();
-    const snap = await db.collection("market_messages").doc(messageId).get();
-    if (!snap.exists) return null;
-    const data = snap.data() || {};
-    return {
-      id: snap.id,
-      listingId: typeof data.listingId === "string" ? data.listingId : void 0,
-      conversationId: typeof data.conversationId === "string" ? data.conversationId : void 0,
-      senderId: typeof data.senderId === "string" ? data.senderId : "",
-      receiverId: typeof data.receiverId === "string" ? data.receiverId : void 0,
-      buyerId: typeof data.buyerId === "string" ? data.buyerId : void 0,
-      sellerId: typeof data.sellerId === "string" ? data.sellerId : "",
-      participants: Array.isArray(data.participants) ? data.participants.filter((p) => typeof p === "string") : void 0
-    };
-  }
-  async getSellerForAnalytics(sellerId) {
-    if (!isValidAnalyticsId(sellerId)) return null;
-    const db = await getAdminFirestoreInstance();
-    const [userSnap, prefSnap] = await Promise.all([
-      db.collection("users").doc(sellerId).get(),
-      db.collection("seller_competition_prefs").doc(sellerId).get().catch(() => null)
-    ]);
-    const pData = prefSnap?.exists ? prefSnap.data() || {} : {};
-    if (userSnap.exists) {
-      const uData = userSnap.data() || {};
-      if (uData.deleted === true || uData.status === "deleted" || uData.isDemo || uData.isSeed || uData.isMock) {
-        return null;
-      }
-      const loc = resolveReliableSellerLocation({
-        profileCountry: uData.country,
-        profileRegion: uData.region
-      });
-      return {
-        id: sellerId,
-        exists: true,
-        sellerName: typeof uData.displayName === "string" && uData.displayName.trim() ? uData.displayName.trim() : typeof uData.name === "string" && uData.name.trim() ? uData.name.trim() : typeof uData.sellerName === "string" && uData.sellerName.trim() ? uData.sellerName.trim() : void 0,
-        country: loc.country,
-        region: loc.region,
-        optedOut: Boolean(pData.optedOut ?? uData.competitionOptOut)
-      };
-    }
-    const listingsSnap = await db.collection("listings").where("sellerId", "==", sellerId).limit(5).get();
-    const validListingDoc = (listingsSnap.docs || []).find((d) => {
-      const data = d.data() || {};
-      return !data.isDemo && !data.isSeed && !data.isMock && data.status !== "deleted";
-    });
-    if (!validListingDoc) {
-      return null;
-    }
-    const lData = validListingDoc.data() || {};
-    return {
-      id: sellerId,
-      exists: true,
-      sellerName: lData.sellerName || lData.authorName,
-      optedOut: Boolean(pData.optedOut)
-    };
-  }
-  async getSellerProfileLocation(sellerId) {
-    const db = await getAdminFirestoreInstance();
-    const [userSnap, prefSnap] = await Promise.all([
-      db.collection("users").doc(sellerId).get().catch(() => null),
-      db.collection("seller_competition_prefs").doc(sellerId).get().catch(() => null)
-    ]);
-    const uData = userSnap?.exists ? userSnap.data() || {} : {};
-    const pData = prefSnap?.exists ? prefSnap.data() || {} : {};
-    const loc = resolveReliableSellerLocation({
-      profileCountry: uData.country,
-      profileRegion: uData.region
-    });
-    return {
-      country: loc.country,
-      region: loc.region,
-      optedOut: Boolean(pData.optedOut ?? uData.competitionOptOut)
-    };
-  }
-  mapListingDocToRecord(id, data) {
-    return {
-      id,
-      sellerId: data.sellerId,
-      sellerName: data.sellerName || data.authorName,
-      title: data.title || data.titleGe || "Untitled",
-      titleGe: data.titleGe,
-      category: data.category || "other",
-      listingType: inferListingType(data.category, data.listingType),
-      image: Array.isArray(data.images) && data.images[0] ? data.images[0] : data.image,
-      status: data.status,
-      country: data.country,
-      city: data.city,
-      createdAt: parseTimestampMs(data.createdAt),
-      isDemo: data.isDemo,
-      isSeed: data.isSeed,
-      isMock: data.isMock
-    };
-  }
-  async getSellerListingsWithMeta(sellerId) {
-    const db = await getAdminFirestoreInstance();
-    const { FieldPath } = await import("firebase-admin/firestore");
-    const scan = await scanCollectionWithCursor({
-      collectionRef: db.collection("listings").where("sellerId", "==", sellerId),
-      documentIdField: FieldPath.documentId(),
-      batchSize: DEFAULT_CURSOR_BATCH_SIZE,
-      maxPages: SELLER_SCOPED_CURSOR_MAX_PAGES,
-      label: `listings:seller:${sellerId}`
-    });
-    return {
-      listings: scan.items.map((item) => this.mapListingDocToRecord(item.id, item.data)),
-      truncated: scan.truncated,
-      ...scan.truncationReason ? { truncationReason: scan.truncationReason } : {}
-    };
-  }
-  async getSellerListings(sellerId) {
-    const res = await this.getSellerListingsWithMeta(sellerId);
-    return res.listings;
-  }
-  async getListingAnalyticsDoc(listingId) {
-    const db = await getAdminFirestoreInstance();
-    const snap = await db.collection("listing_analytics").doc(listingId).get();
-    if (!snap.exists) return null;
-    return snap.data();
-  }
-  async getSellerListingAnalyticsMap(sellerId) {
-    const db = await getAdminFirestoreInstance();
-    const { FieldPath } = await import("firebase-admin/firestore");
-    const scan = await scanCollectionWithCursor({
-      collectionRef: db.collection("listing_analytics").where("sellerId", "==", sellerId),
-      documentIdField: FieldPath.documentId(),
-      batchSize: DEFAULT_CURSOR_BATCH_SIZE,
-      maxPages: SELLER_SCOPED_CURSOR_MAX_PAGES,
-      label: `listing_analytics:seller:${sellerId}`
-    });
-    const docsByListingId = /* @__PURE__ */ new Map();
-    for (const item of scan.items) {
-      docsByListingId.set(item.id, item.data);
-    }
-    return {
-      docsByListingId,
-      truncated: scan.truncated,
-      ...scan.truncationReason ? { truncationReason: scan.truncationReason } : {}
-    };
-  }
-  async getAllPublicAnalyticsDocsWithMeta() {
-    const now = Date.now();
-    if (this.cacheTtlMs > 0 && this.publicDocsCache && this.publicDocsCache.expiresAt > now) {
-      return this.publicDocsCache.value;
-    }
-    const db = await getAdminFirestoreInstance();
-    const { FieldPath } = await import("firebase-admin/firestore");
-    const scan = await scanCollectionWithCursor({
-      collectionRef: db.collection("listing_analytics_public"),
-      documentIdField: FieldPath.documentId(),
-      batchSize: DEFAULT_CURSOR_BATCH_SIZE,
-      maxPages: DEFAULT_CURSOR_MAX_PAGES,
-      label: "listing_analytics_public"
-    });
-    const result = {
-      docs: scan.items.map((item) => item.data),
-      truncated: scan.truncated,
-      ...scan.truncationReason ? { truncationReason: scan.truncationReason } : {}
-    };
-    if (this.cacheTtlMs > 0 && !result.truncated) {
-      this.publicDocsCache = { expiresAt: now + this.cacheTtlMs, value: result };
-    }
-    return result;
-  }
-  async getAllPublicAnalyticsDocs() {
-    const res = await this.getAllPublicAnalyticsDocsWithMeta();
-    return res.docs;
-  }
-  async getSellerRatingsMapWithMeta() {
-    const now = Date.now();
-    if (this.cacheTtlMs > 0 && this.ratingsCache && this.ratingsCache.expiresAt > now) {
-      return this.ratingsCache.value;
-    }
-    const db = await getAdminFirestoreInstance();
-    const { FieldPath } = await import("firebase-admin/firestore");
-    const scan = await scanCollectionWithCursor({
-      collectionRef: db.collection("seller_reviews"),
-      documentIdField: FieldPath.documentId(),
-      batchSize: DEFAULT_CURSOR_BATCH_SIZE,
-      maxPages: DEFAULT_CURSOR_MAX_PAGES,
-      selectFields: ["sellerId", "rating"],
-      label: "seller_reviews"
-    });
-    const agg = {};
-    for (const item of scan.items) {
-      const r = item.data || {};
-      if (r.sellerId && typeof r.rating === "number" && r.rating >= 1 && r.rating <= 5) {
-        if (!agg[r.sellerId]) agg[r.sellerId] = { sum: 0, count: 0 };
-        agg[r.sellerId].sum += r.rating;
-        agg[r.sellerId].count += 1;
-      }
-    }
-    const ratings = {};
-    for (const [sid, v] of Object.entries(agg)) {
-      ratings[sid] = { avg: Math.round(v.sum / v.count * 10) / 10, count: v.count };
-    }
-    const result = {
-      ratings,
-      truncated: scan.truncated,
-      ...scan.truncationReason ? { truncationReason: scan.truncationReason } : {}
-    };
-    if (this.cacheTtlMs > 0 && !result.truncated) {
-      this.ratingsCache = { expiresAt: now + this.cacheTtlMs, value: result };
-    }
-    return result;
-  }
-  async getSellerRatingsMap() {
-    const res = await this.getSellerRatingsMapWithMeta();
-    return res.ratings;
-  }
-  async getAggregatedRankMaps(nowMs = Date.now()) {
-    const now = Date.now();
-    if (this.cacheTtlMs > 0 && this.rankMapsCache && this.rankMapsCache.expiresAt > now) {
-      return this.rankMapsCache.value;
-    }
-    const warnings = [];
-    let truncated = false;
-    const [publicScan, ratingsScan] = await Promise.all([
-      this.getAllPublicAnalyticsDocsWithMeta().catch((err) => {
-        console.error("[MarketAnalytics] Failed to load public docs for seller stats:", err);
-        truncated = true;
-        warnings.push("public_docs_read_failed");
-        return { docs: [], truncated: true, truncationReason: "public_docs_read_failed" };
-      }),
-      this.getSellerRatingsMapWithMeta().catch((err) => {
-        console.error("[MarketAnalytics] Failed to load seller ratings for seller stats:", err);
-        truncated = true;
-        warnings.push("ratings_read_failed");
-        return { ratings: {}, truncated: true, truncationReason: "ratings_read_failed" };
-      })
-    ]);
-    if (publicScan.truncated) {
-      truncated = true;
-      if (publicScan.truncationReason && !warnings.includes(publicScan.truncationReason)) {
-        warnings.push(publicScan.truncationReason);
-      } else if (!publicScan.truncationReason && warnings.length === 0) {
-        warnings.push("public_docs_truncated");
-      }
-    }
-    if (ratingsScan.truncated) {
-      truncated = true;
-      if (ratingsScan.truncationReason && !warnings.includes(ratingsScan.truncationReason)) {
-        warnings.push(ratingsScan.truncationReason);
-      } else if (!ratingsScan.truncationReason && warnings.length === 0) {
-        warnings.push("seller_ratings_truncated");
-      }
-    }
-    const globalRankings = buildRankingsFromPublicDocs({
-      docs: publicScan.docs,
-      sellerRatingsMap: ratingsScan.ratings,
-      scope: "global",
-      period: "30d",
-      nowMs,
-      limitCount: Math.max(300, publicScan.docs.length)
-    });
-    const globalRankMap = new Map(globalRankings.map((r) => [r.listingId, r.rank]));
-    const catRankMap = /* @__PURE__ */ new Map();
-    const byCat = /* @__PURE__ */ new Map();
-    for (const r of globalRankings) {
-      const cat = (r.category || "other").toLowerCase();
-      const arr = byCat.get(cat) || [];
-      arr.push(r);
-      byCat.set(cat, arr);
-    }
-    for (const arr of byCat.values()) {
-      arr.forEach((r, idx) => catRankMap.set(r.listingId, { rank: idx + 1, total: arr.length }));
-    }
-    const result = {
-      globalRankMap,
-      catRankMap,
-      truncated,
-      warnings
-    };
-    if (this.cacheTtlMs > 0 && !truncated) {
-      this.rankMapsCache = { expiresAt: now + this.cacheTtlMs, value: result };
-    }
-    return result;
-  }
-  async recordEventTransaction(params) {
-    const db = await getAdminFirestoreInstance();
-    const { listing, sellerLocation, viewerHash, viewerType, eventType, nowMs } = params;
-    const analyticsRef = db.collection("listing_analytics").doc(listing.id);
-    const viewerRef = analyticsRef.collection("viewers").doc(viewerHash);
-    const publicRef = db.collection("listing_analytics_public").doc(listing.id);
-    const loc = resolveReliableSellerLocation({
-      profileCountry: sellerLocation.country,
-      profileRegion: sellerLocation.region,
-      listingCountry: listing.country,
-      listingCity: listing.city
-    });
-    return db.runTransaction(async (tx) => {
-      const [analyticsSnap, viewerSnap] = await Promise.all([
-        tx.get(analyticsRef),
-        tx.get(viewerRef)
-      ]);
-      const viewerData = viewerSnap.exists ? viewerSnap.data() : { viewerHash, viewerType };
-      if (eventType === "impression") {
-        if (viewerData.lastImpressionAt && nowMs - viewerData.lastImpressionAt < IMPRESSION_COOLDOWN_MS) {
-          return { recorded: false, reason: "impression_cooldown", uniqueIncremented: false };
-        }
-      } else {
-        if (viewerData.lastViewAt && nowMs - viewerData.lastViewAt < VIEW_COOLDOWN_MS) {
-          return { recorded: false, reason: "view_cooldown", uniqueIncremented: false };
-        }
-      }
-      const existingDoc = analyticsSnap.exists ? analyticsSnap.data() || {} : {};
-      const hourKey = getHourBucketKey(nowMs);
-      const dayKey = getDayBucketKey(nowMs);
-      const hourly = pruneHourlyBuckets(existingDoc.hourly, nowMs);
-      const daily = pruneDailyBuckets(existingDoc.daily, nowMs);
-      const hBucket = hourly[hourKey] || {
-        impressions: 0,
-        views: 0,
-        uniqueViewers: 0,
-        authImpressions: 0,
-        authViews: 0,
-        authUniqueViewers: 0,
-        guestImpressions: 0,
-        guestViews: 0,
-        guestUniqueViewers: 0
-      };
-      const dBucket = daily[dayKey] || {
-        impressions: 0,
-        views: 0,
-        uniqueViewers: 0,
-        authImpressions: 0,
-        authViews: 0,
-        authUniqueViewers: 0,
-        guestImpressions: 0,
-        guestViews: 0,
-        guestUniqueViewers: 0
-      };
-      const isAuthViewer = viewerType === "auth";
-      let impressions = Number(existingDoc.impressions) || 0;
-      let views = Number(existingDoc.views) || 0;
-      let uniqueViewers = Number(existingDoc.uniqueViewers) || 0;
-      let authImpressions = Number(existingDoc.authImpressions) || 0;
-      let authViews = Number(existingDoc.authViews) || 0;
-      let authUniqueViewers = Number(existingDoc.authUniqueViewers) || 0;
-      let guestImpressions = Number(existingDoc.guestImpressions) || 0;
-      let guestViews = Number(existingDoc.guestViews) || 0;
-      let guestUniqueViewers = Number(existingDoc.guestUniqueViewers) || 0;
-      let uniqueIncremented = false;
-      if (eventType === "impression") {
-        impressions += 1;
-        hBucket.impressions += 1;
-        dBucket.impressions += 1;
-        if (isAuthViewer) {
-          authImpressions += 1;
-          hBucket.authImpressions = (Number(hBucket.authImpressions) || 0) + 1;
-          dBucket.authImpressions = (Number(dBucket.authImpressions) || 0) + 1;
-        } else {
-          guestImpressions += 1;
-          hBucket.guestImpressions = (Number(hBucket.guestImpressions) || 0) + 1;
-          dBucket.guestImpressions = (Number(dBucket.guestImpressions) || 0) + 1;
-        }
-        viewerData.firstImpressionAt = viewerData.firstImpressionAt || nowMs;
-        viewerData.lastImpressionAt = nowMs;
-      } else {
-        views += 1;
-        hBucket.views += 1;
-        dBucket.views += 1;
-        if (isAuthViewer) {
-          authViews += 1;
-          hBucket.authViews = (Number(hBucket.authViews) || 0) + 1;
-          dBucket.authViews = (Number(dBucket.authViews) || 0) + 1;
-        } else {
-          guestViews += 1;
-          hBucket.guestViews = (Number(hBucket.guestViews) || 0) + 1;
-          dBucket.guestViews = (Number(dBucket.guestViews) || 0) + 1;
-        }
-        if (!viewerData.firstViewedAt) {
-          uniqueViewers += 1;
-          hBucket.uniqueViewers += 1;
-          dBucket.uniqueViewers += 1;
-          if (isAuthViewer) {
-            authUniqueViewers += 1;
-            hBucket.authUniqueViewers = (Number(hBucket.authUniqueViewers) || 0) + 1;
-            dBucket.authUniqueViewers = (Number(dBucket.authUniqueViewers) || 0) + 1;
-          } else {
-            guestUniqueViewers += 1;
-            hBucket.guestUniqueViewers = (Number(hBucket.guestUniqueViewers) || 0) + 1;
-            dBucket.guestUniqueViewers = (Number(dBucket.guestUniqueViewers) || 0) + 1;
-          }
-          viewerData.firstViewedAt = nowMs;
-          uniqueIncremented = true;
-        }
-        viewerData.lastViewAt = nowMs;
-      }
-      hourly[hourKey] = hBucket;
-      daily[dayKey] = dBucket;
-      const breakdownSince = typeof existingDoc.breakdownSince === "number" && Number.isFinite(existingDoc.breakdownSince) ? existingDoc.breakdownSince : nowMs;
-      const optedOut = Boolean(sellerLocation.optedOut ?? existingDoc.optedOut);
-      const normalizedListingType = inferListingType(listing.category, listing.listingType);
-      const nextAnalyticsDoc = {
-        listingId: listing.id,
-        sellerId: listing.sellerId,
-        title: listing.title,
-        ...listing.titleGe ? { titleGe: listing.titleGe } : {},
-        category: listing.category,
-        listingType: normalizedListingType,
-        ...listing.image ? { image: listing.image } : {},
-        status: listing.status || "active",
-        sellerName: listing.sellerName || "Proton Vendor",
-        ...loc.country ? { country: loc.country } : {},
-        ...loc.region ? { region: loc.region } : {},
-        optedOut,
-        impressions,
-        views,
-        uniqueViewers,
-        authImpressions,
-        authViews,
-        authUniqueViewers,
-        guestImpressions,
-        guestViews,
-        guestUniqueViewers,
-        breakdownSince,
-        hourly,
-        daily,
-        createdAt: Number(existingDoc.createdAt) || nowMs,
-        listingCreatedAt: parseTimestampMs(listing.createdAt),
-        updatedAt: nowMs
-      };
-      tx.set(viewerRef, viewerData, { merge: true });
-      tx.set(analyticsRef, nextAnalyticsDoc);
-      if (!optedOut && (!listing.status || listing.status === "active")) {
-        tx.set(publicRef, nextAnalyticsDoc);
-      } else {
-        tx.delete(publicRef);
-      }
-      return { recorded: true, uniqueIncremented };
-    }).then((res) => {
-      if (res.recorded) {
-        this.publicDocsCache = null;
-        this.rankMapsCache = null;
-      }
-      return res;
-    });
-  }
-  async setSellerCompetitionOptOut(sellerId, optedOut, nowMs) {
-    const db = await getAdminFirestoreInstance();
-    const { FieldPath } = await import("firebase-admin/firestore");
-    await db.collection("seller_competition_prefs").doc(sellerId).set({ optedOut, updatedAt: nowMs }, { merge: true });
-    await db.collection("users").doc(sellerId).set({ competitionOptOut: optedOut }, { merge: true });
-    const sellerAnalyticsRef = db.collection("seller_analytics").doc(sellerId);
-    const sellerAnalyticsSnap = await sellerAnalyticsRef.get().catch(() => null);
-    if (sellerAnalyticsSnap?.exists) {
-      await sellerAnalyticsRef.set({ optedOut, updatedAt: nowMs }, { merge: true });
-    }
-    const scan = await scanCollectionWithCursor({
-      collectionRef: db.collection("listing_analytics").where("sellerId", "==", sellerId),
-      documentIdField: FieldPath.documentId(),
-      batchSize: DEFAULT_CURSOR_BATCH_SIZE,
-      maxPages: SELLER_SCOPED_CURSOR_MAX_PAGES,
-      label: `optout:listing_analytics:seller:${sellerId}`
-    });
-    if (scan.truncated) {
-      throw new Error(
-        `Failed to complete competition opt-out update: listing analytics scan was truncated (${scan.truncationReason || "cursor_max_pages_exceeded"}). Some listings may not have been updated.`
-      );
-    }
-    for (let i = 0; i < scan.items.length; i += OPT_OUT_BATCH_CHUNK_SIZE) {
-      const chunk = scan.items.slice(i, i + OPT_OUT_BATCH_CHUNK_SIZE);
-      const batch = db.batch();
-      for (const item of chunk) {
-        const data = item.data;
-        const normalizedType = inferListingType(data.category, data.listingType);
-        const docRef = db.collection("listing_analytics").doc(item.id);
-        batch.set(
-          docRef,
-          { optedOut, listingType: normalizedType, updatedAt: nowMs },
-          { merge: true }
-        );
-        const pubRef = db.collection("listing_analytics_public").doc(item.id);
-        if (optedOut || data.status && data.status !== "active") {
-          batch.delete(pubRef);
-        } else {
-          batch.set(pubRef, {
-            ...data,
-            listingType: normalizedType,
-            optedOut: false,
-            updatedAt: nowMs
-          });
-        }
-      }
-      await batch.commit();
-    }
-    this.invalidateCaches();
-  }
-  // ============================================================================
-  // PHASE 2B: SELLER ANALYTICS FOUNDATION REPOSITORY METHODS
-  // ============================================================================
-  async getSellerAnalyticsDoc(sellerId) {
-    if (!isValidAnalyticsId(sellerId)) return null;
-    const db = await getAdminFirestoreInstance();
-    const snap = await db.collection("seller_analytics").doc(sellerId).get();
-    if (!snap.exists) return null;
-    return snap.data();
-  }
-  async ensureSellerAnalyticsDoc(params) {
-    if (!isValidAnalyticsId(params.sellerId)) {
-      throw new Error("Invalid sellerId for seller_analytics");
-    }
-    const db = await getAdminFirestoreInstance();
-    const ref = db.collection("seller_analytics").doc(params.sellerId);
-    return db.runTransaction(async (tx) => {
-      const snap = await tx.get(ref);
-      if (snap.exists) {
-        return snap.data();
-      }
-      const initialDoc = createEmptySellerAnalyticsDoc(params);
-      tx.set(ref, initialDoc);
-      return initialDoc;
-    });
-  }
-  async getSellerViewerDoc(sellerId, sellerViewerHash) {
-    if (!isValidAnalyticsId(sellerId) || !isValidHmacDigest(sellerViewerHash)) return null;
-    const db = await getAdminFirestoreInstance();
-    const snap = await db.collection("seller_analytics").doc(sellerId).collection("viewers").doc(sellerViewerHash).get();
-    if (!snap.exists) return null;
-    return snap.data();
-  }
-  async upsertSellerViewerDoc(sellerId, viewerDoc) {
-    if (!isValidAnalyticsId(sellerId)) {
-      throw new Error("Invalid sellerId for seller viewer storage");
-    }
-    const cleanDoc = sanitizeSellerViewerDoc(viewerDoc);
-    const db = await getAdminFirestoreInstance();
-    const ref = db.collection("seller_analytics").doc(sellerId).collection("viewers").doc(cleanDoc.viewerHash);
-    await ref.set(cleanDoc, { merge: true });
-    return cleanDoc;
-  }
-  async getGuestSessionIndex(guestHash) {
-    if (!isValidHmacDigest(guestHash)) return null;
-    const db = await getAdminFirestoreInstance();
-    const snap = await db.collection("analytics_guest_sessions").doc(guestHash).get();
-    if (!snap.exists) return null;
-    return snap.data();
-  }
-  async recordGuestSessionActivity(params) {
-    if (!isValidHmacDigest(params.guestHash)) {
-      throw new Error("Invalid guestHash");
-    }
-    const db = await getAdminFirestoreInstance();
-    const ref = db.collection("analytics_guest_sessions").doc(params.guestHash);
-    const nowMs = params.nowMs ?? Date.now();
-    return db.runTransaction(async (tx) => {
-      const snap = await tx.get(ref);
-      const existing = snap.exists ? snap.data() : null;
-      const nextDoc = mergeGuestSessionActivity(existing, {
-        guestHash: params.guestHash,
-        listingId: params.listingId,
-        sellerId: params.sellerId,
-        nowMs
-      });
-      tx.set(ref, nextDoc);
-      return nextDoc;
-    });
-  }
-  async claimGuestSession(params) {
-    if (!isValidHmacDigest(params.guestHash) || !isValidAnalyticsId(params.uid)) {
-      return { status: 400, claimed: false, reason: "invalid_request" };
-    }
-    const db = await getAdminFirestoreInstance();
-    const ref = db.collection("analytics_guest_sessions").doc(params.guestHash);
-    const nowMs = params.nowMs ?? Date.now();
-    return db.runTransaction(async (tx) => {
-      const snap = await tx.get(ref);
-      const existing = snap.exists ? snap.data() : null;
-      const evaluation = evaluateGuestSessionClaim(existing, {
-        uid: params.uid,
-        nowMs
-      });
-      if (evaluation.claimed && !evaluation.idempotent && evaluation.nextDoc) {
-        tx.set(ref, evaluation.nextDoc);
-      }
-      const { nextDoc: _unused, ...publicResult } = evaluation;
-      return publicResult;
-    });
-  }
-  async getVerifiedFunnelMarker(markerId) {
-    if (!isValidAnalyticsId(markerId)) return null;
-    const db = await getAdminFirestoreInstance();
-    const snap = await db.collection("analytics_verified_markers").doc(markerId).get();
-    if (!snap.exists) return null;
-    return snap.data();
-  }
-  async claimVerifiedFunnelMarker(params) {
-    if (!isValidAnalyticsId(params.sellerId) || !isValidHmacDigest(params.buyerHash)) {
-      throw new Error("Invalid sellerId or buyerHash for verified funnel marker");
-    }
-    if (params.listingId !== void 0 && !isValidAnalyticsId(params.listingId)) {
-      throw new Error("Invalid listingId for verified funnel marker");
-    }
-    const markerId = buildVerifiedFunnelMarkerId(params.markerType, params.sourceId);
-    const nowMs = params.nowMs ?? Date.now();
-    const db = await getAdminFirestoreInstance();
-    const ref = db.collection("analytics_verified_markers").doc(markerId);
-    return db.runTransaction(async (tx) => {
-      const snap = await tx.get(ref);
-      if (snap.exists) {
-        return { created: false, duplicate: true, markerId };
-      }
-      const markerDoc = {
-        markerId,
-        markerType: params.markerType,
-        sellerId: params.sellerId,
-        buyerHash: params.buyerHash,
-        sourceId: params.sourceId,
-        ...params.listingId ? { listingId: params.listingId } : {},
-        recordedAt: nowMs
-      };
-      tx.set(ref, markerDoc);
-      return { created: true, duplicate: false, markerId };
-    });
-  }
-  async recordSellerFunnelEvent(params) {
-    if (!isValidAnalyticsId(params.sellerId) || !isValidHmacDigest(params.viewerHash)) {
-      throw new Error("Invalid sellerId or viewerHash for seller funnel event");
-    }
-    const db = await getAdminFirestoreInstance();
-    const nowMs = params.nowMs ?? Date.now();
-    const sellerRef = db.collection("seller_analytics").doc(params.sellerId);
-    const viewerRef = sellerRef.collection("viewers").doc(params.viewerHash);
-    return db.runTransaction(async (tx) => {
-      const [sellerSnap, viewerSnap] = await Promise.all([
-        tx.get(sellerRef),
-        tx.get(viewerRef)
-      ]);
-      const existingSeller = sellerSnap.exists ? sellerSnap.data() : null;
-      const existingViewer = viewerSnap.exists ? viewerSnap.data() : null;
-      const mutation = computeSellerFunnelTransactionUpdate({
-        sellerId: params.sellerId,
-        eventType: params.eventType,
-        viewerHash: params.viewerHash,
-        viewerType: params.viewerType,
-        existingSeller,
-        existingViewer,
-        sellerMeta: params.sellerMeta,
-        nowMs
-      });
-      if (!mutation.recorded || !mutation.nextSellerDoc || !mutation.nextViewerDoc) {
-        return { recorded: false, reason: mutation.reason };
-      }
-      tx.set(viewerRef, mutation.nextViewerDoc, { merge: true });
-      tx.set(sellerRef, mutation.nextSellerDoc);
-      return { recorded: true };
-    });
-  }
-};
-var MarketAnalyticsService = class {
-  repo;
-  explicitSalt;
-  // In-memory short burst IP+listing guard to prevent rotating-token spam WITHOUT storing raw IPs in DB
-  ipListingThrottle = /* @__PURE__ */ new Map();
-  constructor(repo, salt) {
-    this.repo = repo || new FirestoreAdminAnalyticsRepository();
-    if (typeof salt === "string" && salt.length > 0) {
-      this.explicitSalt = salt;
-    }
-  }
-  resolveEffectiveSalt() {
-    if (this.explicitSalt) {
-      return this.explicitSalt;
-    }
-    if (isProductionRuntime()) {
-      const prodSalt = (process.env.ANALYTICS_HASH_SALT || "").trim();
-      if (!prodSalt || prodSalt.length < MIN_ANALYTICS_SALT_LENGTH || prodSalt === DEV_FALLBACK_ANALYTICS_SALT) {
-        throw new AnalyticsConfigError(
-          "analytics/salt-missing",
-          "Server analytics hash salt (ANALYTICS_HASH_SALT) is missing or insufficiently strong for production."
-        );
-      }
-      return prodSalt;
-    }
-    const devSalt = (process.env.ANALYTICS_HASH_SALT || process.env.ANALYTICS_SALT || "").trim();
-    return devSalt || DEV_FALLBACK_ANALYTICS_SALT;
-  }
-  computeViewerHash(listingId, identityKey) {
-    const activeSalt = this.resolveEffectiveSalt();
-    return crypto.createHmac("sha256", activeSalt).update(`${listingId}:${identityKey}`).digest("hex");
-  }
-  /**
-   * Server-only HMAC hash for seller_analytics/{sellerId}/viewers/{sellerViewerHash}.
-   * Never persisted with raw IP, visitorToken, or User-Agent.
-   */
-  computeSellerViewerHash(sellerId, identityKey) {
-    if (!isValidAnalyticsId(sellerId)) {
-      throw new Error("Invalid sellerId for seller viewer hash");
-    }
-    const activeSalt = this.resolveEffectiveSalt();
-    return crypto.createHmac("sha256", activeSalt).update(`seller:${sellerId}:${identityKey}`).digest("hex");
-  }
-  /**
-   * Server-only HMAC hash for analytics_guest_sessions/{guestHash}.
-   */
-  computeGuestSessionHash(visitorToken) {
-    if (typeof visitorToken !== "string" || visitorToken.length < 8 || visitorToken.length > 128 || !/^[a-zA-Z0-9_-]+$/.test(visitorToken)) {
-      throw new Error("Invalid visitorToken for guest session hash");
-    }
-    const activeSalt = this.resolveEffectiveSalt();
-    return crypto.createHmac("sha256", activeSalt).update(`guest_session:${visitorToken}`).digest("hex");
-  }
-  /**
-   * Server-only HMAC hash for buyer identity in verified funnel markers.
-   */
-  computeBuyerIdentityHash(buyerUid) {
-    if (!isValidAnalyticsId(buyerUid)) {
-      throw new Error("Invalid buyerUid for verified marker hash");
-    }
-    const activeSalt = this.resolveEffectiveSalt();
-    return crypto.createHmac("sha256", activeSalt).update(`buyer:${buyerUid}`).digest("hex");
-  }
-  checkInMemoryIpGuard(clientIp, listingId, eventType, nowMs, activeSalt) {
-    if (!clientIp) return true;
-    const keyHash = crypto.createHmac("sha256", activeSalt).update(`${clientIp}:${listingId}:${eventType}`).digest("hex").slice(0, 24);
-    const prev = this.ipListingThrottle.get(keyHash);
-    const minGap = eventType === "impression" ? 15e3 : 1e4;
-    if (prev && nowMs - prev < minGap) {
-      return false;
-    }
-    this.ipListingThrottle.set(keyHash, nowMs);
-    if (this.ipListingThrottle.size > 5e3) {
-      const cutoff = nowMs - 6e4;
-      for (const [k, ts] of this.ipListingThrottle.entries()) {
-        if (ts < cutoff) this.ipListingThrottle.delete(k);
-      }
-    }
-    return true;
-  }
-  async recordListingEvent(params) {
-    const nowMs = params.nowMs ?? Date.now();
-    if (isBotUserAgent(params.userAgent)) {
-      return { status: 200, body: { recorded: false, reason: "bot_filtered" } };
-    }
-    if (!isValidAnalyticsId(params.listingId)) {
-      return { status: 400, body: { error: "Invalid listingId", code: "analytics/invalid-listing-id" } };
-    }
-    if (params.eventType !== "impression" && params.eventType !== "view") {
-      return { status: 400, body: { error: "Invalid eventType", code: "analytics/invalid-event-type" } };
-    }
-    let viewerType;
-    let identityKey;
-    if (params.verifiedUid && isValidAnalyticsId(params.verifiedUid)) {
-      viewerType = "auth";
-      identityKey = `auth:${params.verifiedUid}`;
-    } else {
-      if (typeof params.visitorToken !== "string" || params.visitorToken.length < 8 || params.visitorToken.length > 128 || !/^[a-zA-Z0-9_-]+$/.test(params.visitorToken)) {
-        return { status: 400, body: { error: "Valid visitorToken required for guest telemetry", code: "analytics/invalid-visitor-token" } };
-      }
-      viewerType = "guest";
-      identityKey = `guest:${params.visitorToken}`;
-    }
-    let activeSalt;
+  if (!result) {
     try {
-      activeSalt = this.resolveEffectiveSalt();
-    } catch (err) {
-      if (err instanceof AnalyticsConfigError && err.code === "analytics/salt-missing") {
-        return {
-          status: 503,
-          body: {
-            recorded: false,
-            code: "analytics/salt-missing",
-            error: err.message
+      const projectId = "proton-core-ai";
+      const dbId = "ai-studio-01dfb83a-da41-4952-8647-6368b0e05d51";
+      const apiKey = "AIzaSyAawNki7fRFS_ZQGiAiXh4dmFNOH0OpZDM";
+      const restUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/${dbId}/documents/listings/${encodeURIComponent(cleanId)}?key=${apiKey}`;
+      const res = await fetch(restUrl, { headers: { Accept: "application/json" } });
+      if (res.ok) {
+        const body = await res.json();
+        const fields = body?.fields;
+        if (fields) {
+          const status = extractRestField(fields.status) || "active";
+          if (status !== "deleted") {
+            const rawTitle = extractRestField(fields.title) || extractRestField(fields.titleGe) || extractRestField(fields.titleEn) || "Market Item";
+            const rawDesc = extractRestField(fields.description) || extractRestField(fields.descriptionGe) || "";
+            const rawImg = extractRestField(fields.image);
+            const rawImages = extractRestField(fields.images);
+            const imageCandidate = rawImg || Array.isArray(rawImages) && rawImages[0] || "";
+            const rawPrice = extractRestField(fields.price);
+            const rawCurrency = extractRestField(fields.currency) || "USD";
+            const rawCategory = extractRestField(fields.category);
+            const rawCity = extractRestField(fields.city);
+            const rawCountry = extractRestField(fields.country);
+            result = {
+              id: cleanId,
+              title: String(rawTitle).trim(),
+              description: String(rawDesc).trim(),
+              image: typeof imageCandidate === "string" && imageCandidate.startsWith("http") ? imageCandidate : DEFAULT_ROBOT_IMAGE,
+              price: Number.isFinite(Number(rawPrice)) ? Number(rawPrice) : void 0,
+              currency: String(rawCurrency).trim(),
+              category: typeof rawCategory === "string" ? rawCategory : void 0,
+              city: typeof rawCity === "string" ? rawCity : void 0,
+              country: typeof rawCountry === "string" ? rawCountry : void 0,
+              status: typeof status === "string" ? status : "active"
+            };
           }
-        };
-      }
-      throw err;
-    }
-    if (!this.checkInMemoryIpGuard(params.clientIp, params.listingId, params.eventType, nowMs, activeSalt)) {
-      return { status: 200, body: { recorded: false, reason: "rate_throttled" } };
-    }
-    const listing = await this.repo.getListing(params.listingId);
-    if (!listing || listing.isDemo || listing.isSeed || listing.isMock || listing.status === "deleted") {
-      return { status: 404, body: { error: "Listing not found", code: "analytics/listing-not-found" } };
-    }
-    if (params.verifiedUid && params.verifiedUid === listing.sellerId) {
-      return { status: 200, body: { recorded: false, reason: "owner_excluded" } };
-    }
-    const sellerLocation = await this.repo.getSellerProfileLocation(listing.sellerId);
-    const viewerHash = this.computeViewerHash(listing.id, identityKey);
-    const txResult = await this.repo.recordEventTransaction({
-      listing,
-      sellerLocation,
-      viewerHash,
-      viewerType,
-      eventType: params.eventType,
-      nowMs
-    });
-    return {
-      status: 200,
-      body: {
-        recorded: txResult.recorded,
-        ...txResult.reason ? { reason: txResult.reason } : {},
-        uniqueIncremented: txResult.uniqueIncremented
-      }
-    };
-  }
-  async getSellerStats(params) {
-    const nowMs = params.nowMs ?? Date.now();
-    const { verifiedUid, listingId } = params;
-    if (listingId !== void 0) {
-      if (!isValidAnalyticsId(listingId)) {
-        return { status: 400, body: { error: "Invalid listingId", code: "analytics/invalid-listing-id" } };
-      }
-      const listing = await this.repo.getListing(listingId);
-      if (!listing) {
-        return { status: 404, body: { error: "Listing not found", code: "analytics/listing-not-found" } };
-      }
-      if (listing.sellerId !== verifiedUid) {
-        return { status: 403, body: { error: "Forbidden: Only listing owner can read private analytics", code: "analytics/forbidden" } };
-      }
-      const rawDoc = await this.repo.getListingAnalyticsDoc(listingId);
-      const stats = await this.buildSingleListingStats(listing, rawDoc, nowMs);
-      return { status: 200, body: { listing: stats } };
-    }
-    const [listingsResult, sellerPref] = await Promise.all([
-      this.repo.getSellerListingsWithMeta ? this.repo.getSellerListingsWithMeta(verifiedUid) : this.repo.getSellerListings(verifiedUid).then((listings) => ({
-        listings,
-        truncated: false
-      })),
-      this.repo.getSellerProfileLocation(verifiedUid)
-    ]);
-    const realListings = listingsResult.listings.filter(
-      (l) => !l.isDemo && !l.isSeed && !l.isMock && l.status !== "deleted"
-    );
-    let listingsTruncated = Boolean(listingsResult.truncated);
-    let listingsTruncationReason = listingsResult.truncationReason;
-    let analyticsTruncated = false;
-    let analyticsTruncationReason;
-    let globalRankMap = /* @__PURE__ */ new Map();
-    let catRankMap = /* @__PURE__ */ new Map();
-    if (realListings.length > 0 && !sellerPref.optedOut) {
-      if (this.repo.getAggregatedRankMaps) {
-        const rankMaps = await this.repo.getAggregatedRankMaps(nowMs);
-        globalRankMap = rankMaps.globalRankMap;
-        catRankMap = rankMaps.catRankMap;
-        if (rankMaps.truncated) {
-          analyticsTruncated = true;
-          analyticsTruncationReason = rankMaps.warnings?.[0] || "rank_maps_truncated";
-        }
-      } else {
-        const [publicDocs, ratingsMap] = await Promise.all([
-          this.repo.getAllPublicAnalyticsDocs().catch((err) => {
-            console.error("[MarketAnalytics] Failed to load public docs for seller stats:", err);
-            return [];
-          }),
-          this.repo.getSellerRatingsMap().catch((err) => {
-            console.error("[MarketAnalytics] Failed to load seller ratings for seller stats:", err);
-            return {};
-          })
-        ]);
-        const globalRankings = buildRankingsFromPublicDocs({
-          docs: publicDocs,
-          sellerRatingsMap: ratingsMap,
-          scope: "global",
-          period: "30d",
-          nowMs,
-          limitCount: Math.max(300, publicDocs.length)
-        });
-        globalRankMap = new Map(globalRankings.map((r) => [r.listingId, r.rank]));
-        const byCat = /* @__PURE__ */ new Map();
-        for (const r of globalRankings) {
-          const cat = (r.category || "other").toLowerCase();
-          const arr = byCat.get(cat) || [];
-          arr.push(r);
-          byCat.set(cat, arr);
-        }
-        for (const arr of byCat.values()) {
-          arr.forEach((r, idx) => catRankMap.set(r.listingId, { rank: idx + 1, total: arr.length }));
         }
       }
+    } catch (restErr) {
+      console.warn("[MarketMeta] REST API lookup failed for listingId:", cleanId, restErr);
     }
-    let analyticsDocs;
-    if (realListings.length === 0) {
-      analyticsDocs = [];
-    } else if (this.repo.getSellerListingAnalyticsMap) {
-      const sellerAnalyticsScan = await this.repo.getSellerListingAnalyticsMap(verifiedUid);
-      analyticsDocs = realListings.map((l) => sellerAnalyticsScan.docsByListingId.get(l.id) ?? null);
-      if (sellerAnalyticsScan.truncated) {
-        analyticsTruncated = true;
-        analyticsTruncationReason = sellerAnalyticsScan.truncationReason || "seller_analytics_scan_truncated";
-      }
-    } else {
-      analyticsDocs = await Promise.all(
-        realListings.map((l) => this.repo.getListingAnalyticsDoc(l.id))
-      );
-    }
-    const isPartialData = listingsTruncated || analyticsTruncated;
-    const truncationReason = listingsTruncationReason || analyticsTruncationReason;
-    const listingStats = realListings.map((listing, idx) => {
-      const rawDoc = analyticsDocs[idx];
-      const agg = aggregatePeriodFromBuckets(
-        rawDoc || { impressions: 0, views: 0, uniqueViewers: 0 },
-        nowMs
-      );
-      const viewerBreakdown = aggregateViewerBreakdownFromDoc(rawDoc, nowMs);
-      const catInfo = catRankMap.get(listing.id);
-      const achievements = computeListingAchievements({
-        curr7d: agg.periods["7d"],
-        prev7d: agg.prevPeriods["7d"],
-        curr30d: agg.periods["30d"],
-        listingCreatedAt: parseTimestampMs(listing.createdAt),
-        nowMs,
-        categoryRank: catInfo?.rank,
-        categoryTotal: catInfo?.total,
-        globalRank: globalRankMap.get(listing.id)
-      });
-      return {
-        listingId: listing.id,
-        title: listing.title,
-        titleGe: listing.titleGe,
-        category: listing.category,
-        listingType: inferListingType(listing.category, listing.listingType),
-        image: listing.image,
-        status: listing.status || "active",
-        optedOut: Boolean(sellerPref.optedOut ?? rawDoc?.optedOut),
-        createdAt: parseTimestampMs(listing.createdAt),
-        updatedAt: rawDoc?.updatedAt || 0,
-        periods: agg.periods,
-        comparisons: agg.comparisons,
-        achievements,
-        ...viewerBreakdown ? { viewerBreakdown } : {}
-      };
-    });
-    const periodKeys = ["24h", "7d", "30d", "all"];
-    const periodTotals = {};
-    for (const pk of periodKeys) {
-      periodTotals[pk] = sumPeriodMetricsList(listingStats.map((s) => s.periods[pk]));
-    }
-    const compKeys = ["24h", "7d", "30d"];
-    const periodComparisons = {};
-    for (const ck of compKeys) {
-      const sumDelta = (field) => listingStats.reduce((acc, s) => acc + s.comparisons[ck][field], 0);
-      const impDelta = sumDelta("impressionsDelta");
-      const vDelta = sumDelta("viewsDelta");
-      const uDelta = sumDelta("uniqueViewersDelta");
-      const currP = periodTotals[ck];
-      const prevImp = Math.max(0, currP.impressions - impDelta);
-      const prevViews = Math.max(0, currP.views - vDelta);
-      const prevUniq = Math.max(0, currP.uniqueViewers - uDelta);
-      const prevEng = prevImp > 0 ? Math.min(100, Math.round(prevViews / prevImp * 1e3) / 10) : 0;
-      const pct = (c, p) => p <= 0 ? c > 0 ? 100 : null : Math.round((c - p) / p * 1e3) / 10;
-      periodComparisons[ck] = {
-        impressionsDelta: impDelta,
-        viewsDelta: vDelta,
-        uniqueViewersDelta: uDelta,
-        engagementRateDelta: Math.round((currP.engagementRate - prevEng) * 10) / 10,
-        impressionsChangePct: pct(currP.impressions, prevImp),
-        viewsChangePct: pct(currP.views, prevViews),
-        uniqueViewersChangePct: pct(currP.uniqueViewers, prevUniq)
-      };
-    }
-    const earnedAchievements = [];
-    for (const s of listingStats) {
-      for (const badge of s.achievements) {
-        earnedAchievements.push({
-          id: badge,
-          listingId: s.listingId,
-          listingTitle: s.title,
-          listingTitleGe: s.titleGe,
-          category: s.category
-        });
-      }
-    }
-    const overviewBreakdown = sumViewerBreakdownList(listingStats.map((s) => s.viewerBreakdown));
-    const overview = {
-      totalImpressions: periodTotals.all.impressions,
-      totalViews: periodTotals.all.views,
-      totalUniqueViewers: periodTotals.all.uniqueViewers,
-      engagementRate: periodTotals.all.engagementRate,
-      periodTotals,
-      periodComparisons,
-      listings: listingStats,
-      competitionOptOut: Boolean(sellerPref.optedOut),
-      earnedAchievements,
-      ...overviewBreakdown ? { viewerBreakdown: overviewBreakdown } : {},
-      isPartialData,
-      ...truncationReason ? { truncationReason } : {}
-    };
-    return { status: 200, body: { overview } };
   }
-  async buildSingleListingStats(listing, rawDoc, nowMs) {
-    const agg = aggregatePeriodFromBuckets(
-      rawDoc || { impressions: 0, views: 0, uniqueViewers: 0 },
-      nowMs
-    );
-    const viewerBreakdown = aggregateViewerBreakdownFromDoc(rawDoc, nowMs);
-    const achievements = computeListingAchievements({
-      curr7d: agg.periods["7d"],
-      prev7d: agg.prevPeriods["7d"],
-      curr30d: agg.periods["30d"],
-      listingCreatedAt: parseTimestampMs(listing.createdAt),
-      nowMs
-    });
-    return {
-      listingId: listing.id,
-      title: listing.title,
-      titleGe: listing.titleGe,
-      category: listing.category,
-      listingType: inferListingType(listing.category, listing.listingType),
-      image: listing.image,
-      status: listing.status || "active",
-      optedOut: Boolean(rawDoc?.optedOut),
-      createdAt: parseTimestampMs(listing.createdAt),
-      updatedAt: rawDoc?.updatedAt || 0,
-      periods: agg.periods,
-      comparisons: agg.comparisons,
-      achievements,
-      ...viewerBreakdown ? { viewerBreakdown } : {}
-    };
+  PREVIEW_CACHE.set(cleanId, { data: result, expiresAt: now + CACHE_TTL_MS });
+  return result;
+}
+var cachedBaseHtml = null;
+function loadBaseHtml() {
+  if (cachedBaseHtml && process.env.NODE_ENV === "production") {
+    return cachedBaseHtml;
   }
-  async getRankings(params) {
-    const scope = params.scope === "country" || params.scope === "category" || params.scope === "regional" || params.scope === "listingType" ? params.scope : "global";
-    const period = params.period === "30d" ? "30d" : "7d";
-    const listingType = normalizeListingTypeFilter(params.listingType);
-    const nowMs = params.nowMs ?? Date.now();
-    const [publicScan, ratingsScan] = await Promise.all([
-      this.repo.getAllPublicAnalyticsDocsWithMeta ? this.repo.getAllPublicAnalyticsDocsWithMeta() : this.repo.getAllPublicAnalyticsDocs().then((docs) => ({ docs, truncated: false })),
-      this.repo.getSellerRatingsMapWithMeta ? this.repo.getSellerRatingsMapWithMeta() : this.repo.getSellerRatingsMap().then((ratings) => ({ ratings, truncated: false })).catch((err) => {
-        console.error("[MarketAnalytics] Failed to load seller ratings map for rankings:", err);
-        return { ratings: {}, truncated: true, truncationReason: "ratings_read_failed" };
-      })
-    ]);
-    const publicDocs = publicScan.docs;
-    const sellerRatingsMap = ratingsScan.ratings;
-    const warnings = [];
-    if (publicScan.truncated) {
-      warnings.push(publicScan.truncationReason || "public_docs_truncated");
-    }
-    if (ratingsScan.truncated) {
-      warnings.push(ratingsScan.truncationReason || "seller_ratings_truncated");
-    }
-    const isPartialData = warnings.length > 0;
-    if (isPartialData) {
-      console.error("[MarketAnalytics] Rankings computed on partial data:", warnings.join(", "));
-    }
-    const rankings = buildRankingsFromPublicDocs({
-      docs: publicDocs,
-      sellerRatingsMap,
-      scope,
-      period,
-      listingType,
-      category: params.category,
-      country: params.country,
-      region: params.region,
-      nowMs
-    });
-    const availableCountries = Array.from(
-      new Set(publicDocs.filter((d) => !d.optedOut && d.country).map((d) => d.country))
-    ).sort();
-    const availableRegions = Array.from(
-      new Set(publicDocs.filter((d) => !d.optedOut && d.region).map((d) => d.region))
-    ).sort();
-    return {
-      status: 200,
-      body: {
-        scope,
-        period,
-        listingType,
-        rankings,
-        availableCountries,
-        availableRegions,
-        isPartialData,
-        dataCompleteness: {
-          isComplete: !isPartialData,
-          publicDocsTruncated: publicScan.truncated,
-          ratingsTruncated: ratingsScan.truncated,
-          warnings
-        }
-      }
-    };
-  }
-  async updateCompetitionOptOut(params) {
-    await this.repo.setSellerCompetitionOptOut(
-      params.verifiedUid,
-      Boolean(params.optedOut),
-      params.nowMs ?? Date.now()
-    );
-    return {
-      status: 200,
-      body: {
-        success: true,
-        optedOut: Boolean(params.optedOut)
-      }
-    };
-  }
-  // Phase 2B Server Foundation Operations (no public HTTP endpoints exposed yet)
-  async getSellerAnalyticsDoc(sellerId) {
-    if (!isValidAnalyticsId(sellerId) || !this.repo.getSellerAnalyticsDoc) {
-      return null;
-    }
-    return this.repo.getSellerAnalyticsDoc(sellerId);
-  }
-  async ensureSellerAnalyticsDoc(params) {
-    if (!this.repo.ensureSellerAnalyticsDoc) {
-      throw new Error("Repository does not implement ensureSellerAnalyticsDoc");
-    }
-    return this.repo.ensureSellerAnalyticsDoc(params);
-  }
-  async claimGuestSessionForUser(params) {
-    if (!this.repo.claimGuestSession) {
-      throw new Error("Repository does not implement claimGuestSession");
-    }
-    if (!isValidAnalyticsId(params.uid)) {
-      return { status: 400, claimed: false, reason: "invalid_request" };
-    }
-    let guestHash;
+  const candidatePaths = [
+    path.join(process.cwd(), "dist", "index.html"),
+    path.join(process.cwd(), "index.html"),
+    path.resolve("dist/index.html"),
+    path.resolve("index.html")
+  ];
+  for (const p of candidatePaths) {
     try {
-      guestHash = this.computeGuestSessionHash(params.visitorToken);
+      if (fs.existsSync(p)) {
+        const content = fs.readFileSync(p, "utf8");
+        if (content && content.includes("<html")) {
+          cachedBaseHtml = content;
+          return content;
+        }
+      }
     } catch {
-      return { status: 400, claimed: false, reason: "invalid_request" };
     }
-    return this.repo.claimGuestSession({
-      guestHash,
-      uid: params.uid,
-      nowMs: params.nowMs ?? Date.now()
-    });
   }
-  async claimVerifiedFunnelMarker(params) {
-    if (!this.repo.claimVerifiedFunnelMarker) {
-      throw new Error("Repository does not implement claimVerifiedFunnelMarker");
-    }
-    const buyerHash = this.computeBuyerIdentityHash(params.buyerUid);
-    return this.repo.claimVerifiedFunnelMarker({
-      markerType: params.markerType,
-      sourceId: params.sourceId,
-      sellerId: params.sellerId,
-      buyerHash,
-      listingId: params.listingId,
-      nowMs: params.nowMs ?? Date.now()
-    });
+  return `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover" />
+    <title>${DEFAULT_TITLE}</title>
+    <meta name="description" content="${DEFAULT_DESC}" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="PROTON Market Hub" />
+    <meta property="og:title" content="${DEFAULT_TITLE}" />
+    <meta property="og:description" content="${DEFAULT_DESC}" />
+    <meta property="og:image" content="${DEFAULT_ROBOT_IMAGE}" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="${DEFAULT_TITLE}" />
+    <meta name="twitter:description" content="${DEFAULT_DESC}" />
+    <meta name="twitter:image" content="${DEFAULT_ROBOT_IMAGE}" />
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>`;
+}
+function injectListingMetaToHtml(params) {
+  const { baseHtml, listing, canonicalUrl } = params;
+  if (!listing) {
+    return baseHtml.replace(
+      /<link\s+rel=["']canonical["'][^>]*\/?>/i,
+      `<link rel="canonical" href="${escapeHtml(canonicalUrl)}" />`
+    );
   }
-  async recordSellerFunnelEvent(params) {
-    const nowMs = params.nowMs ?? Date.now();
-    const validEventTypes = [
-      "seller_profile_view",
-      "listing_to_seller",
-      "contact_click",
-      "contact_confirmed",
-      "order_intent",
-      "order_confirmed"
-    ];
-    if (!validEventTypes.includes(params.eventType)) {
-      return { status: 400, body: { error: "Invalid eventType", code: "analytics/invalid-event-type" } };
-    }
-    const isConfirmedEvent = params.eventType === "contact_confirmed" || params.eventType === "order_confirmed";
-    if (isConfirmedEvent) {
-      if (!params.verifiedUid || !isValidAnalyticsId(params.verifiedUid)) {
-        return {
-          status: 401,
-          body: {
-            recorded: false,
-            error: "Unauthorized: Authentication required for confirmed funnel events",
-            code: "analytics/auth-required"
-          }
-        };
-      }
-    }
-    if (isBotUserAgent(params.userAgent)) {
-      return { status: 200, body: { recorded: false, reason: "bot_filtered" } };
-    }
-    if (!isValidAnalyticsId(params.sellerId)) {
-      return { status: 400, body: { error: "Invalid sellerId", code: "analytics/invalid-seller-id" } };
-    }
-    let viewerType;
-    let identityKey;
-    if (params.verifiedUid && isValidAnalyticsId(params.verifiedUid)) {
-      viewerType = "auth";
-      identityKey = `auth:${params.verifiedUid}`;
-    } else {
-      if (typeof params.visitorToken !== "string" || params.visitorToken.length < 8 || params.visitorToken.length > 128 || !/^[a-zA-Z0-9_-]+$/.test(params.visitorToken)) {
-        return { status: 400, body: { error: "Valid visitorToken required for guest telemetry", code: "analytics/invalid-visitor-token" } };
-      }
-      viewerType = "guest";
-      identityKey = `guest:${params.visitorToken}`;
-    }
-    try {
-      this.resolveEffectiveSalt();
-    } catch (err) {
-      if (err instanceof AnalyticsConfigError && err.code === "analytics/salt-missing") {
-        return {
-          status: 503,
-          body: {
-            recorded: false,
-            code: "analytics/salt-missing",
-            error: err.message
-          }
-        };
-      }
-      throw err;
-    }
-    let targetSellerId = String(params.sellerId);
-    let targetListingId;
-    let sellerMeta;
-    if (isConfirmedEvent) {
-      targetListingId = typeof params.listingId === "string" ? params.listingId : void 0;
-      const verifiedUid = params.verifiedUid;
-      if (typeof params.sourceId !== "string" || !isValidAnalyticsId(params.sourceId)) {
-        return {
-          status: 400,
-          body: {
-            recorded: false,
-            error: "Valid sourceId required for confirmed funnel markers",
-            code: "analytics/invalid-source-id"
-          }
-        };
-      }
-      const sourceId = params.sourceId;
-      if (params.eventType === "order_confirmed") {
-        if (!this.repo.getOrderForAnalytics) {
-          throw new Error("Repository does not implement getOrderForAnalytics");
-        }
-        const order = await this.repo.getOrderForAnalytics(sourceId);
-        if (!order) {
-          return {
-            status: 404,
-            body: {
-              recorded: false,
-              error: "Order not found",
-              code: "analytics/order-not-found"
-            }
-          };
-        }
-        if (order.buyerId !== verifiedUid) {
-          return {
-            status: 403,
-            body: {
-              recorded: false,
-              error: "Forbidden: Order does not belong to authenticated buyer",
-              code: "analytics/order-buyer-mismatch"
-            }
-          };
-        }
-        if (!isValidAnalyticsId(order.sellerId) || order.sellerId === verifiedUid) {
-          return {
-            status: 400,
-            body: {
-              recorded: false,
-              error: "Invalid order seller",
-              code: "analytics/invalid-order-seller"
-            }
-          };
-        }
-        if (order.sellerId !== targetSellerId) {
-          return {
-            status: 403,
-            body: {
-              recorded: false,
-              error: "Forbidden: sellerId does not match authoritative order seller",
-              code: "analytics/seller-mismatch"
-            }
-          };
-        }
-        if (typeof params.listingId === "string" && params.listingId.length > 0 && order.listingId !== params.listingId) {
-          return {
-            status: 400,
-            body: {
-              recorded: false,
-              error: "listingId does not match authoritative order listing",
-              code: "analytics/listing-mismatch"
-            }
-          };
-        }
-        const normalizedStatus = String(order.status || "").trim().toLowerCase();
-        if (!CONFIRMED_ORDER_ALLOWED_STATUSES.has(normalizedStatus)) {
-          return {
-            status: 400,
-            body: {
-              recorded: false,
-              error: "Order status is not eligible for confirmation",
-              code: "analytics/invalid-order-status"
-            }
-          };
-        }
-        targetSellerId = order.sellerId;
-        targetListingId = isValidAnalyticsId(order.listingId) ? order.listingId : void 0;
-      } else {
-        if (!this.repo.getMarketMessageForAnalytics) {
-          throw new Error("Repository does not implement getMarketMessageForAnalytics");
-        }
-        const message = await this.repo.getMarketMessageForAnalytics(sourceId);
-        if (!message) {
-          return {
-            status: 404,
-            body: {
-              recorded: false,
-              error: "Message not found",
-              code: "analytics/message-not-found"
-            }
-          };
-        }
-        if (message.senderId !== verifiedUid) {
-          return {
-            status: 403,
-            body: {
-              recorded: false,
-              error: "Forbidden: Message does not belong to authenticated sender",
-              code: "analytics/message-sender-mismatch"
-            }
-          };
-        }
-        if (!isValidAnalyticsId(message.sellerId) || message.sellerId === verifiedUid) {
-          return {
-            status: 400,
-            body: {
-              recorded: false,
-              error: "Invalid message seller",
-              code: "analytics/invalid-message-seller"
-            }
-          };
-        }
-        if (message.sellerId !== targetSellerId) {
-          return {
-            status: 403,
-            body: {
-              recorded: false,
-              error: "Forbidden: sellerId does not match authoritative message seller",
-              code: "analytics/seller-mismatch"
-            }
-          };
-        }
-        if (message.buyerId && message.buyerId !== verifiedUid) {
-          return {
-            status: 403,
-            body: {
-              recorded: false,
-              error: "Forbidden: Message buyerId does not match authenticated user",
-              code: "analytics/message-buyer-mismatch"
-            }
-          };
-        }
-        if (message.receiverId && message.receiverId !== message.sellerId) {
-          return {
-            status: 403,
-            body: {
-              recorded: false,
-              error: "Forbidden: Message receiver does not match seller",
-              code: "analytics/message-receiver-mismatch"
-            }
-          };
-        }
-        if (Array.isArray(message.participants) && (!message.participants.includes(verifiedUid) || !message.participants.includes(message.sellerId))) {
-          return {
-            status: 403,
-            body: {
-              recorded: false,
-              error: "Forbidden: Message participants do not match sender and seller",
-              code: "analytics/message-participants-mismatch"
-            }
-          };
-        }
-        if (typeof params.listingId === "string" && params.listingId.length > 0 && message.listingId !== params.listingId) {
-          return {
-            status: 400,
-            body: {
-              recorded: false,
-              error: "listingId does not match authoritative message listing",
-              code: "analytics/listing-mismatch"
-            }
-          };
-        }
-        targetSellerId = message.sellerId;
-        targetListingId = message.listingId && isValidAnalyticsId(message.listingId) ? message.listingId : void 0;
-      }
-      if (verifiedUid === targetSellerId) {
-        return { status: 200, body: { recorded: false, reason: "owner_excluded" } };
-      }
-      const markerType = params.eventType === "order_confirmed" ? "order_confirmed" : "contact_confirmed";
-      const buyerHash = this.computeBuyerIdentityHash(verifiedUid);
-      if (this.repo.claimVerifiedFunnelMarker) {
-        const markerRes = await this.repo.claimVerifiedFunnelMarker({
-          markerType,
-          sourceId,
-          sellerId: targetSellerId,
-          buyerHash,
-          listingId: targetListingId,
-          nowMs
-        });
-        if (markerRes.duplicate) {
-          return { status: 200, body: { recorded: false, reason: "duplicate_verified_marker" } };
-        }
-      }
-    } else {
-      if (!this.repo.getSellerForAnalytics) {
-        throw new Error("Repository does not implement getSellerForAnalytics");
-      }
-      const seller = await this.repo.getSellerForAnalytics(targetSellerId);
-      if (!seller || !seller.exists || seller.deleted || seller.isDemo || seller.isSeed || seller.isMock) {
-        return {
-          status: 404,
-          body: {
-            recorded: false,
-            error: "Seller not found",
-            code: "analytics/seller-not-found"
-          }
-        };
-      }
-      sellerMeta = {
-        optedOut: seller.optedOut,
-        sellerName: seller.sellerName,
-        country: seller.country,
-        region: seller.region
-      };
-      const rawListingId = params.listingId;
-      if (params.eventType === "listing_to_seller") {
-        if (rawListingId === void 0 || rawListingId === null || rawListingId === "") {
-          return {
-            status: 400,
-            body: {
-              recorded: false,
-              error: "listingId is required for listing_to_seller events",
-              code: "analytics/listing-id-required"
-            }
-          };
-        }
-      }
-      if (rawListingId !== void 0 && rawListingId !== null) {
-        if (!isValidAnalyticsId(rawListingId)) {
-          return {
-            status: 400,
-            body: {
-              recorded: false,
-              error: "Invalid listingId",
-              code: "analytics/invalid-listing-id"
-            }
-          };
-        }
-        const listing = await this.repo.getListing(rawListingId);
-        const normalizedListingStatus = typeof listing?.status === "string" ? listing.status.trim().toLowerCase() : "";
-        if (!listing || listing.isDemo || listing.isSeed || listing.isMock || normalizedListingStatus === "deleted") {
-          return {
-            status: 404,
-            body: {
-              recorded: false,
-              error: "Listing not found",
-              code: "analytics/listing-not-found"
-            }
-          };
-        }
-        if (normalizedListingStatus !== "" && normalizedListingStatus !== "active") {
-          return {
-            status: 400,
-            body: {
-              recorded: false,
-              error: "Listing is not active",
-              code: "analytics/listing-not-active"
-            }
-          };
-        }
-        if (listing.sellerId !== targetSellerId) {
-          return {
-            status: 403,
-            body: {
-              recorded: false,
-              error: "Forbidden: Listing does not belong to target seller",
-              code: "analytics/listing-seller-mismatch"
-            }
-          };
-        }
-        targetListingId = listing.id;
-      }
-      if (params.verifiedUid && params.verifiedUid === targetSellerId) {
-        return { status: 200, body: { recorded: false, reason: "owner_excluded" } };
-      }
-    }
-    const viewerHash = this.computeSellerViewerHash(targetSellerId, identityKey);
-    if (!this.repo.recordSellerFunnelEvent) {
-      throw new Error("Repository does not implement recordSellerFunnelEvent");
-    }
-    const txResult = await this.repo.recordSellerFunnelEvent({
-      sellerId: targetSellerId,
-      eventType: params.eventType,
-      viewerHash,
-      viewerType,
-      nowMs,
-      listingId: targetListingId,
-      sourceId: typeof params.sourceId === "string" ? params.sourceId : void 0,
-      ...sellerMeta ? { sellerMeta } : {}
-    });
-    return {
-      status: 200,
-      body: {
-        recorded: txResult.recorded,
-        ...txResult.reason ? { reason: txResult.reason } : {}
-      }
+  const rawTitle = listing.title.trim();
+  const titleDisplay = `${rawTitle} | PROTON Market Hub`;
+  let descText = cleanText(listing.description, 170);
+  if (listing.price !== void 0 && listing.price > 0) {
+    const priceStr = `${listing.price} ${listing.currency || "USD"}`;
+    descText = descText ? `${priceStr} \u2014 ${descText}` : `${priceStr} \u2014 \u10EE\u10D4\u10DA\u10DB\u10D8\u10E1\u10D0\u10EC\u10D5\u10D3\u10DD\u10DB\u10D8\u10D0 PROTON Market Hub-\u10E8\u10D8`;
+  }
+  if (!descText) {
+    descText = `${rawTitle} \u2014 PROTON Market Hub`;
+  }
+  const imageUrl = listing.image && listing.image.startsWith("http") ? listing.image : DEFAULT_ROBOT_IMAGE;
+  const safeTitle = escapeHtml(titleDisplay);
+  const safeRawTitle = escapeHtml(rawTitle);
+  const safeDesc = escapeHtml(descText);
+  const safeImage = escapeHtml(imageUrl);
+  const safeUrl = escapeHtml(canonicalUrl);
+  let html = baseHtml;
+  html = html.replace(/<title>[\s\S]*?<\/title>/i, `<title>${safeTitle}</title>`);
+  html = html.replace(
+    /<meta\s+name=["']description["']\s+content=["'][\s\S]*?["']\s*\/?>/i,
+    `<meta name="description" content="${safeDesc}" />`
+  );
+  if (/<link\s+rel=["']canonical["']/i.test(html)) {
+    html = html.replace(
+      /<link\s+rel=["']canonical["'][^>]*\/?>/i,
+      `<link rel="canonical" href="${safeUrl}" />`
+    );
+  }
+  html = html.replace(
+    /<meta\s+property=["']og:title["']\s+content=["'][\s\S]*?["']\s*\/?>/i,
+    `<meta property="og:title" content="${safeTitle}" />`
+  );
+  html = html.replace(
+    /<meta\s+property=["']og:description["']\s+content=["'][\s\S]*?["']\s*\/?>/i,
+    `<meta property="og:description" content="${safeDesc}" />`
+  );
+  html = html.replace(
+    /<meta\s+property=["']og:image["']\s+content=["'][\s\S]*?["']\s*\/?>/i,
+    `<meta property="og:image" content="${safeImage}" />`
+  );
+  html = html.replace(
+    /<meta\s+property=["']og:url["']\s+content=["'][\s\S]*?["']\s*\/?>/i,
+    `<meta property="og:url" content="${safeUrl}" />`
+  );
+  html = html.replace(
+    /<meta\s+property=["']og:type["']\s+content=["'][\s\S]*?["']\s*\/?>/i,
+    `<meta property="og:type" content="website" />`
+  );
+  html = html.replace(
+    /<meta\s+name=["']twitter:title["']\s+content=["'][\s\S]*?["']\s*\/?>/i,
+    `<meta name="twitter:title" content="${safeTitle}" />`
+  );
+  html = html.replace(
+    /<meta\s+name=["']twitter:description["']\s+content=["'][\s\S]*?["']\s*\/?>/i,
+    `<meta name="twitter:description" content="${safeDesc}" />`
+  );
+  html = html.replace(
+    /<meta\s+name=["']twitter:image["']\s+content=["'][\s\S]*?["']\s*\/?>/i,
+    `<meta name="twitter:image" content="${safeImage}" />`
+  );
+  html = html.replace(
+    /<meta\s+name=["']twitter:url["']\s+content=["'][\s\S]*?["']\s*\/?>/i,
+    `<meta name="twitter:url" content="${safeUrl}" />`
+  );
+  html = html.replace(
+    /<meta\s+name=["']twitter:card["']\s+content=["'][\s\S]*?["']\s*\/?>/i,
+    `<meta name="twitter:card" content="summary_large_image" />`
+  );
+  const extraTags = [];
+  if (!html.includes('property="og:site_name"')) {
+    extraTags.push('<meta property="og:site_name" content="PROTON Market Hub" />');
+  }
+  extraTags.push(`<meta property="og:image:alt" content="${safeRawTitle}" />`);
+  extraTags.push(`<meta name="twitter:image:alt" content="${safeRawTitle}" />`);
+  const schemaProduct = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: rawTitle,
+    description: descText,
+    image: imageUrl,
+    url: canonicalUrl
+  };
+  if (listing.price !== void 0 && listing.price > 0) {
+    schemaProduct.offers = {
+      "@type": "Offer",
+      price: listing.price,
+      priceCurrency: listing.currency || "USD",
+      availability: listing.status === "active" ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+      url: canonicalUrl
     };
   }
-};
-function isAdminCredentialsError(err) {
-  if (err instanceof AnalyticsConfigError) return true;
-  const code = String(err?.code || "");
-  const msg = String(err?.message || err || "");
-  return err?.code === 7 || err?.code === 16 || code === "analytics/admin-credentials-missing" || code === "analytics/admin-credentials-invalid" || code === "analytics/salt-missing" || msg.includes("PERMISSION_DENIED") || msg.includes("Could not load the default credentials") || msg.includes("UNAUTHENTICATED") || msg.includes("Failed to parse private key") || msg.includes("Invalid PEM");
+  const safeJsonLd = JSON.stringify(schemaProduct).replace(/</g, "\\u003c").replace(/>/g, "\\u003e").replace(/&/g, "\\u0026");
+  extraTags.push(
+    `<script type="application/ld+json">${safeJsonLd}</script>`
+  );
+  html = html.replace("</head>", `  ${extraTags.join("\n    ")}
+  </head>`);
+  return html;
 }
 
 // src/serverApp.ts
@@ -4170,8 +4503,8 @@ function createApiApp(options) {
       });
     }
     const verifiedUid = authResult.uid;
-    const { path, url } = req.body || {};
-    const target = path || url;
+    const { path: path2, url } = req.body || {};
+    const target = path2 || url;
     if (!target || typeof target !== "string") {
       return res.status(400).json({ error: "Bad Request: 'path' or 'url' is required" });
     }
@@ -4349,8 +4682,8 @@ function createApiApp(options) {
     if (!verifiedUid) {
       return res.status(401).json({ error: "Unauthorized: User UID not found in verified token" });
     }
-    const { path, url } = req.body || {};
-    const target = path || url;
+    const { path: path2, url } = req.body || {};
+    const target = path2 || url;
     if (!target || typeof target !== "string") {
       return res.status(400).json({ error: "Bad Request: 'path' or 'url' is required" });
     }
@@ -4704,6 +5037,120 @@ function createApiApp(options) {
       return res.status(500).json({ error: "Failed to update competition preference" });
     }
   });
+  apiRouter.post("/market/listings", analyticsReadLimiter, async (req, res) => {
+    try {
+      const authRes = await verifyBearerTokenFromRequest(req, options?.verifyIdToken, options?.getPublicCerts);
+      if (!authRes.uid) {
+        return res.status(authRes.status || 401).json({
+          error: authRes.error || "Unauthorized",
+          code: authRes.code || "auth/invalid-id-token"
+        });
+      }
+      const body = req.body || {};
+      const title = typeof body.title === "string" ? body.title.trim() : "";
+      const price = Number(body.price);
+      const category = typeof body.category === "string" ? body.category.trim() : "other";
+      if (!title || title.length > 200 || !Number.isFinite(price) || price <= 0 || !category) {
+        return res.status(400).json({ error: "Bad Request: valid title, price, and category are required" });
+      }
+      const normalizedTitle = title.toLowerCase().replace(/[^\w\s]|_/g, "").replace(/\s+/g, " ").trim();
+      const registryKey = crypto2.createHash("sha256").update(`${authRes.uid}_${category.toLowerCase()}_${normalizedTitle}`).digest("hex");
+      const dbAdmin = await getAdminFirestoreInstance();
+      const listingId = typeof body.id === "string" && body.id.trim() ? body.id.trim() : `list-${crypto2.randomUUID()}`;
+      const registryRef = dbAdmin.collection("seller_freshness_registry").doc(registryKey);
+      const listingRef = dbAdmin.collection("listings").doc(listingId);
+      const savedListing = await dbAdmin.runTransaction(async (transaction) => {
+        const regDoc = await transaction.get(registryRef);
+        const nowMs = Date.now();
+        let firstPublishedAt = nowMs;
+        if (regDoc.exists) {
+          const regData = regDoc.data();
+          if (typeof regData.firstPublishedAt === "number" && Number.isFinite(regData.firstPublishedAt)) {
+            firstPublishedAt = regData.firstPublishedAt;
+          }
+        } else {
+          transaction.set(registryRef, {
+            sellerId: authRes.uid,
+            category: category.toLowerCase(),
+            normalizedTitleHash: registryKey,
+            firstPublishedAt: nowMs,
+            originalListingId: listingId,
+            createdAt: nowMs
+          });
+        }
+        const listingData = {
+          id: listingId,
+          title,
+          description: typeof body.description === "string" ? body.description.trim() : "",
+          price,
+          currency: typeof body.currency === "string" ? body.currency.trim() : "USD",
+          sellerId: authRes.uid,
+          // Authoritative!
+          sellerName: typeof body.sellerName === "string" ? body.sellerName.trim() : "Proton Merchant",
+          image: typeof body.image === "string" ? body.image.trim() : "",
+          images: Array.isArray(body.images) ? body.images : [],
+          category,
+          location: typeof body.location === "string" ? body.location.trim() : "Z\xFCrich / Global",
+          country: typeof body.country === "string" ? body.country.trim() : "Switzerland",
+          city: typeof body.city === "string" ? body.city.trim() : "Z\xFCrich",
+          listingType: typeof body.listingType === "string" ? body.listingType.trim() : "product",
+          status: "active",
+          isSold: false,
+          createdAt: firstPublishedAt,
+          updatedAt: nowMs
+        };
+        transaction.set(listingRef, listingData);
+        return listingData;
+      });
+      return res.status(201).json(savedListing);
+    } catch (err) {
+      if (isAdminCredentialsError(err)) {
+        const isConfigErr = err instanceof AnalyticsConfigError;
+        return res.status(503).json({
+          code: isConfigErr ? err.code : "analytics/admin-credentials-missing",
+          error: isConfigErr ? err.message : "Listing creation requires server Firebase Admin credentials."
+        });
+      }
+      console.error("[MarketListings] create error:", err);
+      return res.status(500).json({ error: "Failed to create listing securely" });
+    }
+  });
+  const handleMarketPreview = async (req, res, next) => {
+    const listingId = typeof req.query.listingId === "string" && req.query.listingId.trim() || typeof req.query.id === "string" && req.query.id.trim() || typeof req.params?.listingId === "string" && req.params.listingId.trim() || "";
+    const isDirectPreviewEndpoint = req.path === "/market-preview" || req.path === "/api/market-preview";
+    if (!listingId && !isDirectPreviewEndpoint) {
+      return next();
+    }
+    try {
+      const listing = listingId ? await fetchListingPreviewData(listingId) : null;
+      const baseHtml = loadBaseHtml();
+      const host = req.get("x-forwarded-host") || req.get("host") || "proton-core-final.vercel.app";
+      const cleanHost = host.includes("localhost") || host.includes("127.0.0.1") ? "proton-core-final.vercel.app" : host;
+      const canonicalUrl = listingId ? `https://${cleanHost}/market-hub?listingId=${encodeURIComponent(listingId)}` : `https://${cleanHost}/market-hub`;
+      const html = injectListingMetaToHtml({
+        baseHtml,
+        listing,
+        canonicalUrl
+      });
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.setHeader("Cache-Control", "public, max-age=60, s-maxage=300, stale-while-revalidate=600");
+      return res.status(200).send(html);
+    } catch (err) {
+      console.error("[MarketPreview] Error serving dynamic listing preview:", err);
+      try {
+        const baseHtml = loadBaseHtml();
+        res.setHeader("Content-Type", "text/html; charset=utf-8");
+        return res.status(200).send(baseHtml);
+      } catch {
+        return next();
+      }
+    }
+  };
+  apiRouter.get("/market-preview", handleMarketPreview);
+  apiRouter.get("/market-hub", handleMarketPreview);
+  apiRouter.get("/market", handleMarketPreview);
+  apiRouter.get("/market-hub/:listingId", handleMarketPreview);
+  apiRouter.get("/market/:listingId", handleMarketPreview);
   app2.use("/api", apiRouter);
   app2.use(apiRouter);
   app2.use("/api", (req, res) => {

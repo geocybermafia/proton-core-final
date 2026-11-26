@@ -19,10 +19,55 @@
       ]
     }
   ],
+  "functions": {
+    "api/index.js": {
+      "includeFiles": "dist/**"
+    }
+  },
   "rewrites": [
     {
       "source": "/api/(.*)",
       "destination": "/api?1=$1"
+    },
+    {
+      "source": "/market-hub",
+      "has": [
+        {
+          "type": "query",
+          "key": "listingId"
+        }
+      ],
+      "destination": "/api?path=/market-preview"
+    },
+    {
+      "source": "/market-hub/",
+      "has": [
+        {
+          "type": "query",
+          "key": "listingId"
+        }
+      ],
+      "destination": "/api?path=/market-preview"
+    },
+    {
+      "source": "/market",
+      "has": [
+        {
+          "type": "query",
+          "key": "listingId"
+        }
+      ],
+      "destination": "/api?path=/market-preview"
+    },
+    {
+      "source": "/market/",
+      "has": [
+        {
+          "type": "query",
+          "key": "listingId"
+        }
+      ],
+      "destination": "/api?path=/market-preview"
     },
     {
       "source": "/((?!assets/|api/|robots\\.txt|sitemap\\.xml|.*\\.[\\w]+$).*)",
