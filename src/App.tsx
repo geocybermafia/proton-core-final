@@ -4383,12 +4383,7 @@ export default function App() {
                   (activeView === 'personas' || activeView === 'clips') ? "h-full overflow-hidden" : ""
                 )}
               >
-              {uiMode === 'market' && (activeView as string) === 'market-hub' ? (
-                <div className="min-h-[400px] flex flex-col items-center justify-center text-proton-muted/50 font-mono text-xs gap-3">
-                  <Loader2 className="animate-spin text-proton-accent" size={24} />
-                  <span className="uppercase tracking-widest font-black text-proton-accent/90 animate-pulse">{language === 'ka' ? 'მარკეტი იტვირთება...' : 'Loading Marketplace...'}</span>
-                </div>
-              ) : (
+
                 <ViewErrorBoundary 
                   viewName={String(activeView)} 
                   language={userProfile.language}
@@ -4620,7 +4615,6 @@ export default function App() {
                     </Suspense>
                   )}
                 </ViewErrorBoundary>
-              )}
             </motion.div>
           </AnimatePresence>
         </div>
