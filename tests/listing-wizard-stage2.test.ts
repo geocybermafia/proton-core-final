@@ -43,11 +43,13 @@ describe('Stage 2 Smart Listing Wizard — Classification & Auto ListingType', (
   });
 
   it('requires manual listingType fallback only for ambiguous or legacy categories', () => {
-    for (const legacyCat of ['', 'other', 'realestate', 'auto', 'crypto', 'hobby', 'home']) {
+    for (const legacyCat of ['', 'other', 'crypto', 'hobby', 'home']) {
       assert.equal(canInferListingTypeFromCategory(legacyCat), false, `Expected ${legacyCat} to require fallback`);
     }
-    assert.equal(inferListingType('realestate', 'service'), 'service');
-    assert.equal(inferListingType('realestate', 'product'), 'product');
+    assert.equal(inferListingType('crypto', 'service'), 'service');
+    assert.equal(inferListingType('crypto', 'product'), 'product');
+    assert.equal(inferListingType('realestate'), 'product');
+    assert.equal(inferListingType('auto'), 'product');
   });
 });
 

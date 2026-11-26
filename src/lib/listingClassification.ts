@@ -20,6 +20,8 @@ export const PRODUCT_CATEGORY_IDS = [
   'business',
   'book',
   'art',
+  'realestate',
+  'auto',
 ] as const;
 
 export const SERVICE_CATEGORY_IDS = [

@@ -523,6 +523,11 @@ export const getGroupedCategoriesForListingType = (
       title: isKa ? 'ჰობი, სპორტი და ბიზნესი' : 'Hobby, Outdoor & Business',
       categories: toItems(['sport', 'hunting', 'music', 'book', 'art', 'animals', 'village', 'business']),
     },
+    {
+      groupId: 'realestate_auto',
+      title: isKa ? 'უძრავი ქონება და ტრანსპორტი' : 'Real Estate & Vehicles',
+      categories: toItems(['realestate', 'auto']),
+    },
   ];
 };
 

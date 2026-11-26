@@ -37,16 +37,16 @@ import {
 
 describe('Marketplace 3-Direction Category Separation & Strict Partitioning', () => {
   it('maintains exact category counts (17 Product, 3 Service, 5 Project = 25) with zero overlap', () => {
-    assert.equal(PRODUCT_CATEGORY_IDS.length, 17);
+    assert.equal(PRODUCT_CATEGORY_IDS.length, 19);
     assert.equal(SERVICE_CATEGORY_IDS.length, 3);
     assert.equal(PROJECT_CATEGORY_IDS.length, 5);
-    assert.equal(ALL_ACTIVE_CATEGORY_IDS.length, 25);
+    assert.equal(ALL_ACTIVE_CATEGORY_IDS.length, 27);
 
     const productSet = new Set<string>(PRODUCT_CATEGORY_IDS);
     const serviceSet = new Set<string>(SERVICE_CATEGORY_IDS);
     const projectSet = new Set<string>(PROJECT_CATEGORY_IDS);
 
-    assert.equal(new Set(ALL_ACTIVE_CATEGORY_IDS).size, 25);
+    assert.equal(new Set(ALL_ACTIVE_CATEGORY_IDS).size, 27);
 
     for (const id of productSet) {
       assert.equal(serviceSet.has(id), false, `${id} leaked into service`);
@@ -138,7 +138,7 @@ describe('Marketplace 3-Direction Category Separation & Strict Partitioning', ()
       const serviceGroups = getGroupedCategoriesForListingType('service', undefined, lang);
       const projectGroups = getGroupedCategoriesForListingType('project', undefined, lang);
 
-      assert.equal(productGroups.length, 3);
+      assert.equal(productGroups.length, 4);
       assert.equal(serviceGroups.length, 1);
       assert.equal(projectGroups.length, 2);
       assert.deepEqual(projectGroups.map(g => g.groupId), ['digital_assets', 'jobs_collaboration']);
@@ -147,15 +147,15 @@ describe('Marketplace 3-Direction Category Separation & Strict Partitioning', ()
       const flatServiceIds = serviceGroups.flatMap(g => g.categories.map(c => c.id));
       const flatProjectIds = projectGroups.flatMap(g => g.categories.map(c => c.id));
 
-      assert.equal(flatProductIds.length, 17);
+      assert.equal(flatProductIds.length, 19);
       assert.deepEqual(new Set(flatProductIds), new Set(PRODUCT_CATEGORY_IDS));
       assert.deepEqual(flatServiceIds, [...SERVICE_CATEGORY_IDS]);
       assert.deepEqual(flatProjectIds, [...PROJECT_ASSET_CATEGORY_IDS, ...JOB_CATEGORY_IDS, ...COLLABORATION_CATEGORY_IDS]);
 
-      assert.equal(getCategoriesForListingType('product', undefined, lang).length, 17);
+      assert.equal(getCategoriesForListingType('product', undefined, lang).length, 19);
       assert.equal(getCategoriesForListingType('service', undefined, lang).length, 3);
       assert.equal(getCategoriesForListingType('project', undefined, lang).length, 5);
-      assert.equal(getCategoriesForListingType('all', undefined, lang).length, 25);
+      assert.equal(getCategoriesForListingType('all', undefined, lang).length, 27);
     }
   });
 
@@ -191,7 +191,15 @@ describe('Marketplace 3-Direction Category Separation & Strict Partitioning', ()
     assert.equal(inferListingType('project'), 'project');
 
     // Legacy categories that require explicit listingType fallback if provided
-    for (const legacyCat of ['realestate', 'auto', 'crypto', 'hobby', 'home']) {
+      it('verifies realestate and auto infer product type directly', () => {
+    for (const cat of ['realestate', 'auto']) {
+      assert.equal(canInferListingTypeFromCategory(cat), true);
+      assert.equal(inferListingType(cat), 'product');
+      assert.equal(classifyListing({ category: cat }), 'product');
+    }
+  });
+
+  for (const legacyCat of ['crypto', 'hobby', 'home']) {
       assert.equal(canInferListingTypeFromCategory(legacyCat), false);
       assert.equal(inferListingType(legacyCat, 'product'), 'product');
       assert.equal(inferListingType(legacyCat, 'service'), 'service');
