@@ -34,6 +34,7 @@ import {
 } from "./lib/marketListingMeta.js";
 import { inferListingType, normalizeExplicitListingType } from "./lib/listingClassification.js";
 import { MAX_LISTING_PHOTOS, resolveListingPrimaryAndGalleryImages } from "./lib/listingPhotos.js";
+import { validateAndNormalizeListingPrice } from "./lib/listingPricing.js";
 
 // Lazy dynamic initialization of Firebase Admin for server-side token authentication
 const _adminAuthMap = new Map<string, any>();
@@ -1406,21 +1407,7 @@ export function createApiApp(options?: CreateApiAppOptions): express.Express {
       const description = rawDesc || rawDescGe;
       const descriptionGe = rawDescGe || (primaryLanguage === 'ka' && rawDesc ? rawDesc : '');
 
-      // Validate price, currency, isNegotiable
-      if (
-        body.price === undefined ||
-        body.price === null ||
-        body.price === '' ||
-        typeof body.price === 'boolean' ||
-        typeof body.price === 'object'
-      ) {
-        return res.status(400).json({ error: "Bad Request: Valid numeric price > 0 is required", code: "listings/invalid-price" });
-      }
-      const price = Number(typeof body.price === 'string' ? body.price.trim().replace(',', '.') : body.price);
-      if (!Number.isFinite(price) || price <= 0) {
-        return res.status(400).json({ error: "Bad Request: Price must be a finite number greater than 0", code: "listings/invalid-price" });
-      }
-
+      // Validate currency, isNegotiable, category & listingType before price rules
       const rawCurrency = typeof body.currency === 'string' && body.currency.trim()
         ? body.currency.trim().toUpperCase()
         : 'USD';
@@ -1438,6 +1425,17 @@ export function createApiApp(options?: CreateApiAppOptions): express.Express {
         });
       }
       const isNegotiable = Boolean(body.isNegotiable);
+
+      if (
+        body.priceUnspecified !== undefined &&
+        body.priceUnspecified !== null &&
+        typeof body.priceUnspecified !== 'boolean'
+      ) {
+        return res.status(400).json({
+          error: "Bad Request: 'priceUnspecified' must be a boolean",
+          code: "listings/invalid-price-unspecified"
+        });
+      }
 
       // Validate category & listingType
       const category = body.category === undefined || body.category === null
@@ -1460,6 +1458,32 @@ export function createApiApp(options?: CreateApiAppOptions): express.Express {
         }
       }
       const listingType = inferListingType(category, body.listingType);
+
+      // Validate and normalize price (allows 0/empty ONLY for project-jobs, collaboration, or isNegotiable=true)
+      const priceValidation = validateAndNormalizeListingPrice({
+        rawPrice: body.price,
+        category,
+        isNegotiable,
+      });
+      if (!priceValidation.valid) {
+        const errMsg =
+          priceValidation.reason === 'negative'
+            ? "Bad Request: Price cannot be negative"
+            : priceValidation.reason === 'invalid_format'
+            ? "Bad Request: Valid numeric price is required"
+            : "Bad Request: Price must be greater than 0 unless Negotiable or in Jobs / Collaboration";
+        return res.status(400).json({
+          error: errMsg,
+          code: "listings/invalid-price"
+        });
+      }
+      const price = priceValidation.price;
+      const priceUnspecified =
+        price > 0
+          ? false
+          : typeof body.priceUnspecified === 'boolean'
+          ? body.priceUnspecified
+          : priceValidation.priceUnspecified;
 
       // Validate condition
       let condition = '';
@@ -1752,6 +1776,7 @@ export function createApiApp(options?: CreateApiAppOptions): express.Express {
           description,
           descriptionGe,
           price,
+          priceUnspecified,
           currency: rawCurrency,
           sellerId: authRes.uid, // Authoritative!
           sellerName,

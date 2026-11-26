@@ -77,6 +77,7 @@ import { MapPicker } from './MapPicker';
 import { uploadProductImage, deleteListingImagesFromStorage, validateListingImageUrl } from '../lib/storageUtils';
 import { translations } from '../translations';
 import { useFocusTrap } from '../hooks/useFocusTrap';
+import { getListingPriceValidationMessage, validateAndNormalizeListingPrice } from '../lib/listingPricing';
 import 'leaflet/dist/leaflet.css';
 
 interface MarketHubProps {
@@ -4152,18 +4153,19 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
       const activeSchema = getCategoryFormSchema(resolvedListingType, resolvedCategory);
 
       // Step 2 validation: Price & Category-Specific Dynamic Attributes
-      const priceStr = String(formData.price || '').trim().replace(',', '.');
-      const parsedPrice = parseFloat(priceStr);
-      if (!priceStr || isNaN(parsedPrice) || parsedPrice <= 0) {
-        showToast(language === 'ka' 
-          ? "გთხოვთ შეიყვანოთ სწორი ფასი (მხოლოდ დადებითი რიცხვები)." 
-          : "Please enter a valid price (positive numbers only).",
-          'warning'
-        );
+      const priceValidation = validateAndNormalizeListingPrice({
+        rawPrice: formData.price,
+        category: resolvedCategory,
+        isNegotiable: Boolean(formData.isNegotiable),
+      });
+      if (!priceValidation.valid) {
+        showToast(getListingPriceValidationMessage(priceValidation.reason, language), 'warning');
         setFormStep(2);
         setIsSubmitting(false);
         return;
       }
+      const parsedPrice = priceValidation.price;
+      const parsedPriceUnspecified = priceValidation.priceUnspecified;
 
       const attrCheck = validateSchemaAttributes(activeSchema, formData.attributes, language);
       if (!attrCheck.valid) {
@@ -4350,6 +4352,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
         description: formData.description.trim(),
         descriptionGe: formData.description.trim(),
         price: parsedPrice,
+        priceUnspecified: parsedPriceUnspecified,
         currency: formData.currency || 'USD',
         sellerId: (isEdit && editingListing) ? editingListing.sellerId : user.uid,
         sellerName: (isEdit && editingListing) ? (editingListing.sellerName || 'Unknown') : (user.displayName || user.email?.split('@')[0] || 'Unknown'),
@@ -4441,6 +4444,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
           description: formData.description.trim(),
           descriptionGe: formData.description.trim(),
           price: parsedPrice,
+          priceUnspecified: parsedPriceUnspecified,
           currency: formData.currency || 'USD',
           sellerName: user.displayName || user.email?.split('@')[0] || 'Unknown',
           image: primaryListingImage,
@@ -4662,7 +4666,11 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
       primaryLanguage: primaryLang,
       description: listing.description || listing.descriptionGe || '',
       descriptionGe: listing.descriptionGe || '',
-      price: listing.price.toString(),
+      price: listing.priceUnspecified
+        ? ''
+        : typeof listing.price === 'number' && Number.isFinite(listing.price)
+        ? listing.price.toString()
+        : '',
       currency: listing.currency || 'USD',
       category: listing.category,
       country: (listing as any).country || (inferredRemote ? 'GLOBAL' : 'GEO'),

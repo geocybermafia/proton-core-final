@@ -119,6 +119,7 @@
         "description": { "type": "string" },
         "descriptionGe": { "type": "string" },
         "price": { "type": "number" },
+        "priceUnspecified": { "type": "boolean" },
         "currency": { "type": "string" },
         "sellerId": { "type": "string" },
         "sellerName": { "type": "string" },

@@ -172,6 +172,7 @@ export type Listing = {
   description: string;
   descriptionGe?: string;
   price: number;
+  priceUnspecified?: boolean;
   currency: string;
   sellerId: string;
   sellerName: string;

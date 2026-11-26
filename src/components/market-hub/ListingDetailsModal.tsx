@@ -40,6 +40,7 @@ import { getFormattedListingAttributes, isEffectiveRemoteListing } from './Listi
 import { trackEvent } from '../../utils/analytics';
 import { fetchSingleListingAnalytics, sendListingAnalyticsEvent } from '../../utils/marketAnalyticsClient';
 import { AchievementBadge } from './AchievementBadge';
+import { getListingPriceDisplayMode } from '../../lib/listingPricing';
 
 export interface ListingDetailsModalProps {
   listing: Listing | null;
@@ -207,6 +208,7 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
       ? listing.descriptionGe || listing.description
       : listing.description || listing.descriptionGe;
 
+  const priceDisplayMode = getListingPriceDisplayMode(listing);
   const originalCurrency = (listing.currency || 'USD').trim().toUpperCase();
   const targetCurrency = (displayCurrency || 'USD').trim().toUpperCase();
   const isSameCurrency = originalCurrency === targetCurrency;
@@ -582,7 +584,25 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
 
                     <div className="pt-2 space-y-1.5">
                       <div className="flex flex-wrap items-baseline justify-between gap-2">
-                        {isSameCurrency ? (
+                        {priceDisplayMode === 'negotiable' ? (
+                          <div className="flex items-baseline gap-1.5">
+                            <span className={cn('text-2xl sm:text-3xl font-black', currentTheme.accent)}>
+                              {language === 'ka' ? 'ფასი შეთანხმებით' : 'Negotiable'}
+                            </span>
+                          </div>
+                        ) : priceDisplayMode === 'free' ? (
+                          <div className="flex items-baseline gap-1.5">
+                            <span className="text-2xl sm:text-3xl font-black text-emerald-500">
+                              {language === 'ka' ? 'უფასო' : 'Free'}
+                            </span>
+                          </div>
+                        ) : priceDisplayMode === 'unspecified' ? (
+                          <div className="flex items-baseline gap-1.5">
+                            <span className={cn('text-xl sm:text-2xl font-bold', currentTheme.text)}>
+                              {language === 'ka' ? 'მითითებული არ არის' : 'Not specified'}
+                            </span>
+                          </div>
+                        ) : isSameCurrency ? (
                           <div className="flex items-baseline gap-1.5">
                             <span
                               className={cn(
@@ -617,17 +637,19 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
                           </div>
                         )}
 
-                        <span className={cn('text-xs font-medium', currentTheme.muted)}>
-                          {listing.isNegotiable
-                            ? language === 'ka'
-                              ? 'ფასზე მოლაპარაკება შესაძლებელია'
-                              : 'Negotiable price'
-                            : language === 'ka'
-                            ? 'ფიქსირებული ფასი'
-                            : 'Fixed price'}
-                        </span>
+                        {priceDisplayMode === 'amount' && (
+                          <span className={cn('text-xs font-medium', currentTheme.muted)}>
+                            {listing.isNegotiable
+                              ? language === 'ka'
+                                ? 'ფასზე მოლაპარაკება შესაძლებელია'
+                                : 'Negotiable price'
+                              : language === 'ka'
+                              ? 'ფიქსირებული ფასი'
+                              : 'Fixed price'}
+                          </span>
+                        )}
                       </div>
-                      {!isSameCurrency && (
+                      {priceDisplayMode === 'amount' && !isSameCurrency && (
                         <p className={cn('text-xs break-words min-w-0', currentTheme.muted)}>
                           {language === 'ka'
                             ? `კონვერტირებული თანხა მხოლოდ საორიენტაციოა. შეკვეთა ფორმდება ორიგინალ ვალუტაში (${originalCurrency}).`

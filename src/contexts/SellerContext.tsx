@@ -32,6 +32,10 @@ import {
   isValidClientListingId,
   submitListingViaApi
 } from '../lib/marketListingApi';
+import {
+  isZeroOrEmptyPriceAllowed,
+  validateAndNormalizeListingPrice
+} from '../lib/listingPricing';
 export { isRealListing };
 
 export interface CreateListingPayload extends CreateListingApiPayload {}
@@ -430,8 +434,22 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     }
 
-    const price = typeof payload.price === 'number' ? payload.price : 0;
     const status = payload.status || 'draft';
+    const draftCategory = payload.category || 'Digital Assets';
+    const draftNegotiable = Boolean(payload.isNegotiable);
+    const draftPriceResult = validateAndNormalizeListingPrice({
+      rawPrice: payload.price,
+      category: draftCategory,
+      isNegotiable: draftNegotiable,
+    });
+    const price = draftPriceResult.valid ? draftPriceResult.price : 0;
+    const priceUnspecified = draftPriceResult.valid
+      ? (price > 0
+          ? false
+          : typeof payload.priceUnspecified === 'boolean'
+          ? payload.priceUnspecified
+          : draftPriceResult.priceUnspecified)
+      : true;
 
     const localListing: Listing = {
       id: newId,
@@ -442,12 +460,13 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       description: payload.description || '',
       descriptionGe: payload.descriptionGe,
       price,
+      priceUnspecified,
       currency: payload.currency || 'USD',
       sellerId: user?.uid || 'guest-seller',
       sellerName: payload.sellerName || user?.displayName || user?.email || 'Proton Merchant',
       images: processedImages,
       image: payload.image || processedImages[0] || '',
-      category: payload.category || 'Digital Assets',
+      category: draftCategory,
       location: payload.location || '',
       country: payload.country || '',
       city: payload.city || '',
@@ -466,13 +485,18 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       listingType: inferListingType(payload.category, payload.listingType)
     };
 
-    // If status is 'draft' or price <= 0: Keep draft purely in local React state without calling Firestore setDoc
-    if (status === 'draft' || price <= 0) {
+    const allowZeroOrEmpty = isZeroOrEmptyPriceAllowed({
+      category: draftCategory,
+      isNegotiable: draftNegotiable,
+    });
+
+    // If status is 'draft' or price fails validation: Keep draft purely in local React state without calling API
+    if (status === 'draft' || !draftPriceResult.valid || (!allowZeroOrEmpty && price <= 0)) {
       setAllListings(prev => [localListing, ...prev.filter(l => l.id !== localListing.id)]);
       return localListing;
     }
 
-    // If active and price > 0, delegate to publishListing
+    // If active and price passes validation, delegate to publishListing
     return publishListing(payload);
   }, [user]);
 
@@ -481,7 +505,7 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
    * Requires:
    *  - authenticated user (valid Firebase ID Token)
    *  - status === 'active'
-   *  - price > 0
+   *  - valid price (> 0 for standard listings, >= 0 or empty for Jobs, Collaboration, or isNegotiable)
    * Server authoritatively enforces sellerId and Controlled Freshness Protection (`createdAt`).
    */
   const publishListing = useCallback(async (payload: CreateListingPayload): Promise<Listing> => {
@@ -496,17 +520,34 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       throw err;
     }
 
-    const price = typeof payload.price === 'number' ? payload.price : 0;
-    if (!Number.isFinite(price) || price <= 0) {
+    const categoryForPrice = payload.category?.trim() || 'Digital Assets';
+    const isNegotiableForPrice = Boolean(payload.isNegotiable);
+    const priceValidation = validateAndNormalizeListingPrice({
+      rawPrice: payload.price,
+      category: categoryForPrice,
+      isNegotiable: isNegotiableForPrice,
+    });
+    if (!priceValidation.valid) {
       const err = new MarketListingApiError(
         400,
-        'Listing price must be strictly positive to publish',
+        priceValidation.reason === 'negative'
+          ? 'Listing price cannot be negative'
+          : priceValidation.reason === 'invalid_format'
+          ? 'Listing price must be a valid number'
+          : 'Listing price must be strictly positive unless negotiable or in Jobs/Collaboration',
         'listings/invalid-price'
       );
       console.error("[SellerContext] Publish listing error:", err);
       setError(err.message);
       throw err;
     }
+    const price = priceValidation.price;
+    const priceUnspecified =
+      price > 0
+        ? false
+        : typeof payload.priceUnspecified === 'boolean'
+        ? payload.priceUnspecified
+        : priceValidation.priceUnspecified;
 
     const targetId = isValidClientListingId(payload.id)
       ? payload.id.trim()
@@ -603,6 +644,7 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           description,
           descriptionGe: payload.descriptionGe ?? description,
           price,
+          priceUnspecified,
           currency,
           sellerName,
           image: primaryImage,

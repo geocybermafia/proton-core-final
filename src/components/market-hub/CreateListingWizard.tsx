@@ -74,6 +74,12 @@ import {
   setPrimaryPhotoAtIndex,
   validateExternalPhotoUrl,
 } from '../../lib/listingPhotos';
+import {
+  getListingPriceDisplayMode,
+  getListingPriceValidationMessage,
+  isZeroOrEmptyPriceAllowed,
+  validateAndNormalizeListingPrice,
+} from '../../lib/listingPricing';
 
 export type { ListingFormData };
 
@@ -361,6 +367,11 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
     [activeSchema.locationMode, formData.isRemote]
   );
 
+  const isPriceOptional = React.useMemo(
+    () => isZeroOrEmptyPriceAllowed({ category: formData.category, isNegotiable: formData.isNegotiable }),
+    [formData.category, formData.isNegotiable]
+  );
+
   React.useEffect(() => {
     setFieldErrors({});
   }, [formData.category, formData.listingType, viewMode]);
@@ -608,11 +619,20 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
     [formData.images]
   );
 
-  const parsedPreviewPrice = React.useMemo(() => {
-    const priceStr = String(formData.price || '').trim().replace(',', '.');
-    const parsed = parseFloat(priceStr);
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
-  }, [formData.price]);
+  const previewPriceValidation = React.useMemo(
+    () =>
+      validateAndNormalizeListingPrice({
+        rawPrice: formData.price,
+        category: formData.category,
+        isNegotiable: formData.isNegotiable,
+      }),
+    [formData.price, formData.category, formData.isNegotiable]
+  );
+
+  const parsedPreviewPrice = previewPriceValidation.valid ? previewPriceValidation.price : 0;
+  const previewPriceUnspecified = previewPriceValidation.valid
+    ? previewPriceValidation.priceUnspecified
+    : String(formData.price || '').trim() === '';
 
   const sanitizedPreviewAttributes = React.useMemo(
     () => sanitizeListingAttributes(formData.listingType, formData.category, formData.attributes),
@@ -642,6 +662,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
       description: resolvedDesc,
       descriptionGe: resolvedDescGe || undefined,
       price: parsedPreviewPrice,
+      priceUnspecified: previewPriceUnspecified,
       currency: formData.currency || 'USD',
       sellerId: 'preview-seller',
       sellerName: sellerName || (language === 'ka' ? 'თქვენი პროფილი' : 'Your Profile'),
@@ -684,6 +705,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
     activeSchema.showServiceTerms,
     sanitizedPreviewAttributes,
     parsedPreviewPrice,
+    previewPriceUnspecified,
     sellerName,
     language,
     validImages,
@@ -724,7 +746,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
   };
 
   const hasTitleFilled = Boolean((formData.title || '').trim() || (formData.titleGe || '').trim());
-  const hasPriceFilled = parsedPreviewPrice > 0;
+  const hasPriceFilled = previewPriceValidation.valid;
   const hasDescriptionFilled = Boolean((formData.description || '').trim());
   const hasLocationFilled = effectiveIsRemote || Boolean((formData.country || '').trim() && (formData.city || '').trim());
   const hasPhotoFilled = validImages.length > 0;
@@ -941,12 +963,13 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                           }
                         }
                         if (step > 2) {
-                          const priceStr = String(formData.price || '').trim().replace(',', '.');
-                          const parsedPrice = parseFloat(priceStr);
-                          if (!priceStr || isNaN(parsedPrice) || parsedPrice <= 0) {
-                            const msg = language === 'ka'
-                              ? "გთხოვთ შეიყვანოთ სწორი ფასი გასაგრძელებლად (მხოლოდ დადებითი რიცხვები)."
-                              : "Please enter a valid price to continue (positive numbers only).";
+                          const priceCheck = validateAndNormalizeListingPrice({
+                            rawPrice: formData.price,
+                            category: formData.category,
+                            isNegotiable: formData.isNegotiable,
+                          });
+                          if (!priceCheck.valid) {
+                            const msg = getListingPriceValidationMessage(priceCheck.reason, language);
                             setFieldErrors(prev => ({ ...prev, price: msg }));
                             showToast(msg, 'warning');
                             return;
@@ -1370,16 +1393,22 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
               {/* Price and Currency input fields (1-column up to 820px tablet, 2-column from 1024px) */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
                 <div className="space-y-2 min-w-0">
-                  <label className={cn("text-[13px] sm:text-sm font-bold flex items-center gap-1.5", currentTheme.accent)}>
+                  <label className={cn("text-[13px] sm:text-sm font-bold flex flex-wrap items-center gap-1.5", currentTheme.accent)}>
                     <span>🪙</span> {language === 'ka' ? activeSchema.priceLabelKa : activeSchema.priceLabelEn}
-                    <span className="text-rose-500">*</span>
+                    {isPriceOptional ? (
+                      <span className={cn("text-xs font-medium", currentTheme.muted)}>
+                        ({language === 'ka' ? 'არასავალდებულო' : 'optional'})
+                      </span>
+                    ) : (
+                      <span className="text-rose-500">*</span>
+                    )}
                   </label>
                   <div className="relative group">
                     <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center">
                       <Coins size={16} className={cn("opacity-75 group-focus-within:opacity-100 transition-opacity", currentTheme.accent)} />
                     </div>
                     <FastInput 
-                      required
+                      required={!isPriceOptional}
                       type="number"
                       min="0"
                       step="any"
@@ -1397,12 +1426,22 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                       )}
                     />
                   </div>
-                  {fieldErrors.price && (
+                  {fieldErrors.price ? (
                     <p className="text-xs sm:text-[13px] font-semibold text-rose-500 flex items-center gap-1.5 ml-1">
                       <AlertCircle size={14} className="shrink-0" />
                       <span>{fieldErrors.price}</span>
                     </p>
-                  )}
+                  ) : isPriceOptional ? (
+                    <p className={cn("text-xs font-medium ml-1", currentTheme.muted)}>
+                      {formData.isNegotiable
+                        ? (language === 'ka'
+                            ? 'შეგიძლიათ დატოვოთ ცარიელი ან ჩაწეროთ 0 — განცხადებაზე გამოჩნდება „შეთანხმებით“.'
+                            : 'You can leave empty or enter 0 — listing will display as Negotiable.')
+                        : (language === 'ka'
+                            ? 'შეგიძლიათ მიუთითოთ 0 (უფასო) ან დატოვოთ ველი ცარიელი.'
+                            : 'You can enter 0 (Free) or leave the price blank.')}
+                    </p>
+                  ) : null}
                 </div>
 
                 <div className="space-y-2 min-w-0">
@@ -1496,7 +1535,10 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                   role="switch"
                   aria-checked={Boolean(formData.isNegotiable)}
                   aria-label={language === 'ka' ? 'ფასი შეთანხმებით' : 'Negotiable Price'}
-                  onClick={() => setFormData({...formData, isNegotiable: !formData.isNegotiable})}
+                  onClick={() => {
+                    setFormData(p => ({ ...p, isNegotiable: !p.isNegotiable }));
+                    clearFieldError('price');
+                  }}
                   className="min-w-[44px] min-h-[44px] flex items-center justify-end shrink-0 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-proton-accent rounded-xl"
                 >
                   <span className={cn(
@@ -2410,7 +2452,9 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                     : formData.listingType === 'project'
                     ? (language === 'ka' ? 'ნაბიჯი 2: ბიუჯეტი და მახასიათებლები' : 'Step 2: Budget & Specs')
                     : (language === 'ka' ? 'ნაბიჯი 2: ფასი და მახასიათებლები' : 'Step 2: Price & Specs');
+                const previewPriceMode = getListingPriceDisplayMode(previewListing);
                 const showOriginalCurrencyLine =
+                  previewPriceMode === 'amount' &&
                   activeDisplayCurrency.trim().toUpperCase() !== (formData.currency || 'USD').trim().toUpperCase();
 
                 return (
@@ -2545,7 +2589,19 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                             </div>
                           )}
 
-                          {formData.listingType === 'project' && !showOriginalCurrencyLine && !formData.isNegotiable && formattedPreviewAttributes.length === 0 && (
+                          {previewPriceMode === 'free' && (
+                            <p className={cn("text-sm font-bold text-emerald-500")}>
+                              ✓ {language === 'ka' ? 'ფასი: უფასო' : 'Price: Free'}
+                            </p>
+                          )}
+
+                          {previewPriceMode === 'unspecified' && (
+                            <p className={cn("text-sm font-semibold", currentTheme.text)}>
+                              {language === 'ka' ? 'ფასი: მითითებული არ არის' : 'Price: Not specified'}
+                            </p>
+                          )}
+
+                          {previewPriceMode === 'amount' && formData.listingType === 'project' && !showOriginalCurrencyLine && !formData.isNegotiable && formattedPreviewAttributes.length === 0 && (
                             <p className={cn("text-sm font-bold font-mono tabular-nums", currentTheme.text)}>
                               {parsedPreviewPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })} {formData.currency}
                             </p>
@@ -2818,12 +2874,13 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                         return;
                       }
                     } else if (formStep === 2) {
-                      const priceStr = String(formData.price || '').trim().replace(',', '.');
-                      const parsedPrice = parseFloat(priceStr);
-                      if (!priceStr || isNaN(parsedPrice) || parsedPrice <= 0) {
-                        const msg = language === 'ka'
-                          ? "გთხოვთ შეიყვანოთ სწორი ფასი გასაგრძელებლად (მხოლოდ დადებითი რიცხვები)."
-                          : "Please enter a valid price to continue (positive numbers only).";
+                      const priceCheck = validateAndNormalizeListingPrice({
+                        rawPrice: formData.price,
+                        category: formData.category,
+                        isNegotiable: formData.isNegotiable,
+                      });
+                      if (!priceCheck.valid) {
+                        const msg = getListingPriceValidationMessage(priceCheck.reason, language);
                         setFieldErrors(prev => ({ ...prev, price: msg }));
                         showToast(msg, 'warning');
                         return;
@@ -2938,7 +2995,14 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
             <div className="flex items-center justify-between gap-2">
               <span className={currentTheme.muted}>{language === 'ka' ? 'ფასი' : 'Price'}</span>
               <span className={cn("font-semibold", hasPriceFilled ? "text-emerald-500" : currentTheme.muted)}>
-                {hasPriceFilled ? `${parsedPreviewPrice.toLocaleString()} ${formData.currency}` : (language === 'ka' ? 'საჭიროა' : 'Required')}
+                {(() => {
+                  if (!hasPriceFilled) return language === 'ka' ? 'საჭიროა' : 'Required';
+                  const mode = getListingPriceDisplayMode(previewListing);
+                  if (mode === 'negotiable') return language === 'ka' ? '✓ შეთანხმებით' : '✓ Negotiable';
+                  if (mode === 'free') return language === 'ka' ? '✓ უფასო' : '✓ Free';
+                  if (mode === 'unspecified') return language === 'ka' ? '✓ მითითებული არ არის' : '✓ Not specified';
+                  return `${parsedPreviewPrice.toLocaleString()} ${formData.currency}`;
+                })()}
               </span>
             </div>
             <div className="flex items-center justify-between gap-2">

@@ -282,4 +282,68 @@ describe('PROTON Market Hub — TASK-01 Client-to-API Publish Flow Verification'
     assert.equal(sellerContextSrc.includes('Switzerland'), false);
     assert.equal(sellerContextSrc.includes('submitListingViaApi'), true);
   });
+
+  it('11 (TASK-03). Preserves 0 vs null/priceUnspecified across buildMarketListingApiBody -> submitListingViaApi -> serverApp', async () => {
+    const mockDb = createInMemoryAdminFirestore();
+    const app = createApiApp({
+      verifyIdToken: async (token: string) =>
+        token === 'seller-token' ? { uid: 'uid_seller_free', email: 'seller@proton.test' } : null,
+      getAdminFirestore: async () => mockDb,
+    });
+
+    await withServer(app, async (baseUrl) => {
+      // Explicit 0 for job listing -> price: 0, priceUnspecified: false
+      const jobZeroBody = buildMarketListingApiBody({
+        id: 'lst-flow-job-0',
+        title: 'Volunteer Coordinator',
+        description: 'Community open role',
+        price: 0,
+        priceUnspecified: false,
+        category: 'project-jobs',
+        listingType: 'project',
+        isRemote: true,
+      });
+      assert.equal(jobZeroBody.price, 0);
+      assert.equal(jobZeroBody.priceUnspecified, false);
+
+      const createdJobZero = await submitListingViaApi({
+        payload: {
+          id: 'lst-flow-job-0',
+          title: 'Volunteer Coordinator',
+          description: 'Community open role',
+          price: 0,
+          priceUnspecified: false,
+          category: 'project-jobs',
+          listingType: 'project',
+          isRemote: true,
+        },
+        getIdToken: async () => 'seller-token',
+        endpoint: `${baseUrl}/api/market/listings`,
+      });
+      assert.equal(createdJobZero.price, 0);
+      assert.equal(createdJobZero.priceUnspecified, false);
+
+      // Negotiable product with empty/null price -> price: 0, priceUnspecified: true, isNegotiable: true
+      const createdNegEmpty = await submitListingViaApi({
+        payload: {
+          id: 'lst-flow-neg-empty',
+          title: 'Industrial Router',
+          description: 'Message for price',
+          price: null,
+          priceUnspecified: true,
+          category: 'technics',
+          listingType: 'product',
+          isNegotiable: true,
+          country: 'GEO',
+          city: 'Tbilisi',
+        },
+        getIdToken: async () => 'seller-token',
+        endpoint: `${baseUrl}/api/market/listings`,
+      });
+      assert.equal(createdNegEmpty.price, 0);
+      assert.equal(createdNegEmpty.priceUnspecified, true);
+      assert.equal(createdNegEmpty.isNegotiable, true);
+    });
+  });
 });
+

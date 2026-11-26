@@ -8,7 +8,8 @@ export interface CreateListingApiPayload {
   primaryLanguage?: 'ka' | 'en';
   description: string;
   descriptionGe?: string;
-  price?: number;
+  price?: number | null;
+  priceUnspecified?: boolean;
   currency?: string;
   sellerName?: string;
   category?: string;
@@ -83,7 +84,10 @@ export function buildMarketListingApiBody(payload: CreateListingApiPayload): Rec
     primaryLanguage: payload.primaryLanguage,
     description: payload.description,
     descriptionGe: payload.descriptionGe ?? payload.description,
-    price: payload.price,
+    price: payload.price === undefined ? null : payload.price,
+    ...(typeof payload.priceUnspecified === 'boolean'
+      ? { priceUnspecified: payload.priceUnspecified }
+      : {}),
     currency: payload.currency || 'USD',
     sellerName: payload.sellerName,
     category: payload.category,

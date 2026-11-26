@@ -385,4 +385,140 @@ describe('POST /api/market/listings — Full Schema, Location, Security & Freshn
     assert.equal(recreated.status, 201);
     assert.equal(recreated.body.createdAt, originalTimestamp);
   });
+
+  it('10 (TASK-03). Supports free/empty Jobs, Collaboration, and Negotiable listings while rejecting invalid/negative/zero paid prices', async () => {
+    const { app, mockDb } = buildTestHarness();
+
+    // 1. Job posting with explicit 0 price
+    const jobZero = await callListingEndpoint(app, {
+      token: 'valid-seller-a',
+      body: {
+        id: 'lst-job-zero',
+        title: 'Frontend React Developer',
+        description: 'Remote contract role',
+        price: 0,
+        currency: 'USD',
+        category: 'project-jobs',
+        listingType: 'project',
+        isRemote: true,
+      },
+    });
+    assert.equal(jobZero.status, 201);
+    assert.equal(jobZero.body.price, 0);
+    assert.equal(jobZero.body.priceUnspecified, false);
+
+    // 2. Job posting with empty / null price
+    const jobEmpty = await callListingEndpoint(app, {
+      token: 'valid-seller-a',
+      body: {
+        id: 'lst-job-empty',
+        title: 'Backend Node Engineer',
+        description: 'Salary discussed on interview',
+        price: '',
+        currency: 'GEL',
+        category: 'project-jobs',
+        listingType: 'project',
+        isRemote: true,
+      },
+    });
+    assert.equal(jobEmpty.status, 201);
+    assert.equal(jobEmpty.body.price, 0);
+    assert.equal(jobEmpty.body.priceUnspecified, true);
+
+    // 3. Collaboration offer with explicit 0 price
+    const collabZero = await callListingEndpoint(app, {
+      token: 'valid-seller-a',
+      body: {
+        id: 'lst-collab-zero',
+        title: 'Co-founder for AI Startup',
+        description: 'Equity partnership',
+        price: 0,
+        category: 'collaboration',
+        listingType: 'project',
+        isRemote: true,
+      },
+    });
+    assert.equal(collabZero.status, 201);
+    assert.equal(collabZero.body.price, 0);
+    assert.equal(collabZero.body.priceUnspecified, false);
+
+    // 4. Collaboration offer with omitted / null price
+    const collabEmpty = await callListingEndpoint(app, {
+      token: 'valid-seller-a',
+      body: {
+        id: 'lst-collab-empty',
+        title: 'Design Partner Needed',
+        description: 'Revenue share partnership',
+        price: null,
+        category: 'collaboration',
+        listingType: 'project',
+        isRemote: true,
+      },
+    });
+    assert.equal(collabEmpty.status, 201);
+    assert.equal(collabEmpty.body.price, 0);
+    assert.equal(collabEmpty.body.priceUnspecified, true);
+
+    // 5. Negotiable product with price 0
+    const negZero = await callListingEndpoint(app, {
+      token: 'valid-seller-a',
+      body: {
+        id: 'lst-neg-zero',
+        title: 'Custom Workstation',
+        description: 'Price negotiable upon inspection',
+        price: 0,
+        category: 'technics',
+        listingType: 'product',
+        isNegotiable: true,
+        country: 'GEO',
+        city: 'Tbilisi',
+      },
+    });
+    assert.equal(negZero.status, 201);
+    assert.equal(negZero.body.price, 0);
+    assert.equal(negZero.body.priceUnspecified, false);
+    assert.equal(negZero.body.isNegotiable, true);
+
+    // 6. Negotiable product with empty price
+    const negEmpty = await callListingEndpoint(app, {
+      token: 'valid-seller-a',
+      body: {
+        id: 'lst-neg-empty',
+        title: 'Vintage Camera Lot',
+        description: 'Open to offers',
+        price: '',
+        category: 'technics',
+        listingType: 'product',
+        isNegotiable: true,
+        country: 'GEO',
+        city: 'Batumi',
+      },
+    });
+    assert.equal(negEmpty.status, 201);
+    assert.equal(negEmpty.body.price, 0);
+    assert.equal(negEmpty.body.priceUnspecified, true);
+    assert.equal(negEmpty.body.isNegotiable, true);
+
+    // Verify numeric & boolean Firestore types
+    const savedNegEmpty = mockDb.collections.get('listings')?.docs.get('lst-neg-empty');
+    assert.equal(typeof savedNegEmpty?.price, 'number');
+    assert.equal(savedNegEmpty?.priceUnspecified, true);
+
+    // 7. Standard fixed-price product MUST reject 0, empty, negative, and malformed strings
+    const rejectedCases = [
+      { title: 'Fixed Zero', price: 0, category: 'technics', isNegotiable: false },
+      { title: 'Fixed Empty', price: '', category: 'technics', isNegotiable: false },
+      { title: 'Fixed Null', price: null, category: 'phones', isNegotiable: false },
+      { title: 'Job Negative', price: -10, category: 'project-jobs', isNegotiable: false },
+      { title: 'Neg Negative', price: -5, category: 'technics', isNegotiable: true },
+      { title: 'Bad Partial Number', price: '12abc', category: 'project-jobs', isNegotiable: true },
+      { title: 'Bad Currency Symbol', price: '$50', category: 'technics', isNegotiable: true },
+      { title: 'Bad PriceUnspecified Type', price: 0, priceUnspecified: 'yes', category: 'project-jobs' },
+    ];
+    for (const badCase of rejectedCases) {
+      const badRes = await callListingEndpoint(app, { token: 'valid-seller-a', body: badCase });
+      assert.equal(badRes.status, 400, `Expected 400 for ${badCase.title}, got ${badRes.status}`);
+    }
+  });
 });
+

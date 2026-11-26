@@ -75,6 +75,11 @@ service cloud.firestore {
         || getStr(data, 'listingType', '') in ['job', 'collaboration'];
     }
 
+    function isZeroOrEmptyPriceEligibleListing(data) {
+      return isNonPurchasableListing(data)
+        || ('isNegotiable' in data && data.isNegotiable == true);
+    }
+
     function isPhysicalListing(data) {
       return !isServiceOrProjectListing(data) && !isUniqueDigitalAssetListingData(data);
     }
@@ -123,7 +128,9 @@ service cloud.firestore {
     
     function isValidListingShape(data) {
       return getStr(data, 'title', '').size() <= 200
-        && getNum(data, 'price', 0) > 0
+        && ('price' in data && data.price is number)
+        && (isZeroOrEmptyPriceEligibleListing(data) ? data.price >= 0 : data.price > 0)
+        && (!('priceUnspecified' in data) || data.priceUnspecified is bool)
         && getStr(data, 'category', '').size() <= 50
         && getStr(data, 'country', '').size() <= 50
         && getStr(data, 'city', '').size() <= 50
@@ -375,6 +382,8 @@ service cloud.firestore {
       allow create: if isVerified() && isValidId(orderId) && isValidOrder(incoming())
         && exists(/databases/$(database)/documents/listings/$(incoming().listingId))
         && !isNonPurchasableListing(get(/databases/$(database)/documents/listings/$(incoming().listingId)).data)
+        && get(/databases/$(database)/documents/listings/$(incoming().listingId)).data.price is number
+        && get(/databases/$(database)/documents/listings/$(incoming().listingId)).data.price > 0
         && get(/databases/$(database)/documents/listings/$(incoming().listingId)).data.status == 'active'
         && (!('isSold' in get(/databases/$(database)/documents/listings/$(incoming().listingId)).data) || get(/databases/$(database)/documents/listings/$(incoming().listingId)).data.isSold == false)
         && incoming().amount == get(/databases/$(database)/documents/listings/$(incoming().listingId)).data.price

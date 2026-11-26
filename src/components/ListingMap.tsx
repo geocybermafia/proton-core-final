@@ -10,6 +10,7 @@ import {
   formatOriginalCurrencyPrice,
   formatApproxCurrencyEquivalent
 } from './market-hub/MarketConstants';
+import { getListingPriceDisplayMode } from '../lib/listingPricing';
 
 interface ListingMapProps {
   listings: Listing[];
@@ -114,6 +115,7 @@ export function buildListingPopupElement({
       : listing.description || listing.descriptionGe) || '';
   const categoryLabel = getLocalizedMapCategory(listing.category, language);
 
+  const priceDisplayMode = getListingPriceDisplayMode(listing);
   const origCurrency = (listing.currency || 'USD').trim().toUpperCase();
   const targetCurrency = (displayCurrency || 'USD').trim().toUpperCase();
   const isSameCurrency = origCurrency === targetCurrency;
@@ -193,14 +195,26 @@ export function buildListingPopupElement({
   const priceLabel = document.createElement('span');
   priceLabel.className = 'text-[9px] font-bold uppercase tracking-wider';
   priceLabel.style.color = 'var(--proton-muted)';
-  priceLabel.textContent = isSameCurrency
-    ? (language === 'ka' ? 'ფასი:' : 'Price:')
-    : (language === 'ka' ? 'სავარაუდო:' : 'Est.:');
+  priceLabel.textContent =
+    priceDisplayMode !== 'amount' || isSameCurrency
+      ? (language === 'ka' ? 'ფასი:' : 'Price:')
+      : (language === 'ka' ? 'სავარაუდო:' : 'Est.:');
 
   const priceValues = document.createElement('div');
   priceValues.className = 'text-right';
 
-  if (isSameCurrency) {
+  if (priceDisplayMode !== 'amount') {
+    const modePrice = document.createElement('span');
+    modePrice.className = 'text-xs font-black';
+    modePrice.style.color = priceDisplayMode === 'free' ? '#10b981' : 'var(--proton-accent)';
+    modePrice.textContent =
+      priceDisplayMode === 'negotiable'
+        ? (language === 'ka' ? 'შეთანხმებით' : 'Negotiable')
+        : priceDisplayMode === 'free'
+        ? (language === 'ka' ? 'უფასო' : 'Free')
+        : (language === 'ka' ? 'მითითებული არ არის' : 'Not specified');
+    priceValues.appendChild(modePrice);
+  } else if (isSameCurrency) {
     const singlePrice = document.createElement('span');
     singlePrice.className = 'text-xs font-black font-mono';
     singlePrice.style.color = 'var(--proton-accent)';

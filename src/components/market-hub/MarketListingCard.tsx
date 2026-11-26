@@ -31,6 +31,7 @@ import {
 } from './MarketConstants';
 import { getCardAttributeHighlights, isEffectiveRemoteListing } from './ListingSchemas';
 import { hasSessionImpression, sendListingAnalyticsEvent } from '../../utils/marketAnalyticsClient';
+import { getListingPriceDisplayMode } from '../../lib/listingPricing';
 
 export interface ListingCardImageProps {
   src?: string;
@@ -279,6 +280,7 @@ export const MarketListingCard = React.memo(function MarketListingCard({
   const displayTitle = getListingTitle(listing, language);
   const imageUrl = (listing.images && listing.images.length > 0) ? listing.images[0] : listing.image;
 
+  const priceDisplayMode = getListingPriceDisplayMode(listing);
   const originalCurrency = (listing.currency || 'USD').trim().toUpperCase();
   const targetCurrency = (displayCurrency || 'USD').trim().toUpperCase();
   const isSameCurrency = originalCurrency === targetCurrency;
@@ -496,17 +498,35 @@ export const MarketListingCard = React.memo(function MarketListingCard({
             </div>
           )}
 
-          {/* 3. Price (with original currency & approx equivalent when needed) */}
+          {/* 3. Price (Free / Negotiable / Unspecified or formatted amount) */}
           <div className={cn("pt-2.5 border-t min-w-0", currentTheme.border)}>
             <div className="flex items-end justify-between gap-2 min-w-0 flex-wrap">
               <div className="flex flex-col min-w-0 flex-1">
                 <span className="text-[9px] uppercase tracking-wider text-proton-muted font-bold mb-0.5 block font-mono">
-                  {isSameCurrency
+                  {priceDisplayMode !== 'amount' || isSameCurrency
                     ? t.market.price
                     : (language === 'ka' ? 'სავარაუდო ფასი' : 'Est. Price')}
                 </span>
 
-                {isSameCurrency ? (
+                {priceDisplayMode === 'negotiable' ? (
+                  <div className="flex items-baseline gap-1 min-w-0 overflow-hidden">
+                    <span className="font-black tracking-tight text-proton-accent leading-none truncate text-base sm:text-lg">
+                      {language === 'ka' ? 'შეთანხმებით' : 'Negotiable'}
+                    </span>
+                  </div>
+                ) : priceDisplayMode === 'free' ? (
+                  <div className="flex items-baseline gap-1 min-w-0 overflow-hidden">
+                    <span className="font-black tracking-tight text-emerald-500 leading-none truncate text-base sm:text-lg">
+                      {language === 'ka' ? 'უფასო' : 'Free'}
+                    </span>
+                  </div>
+                ) : priceDisplayMode === 'unspecified' ? (
+                  <div className="flex items-baseline gap-1 min-w-0 overflow-hidden">
+                    <span className="font-bold tracking-tight text-proton-text leading-none truncate text-sm sm:text-base">
+                      {language === 'ka' ? 'მითითებული არ არის' : 'Not specified'}
+                    </span>
+                  </div>
+                ) : isSameCurrency ? (
                   <div className="flex items-baseline gap-1 whitespace-nowrap min-w-0 overflow-hidden">
                     <span className={cn(
                       "font-black tracking-tight text-proton-accent font-mono tabular-nums leading-none truncate",
@@ -535,7 +555,7 @@ export const MarketListingCard = React.memo(function MarketListingCard({
                 )}
               </div>
 
-              {listing.isNegotiable ? (
+              {listing.isNegotiable && priceDisplayMode === 'amount' ? (
                 <span className="text-[9px] font-bold text-proton-muted uppercase tracking-wider font-mono shrink-0 whitespace-nowrap">
                   {language === 'ka' ? 'შეთანხმებით' : 'Negotiable'}
                 </span>
