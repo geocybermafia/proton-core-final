@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { AdsterraNativeBanner } from './AdsterraNativeBanner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, 
@@ -6776,6 +6777,13 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
             )}
           </div>
         )}
+
+        {/* Adsterra Native Banner Container */}
+        <div className="w-full max-w-7xl mx-auto px-4 my-6">
+          <div className="bg-proton-card/50 border border-proton-border/80 rounded-2xl p-4 shadow-sm backdrop-blur-md">
+            <AdsterraNativeBanner />
+          </div>
+        </div>
       </div>
 
             {(viewMode === 'browse' || (viewMode === 'my-listings' && profileSubMode === 'selling' && activeSellingTab === 'listings')) && !loading && !isSearchingBackend && listings.length === 0 && !isFilteredMode && (
