@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { User, onAuthStateChanged, onIdTokenChanged, signOut } from 'firebase/auth';
-import { auth } from '../firebase';
+import { auth, initAuthPersistence } from '../firebase';
 import {
   PendingGuestLinkContext,
   consumePendingAuthVisitorLinkIntent,
@@ -12,6 +12,8 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   initialized: boolean;
+  persistenceFailed: boolean;
+  authError: string | null;
   logout: () => Promise<void>;
 }
 
@@ -93,6 +95,8 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   initialized: false,
+  persistenceFailed: false,
+  authError: null,
   logout: async () => {},
 });
 
@@ -142,6 +146,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
+  const [persistenceFailed, setPersistenceFailed] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
   const sessionTrackerRef = useRef<AuthSessionStateTracker>({
     hasResolvedInitialAuth: false,
     previousUid: null,
@@ -164,59 +170,84 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   useEffect(() => {
+    let isCancelled = false;
     let authSettled = false;
+    let unsubscribeAuth: () => void = () => {};
+    let unsubscribeToken: () => void = () => {};
+    let fallbackTimer: ReturnType<typeof setTimeout>;
 
-    // Safety timeout: If Firebase Auth takes longer than 3500ms (e.g. mobile cellular latency,
-    // captive portal, or sandboxed IndexedDB restrictions), unblock the app in Guest mode.
-    // The listener remains subscribed, so when Firebase later resolves the actual user,
-    // the state will cleanly elevate without reloading.
-    const fallbackTimer = setTimeout(() => {
-      if (!authSettled) {
-        console.warn('[AuthContext] Firebase Auth resolution took longer than 3500ms. Transitioning to Guest mode while listener continues in background.');
+    initAuthPersistence()
+      .then(() => {
+        if (isCancelled) return;
+
+        // Safety timeout: Diagnostic warning only (does not force initialized = true or guest state prematurely)
+        fallbackTimer = setTimeout(() => {
+          if (!authSettled && !isCancelled) {
+            console.warn('[AuthContext] Firebase Auth resolution took longer than 3500ms.');
+          }
+        }, 3500);
+
+        try {
+          unsubscribeAuth = onAuthStateChanged(
+            auth,
+            (u) => {
+              if (isCancelled) return;
+              authSettled = true;
+              clearTimeout(fallbackTimer);
+              sessionTrackerRef.current = processAuthStateTransitionForAnalytics(
+                sessionTrackerRef.current,
+                u?.uid ?? null
+              );
+              setUser(u);
+              setLoading(false);
+              setInitialized(true);
+            },
+            (error) => {
+              if (isCancelled) return;
+              console.warn('[AuthContext] onAuthStateChanged encountered an error:', error);
+              // Do not treat observer error as user logout or guest conversion; keep unverified state and record authError
+              setAuthError(error?.message || 'Auth observer error');
+            }
+          );
+        } catch (authRegErr: any) {
+          console.error('[AuthContext] Failed to register onAuthStateChanged:', authRegErr);
+          // Do not declare auth initialization successful or set user=null / initialized=true
+          setAuthError(authRegErr?.message || 'Auth registration failed');
+          return;
+        }
+
+        try {
+          unsubscribeToken = onIdTokenChanged(auth, (u) => {
+            if (u && !isCancelled) {
+              setUser(u);
+            }
+          });
+        } catch (tokenRegErr) {
+          console.error('[AuthContext] Failed to register onIdTokenChanged:', tokenRegErr);
+          try {
+            unsubscribeAuth();
+          } catch {}
+          unsubscribeAuth = () => {};
+          setAuthError('Token listener registration failed');
+        }
+      })
+      .catch((err) => {
+        if (isCancelled) return;
+        console.error('[AuthContext] Critical persistence failure:', err);
+        setPersistenceFailed(true);
         setLoading(false);
         setInitialized(true);
-      }
-    }, 3500);
-
-    // onAuthStateChanged handles the initial session and subsequent sign-in/sign-out
-    const unsubscribeAuth = onAuthStateChanged(
-      auth,
-      (u) => {
-        authSettled = true;
-        clearTimeout(fallbackTimer);
-        sessionTrackerRef.current = processAuthStateTransitionForAnalytics(
-          sessionTrackerRef.current,
-          u?.uid ?? null
-        );
-        setUser(u);
-        setLoading(false);
-        setInitialized(true);
-      },
-      (error) => {
-        console.warn('[AuthContext] onAuthStateChanged encountered an error:', error);
-        authSettled = true;
-        clearTimeout(fallbackTimer);
-        sessionTrackerRef.current = processAuthStateTransitionForAnalytics(
-          sessionTrackerRef.current,
-          null
-        );
-        setUser(null);
-        setLoading(false);
-        setInitialized(true);
-      }
-    );
-
-    // onIdTokenChanged handles token refreshes (important for long-lived sessions)
-    const unsubscribeToken = onIdTokenChanged(auth, (u) => {
-      if (u) {
-        setUser(u);
-      }
-    });
+      });
 
     return () => {
+      isCancelled = true;
       clearTimeout(fallbackTimer);
-      unsubscribeAuth();
-      unsubscribeToken();
+      try {
+        unsubscribeAuth();
+      } catch {}
+      try {
+        unsubscribeToken();
+      } catch {}
     };
   }, []);
 
@@ -224,8 +255,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user,
     loading,
     initialized,
+    persistenceFailed,
+    authError,
     logout,
-  }), [user, loading, initialized, logout]);
+  }), [user, loading, initialized, persistenceFailed, authError, logout]);
 
   return (
     <AuthContext.Provider value={value}>
