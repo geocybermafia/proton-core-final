@@ -5684,7 +5684,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                         onClick={() => setIsCategoryDropdownOpen(false)} 
                       />
                       <div className="absolute left-0 top-12 w-[calc(200%+0.5rem)] sm:w-64 max-w-[calc(100vw-2.5rem)] bg-proton-card border-2 border-proton-accent/40 rounded-2xl shadow-2xl p-2 z-[70] backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200">
-                        <div className="text-[9px] font-black tracking-wider text-proton-muted uppercase px-3 py-1.5 border-b border-proton-border w-full flex justify-between items-center mb-1.5">
+                        <div className="text-[11px] font-black tracking-wider text-proton-muted uppercase px-3 py-1.5 border-b border-proton-border w-full flex justify-between items-center mb-1.5">
                           <span>{language === 'ka' ? 'აირჩიეთ კატეგორია' : 'Select Category'}</span>
                         </div>
                         <div className="max-h-72 overflow-y-auto pr-1 space-y-2 custom-scrollbar">
@@ -5695,7 +5695,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                               setIsCategoryDropdownOpen(false);
                             }}
                             className={cn(
-                              "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border text-left cursor-pointer",
+                              "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all border text-left cursor-pointer",
                               activeCategory === 'all'
                                 ? "bg-proton-accent/15 border-proton-accent/35 text-proton-accent"
                                 : "bg-transparent border-transparent text-proton-muted hover:bg-proton-bg hover:text-proton-text"
@@ -5717,7 +5717,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                             : getGroupedCategoriesForListingType(activeListingType, t, language)
                           ).map(group => (
                             <div key={group.groupId} className="pt-1.5 border-t border-proton-border/60 space-y-0.5">
-                              <div className="px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-proton-accent/90">
+                              <div className="px-2.5 py-1 text-[11px] font-black uppercase tracking-widest text-proton-accent/90">
                                 {group.title}
                               </div>
                               {group.categories.map(cat => {
@@ -5732,7 +5732,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                                       setIsCategoryDropdownOpen(false);
                                     }}
                                     className={cn(
-                                      "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border text-left cursor-pointer",
+                                      "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all border text-left cursor-pointer",
                                       isSelected
                                         ? "bg-proton-accent/15 border-proton-accent/35 text-proton-accent"
                                         : "bg-transparent border-transparent text-proton-muted hover:bg-proton-bg hover:text-proton-text"
@@ -5758,7 +5758,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                 <button
                   type="button"
                   onClick={() => setIsFiltersOpen(true)}
-                  className="col-span-3 h-11 rounded-xl text-[10px] uppercase font-black tracking-widest bg-proton-bg border border-proton-border text-proton-text hover:border-proton-accent/40 active:scale-95 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                  className="col-span-3 h-11 rounded-xl text-xs uppercase font-black tracking-widest bg-proton-bg border border-proton-border text-proton-text hover:border-proton-accent/40 active:scale-95 transition-all flex items-center justify-center gap-1 cursor-pointer"
                 >
                   ⚙️ <span>{language === 'ka' ? 'ფილტრი' : 'Filter'}</span>
                 </button>
@@ -5767,7 +5767,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                 <button
                   type="button"
                   onClick={() => setDisplayMode(displayMode === 'grid' ? 'map' : 'grid')}
-                  className="col-span-3 h-11 bg-proton-bg border border-proton-border hover:border-proton-accent/40 rounded-xl text-proton-text flex items-center justify-center active:scale-95 transition-all text-[10px] uppercase font-black tracking-widest gap-1 cursor-pointer"
+                  className="col-span-3 h-11 bg-proton-bg border border-proton-border hover:border-proton-accent/40 rounded-xl text-proton-text flex items-center justify-center active:scale-95 transition-all text-xs uppercase font-black tracking-widest gap-1 cursor-pointer"
                 >
                   {displayMode === 'grid' ? (
                     <>
