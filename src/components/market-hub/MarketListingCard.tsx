@@ -362,7 +362,7 @@ export const MarketListingCard = React.memo(function MarketListingCard({
               <span className="text-[10px] leading-none shrink-0" aria-hidden="true">
                 {CATEGORY_EMOJIS[listing.category] || '🏷️'}
               </span>
-              <span className="text-[9px] font-black text-proton-accent uppercase tracking-wider truncate block">
+              <span className="text-[11px] font-black text-proton-accent uppercase tracking-wider truncate block">
                 {categoryLabel}
               </span>
             </div>
@@ -489,7 +489,7 @@ export const MarketListingCard = React.memo(function MarketListingCard({
               {attributeHighlights.map((highlight, hIdx) => (
                 <span
                   key={`${listing.id}-hl-${hIdx}`}
-                  className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-proton-bg border border-proton-border text-proton-muted truncate max-w-full"
+                  className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-proton-bg border border-proton-border text-proton-muted truncate max-w-full"
                 >
                   {highlight}
                 </span>
@@ -501,7 +501,7 @@ export const MarketListingCard = React.memo(function MarketListingCard({
           <div className={cn("pt-2.5 border-t min-w-0", currentTheme.border)}>
             <div className="flex items-end justify-between gap-2 min-w-0 flex-wrap">
               <div className="flex flex-col min-w-0 flex-1">
-                <span className="text-[9px] uppercase tracking-wider text-proton-muted font-bold mb-0.5 block font-mono">
+                <span className="text-[11px] uppercase tracking-wider text-proton-muted font-bold mb-0.5 block font-mono">
                   {priceDisplayMode !== 'amount' || isSameCurrency
                     ? t.market.price
                     : (language === 'ka' ? 'სავარაუდო ფასი' : 'Est. Price')}
@@ -555,15 +555,15 @@ export const MarketListingCard = React.memo(function MarketListingCard({
               </div>
 
               {listing.isNegotiable && priceDisplayMode === 'amount' ? (
-                <span className="text-[9px] font-bold text-proton-muted uppercase tracking-wider font-mono shrink-0 whitespace-nowrap">
+                <span className="text-[10px] font-bold text-proton-muted uppercase tracking-wider font-mono shrink-0 whitespace-nowrap">
                   {language === 'ka' ? 'შეთანხმებით' : 'Negotiable'}
                 </span>
               ) : isServiceListing(listing) ? (
-                <span className="text-[9px] font-bold text-proton-accent uppercase tracking-wider font-mono shrink-0 whitespace-nowrap">
+                <span className="text-[10px] font-bold text-proton-accent uppercase tracking-wider font-mono shrink-0 whitespace-nowrap">
                   {language === 'ka' ? 'სერვისი' : 'Service'}
                 </span>
               ) : isProjectListing(listing) ? (
-                <span className="text-[9px] font-bold text-proton-accent uppercase tracking-wider font-mono shrink-0 whitespace-nowrap">
+                <span className="text-[10px] font-bold text-proton-accent uppercase tracking-wider font-mono shrink-0 whitespace-nowrap">
                   {language === 'ka' ? 'პროექტი' : 'Project'}
                 </span>
               ) : null}
@@ -604,7 +604,7 @@ export const MarketListingCard = React.memo(function MarketListingCard({
             className="w-full flex items-center justify-between gap-2 min-w-0 group/vendor cursor-pointer text-left rounded-lg py-0.5 focus:outline-none focus-visible:ring-1 focus-visible:ring-proton-accent"
           >
             <div className="flex items-center gap-2 min-w-0 flex-1">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-[10px] relative shrink-0 bg-proton-bg text-proton-text border border-proton-border group-hover/vendor:border-proton-accent/50 transition-all">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs relative shrink-0 bg-proton-bg text-proton-text border border-proton-border group-hover/vendor:border-proton-accent/50 transition-all">
                 {sellerName.substring(0, 2).toUpperCase()}
                 <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-emerald-500 rounded-full border-2 border-proton-card" />
               </div>
@@ -617,10 +617,10 @@ export const MarketListingCard = React.memo(function MarketListingCard({
               </div>
             </div>
 
-            <div className="shrink-0 flex items-center gap-1 text-[10px] font-bold">
+            <div className="shrink-0 flex items-center gap-1 text-[11px] font-bold">
               {sellerRating && sellerRating.count > 0 ? (
                 <>
-                  <Star size={11} className="fill-amber-400 text-amber-500 shrink-0" aria-hidden="true" />
+                  <Star size={12} className="fill-amber-400 text-amber-500 shrink-0" aria-hidden="true" />
                   <span className="font-black text-proton-accent tabular-nums">
                     {sellerRating.avg.toFixed(1)}
                   </span>
