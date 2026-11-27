@@ -341,17 +341,12 @@ export function createApiApp(options?: CreateApiAppOptions): express.Express {
   apiRouter.use(cacheControlMiddleware);
   apiRouter.use("/gemini", apiLimiter);
 
-  // Health route - reports status and non-sensitive key presence without leaking any secrets
+  // Health route - reports status and runtime platform without exposing secret configuration indicators
   const healthHandler: express.RequestHandler = (req, res) => {
-    const hasSupabaseServiceKey = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY);
-    const hasGeminiKey = Boolean(process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY);
-
     res.json({
       status: "ok",
       timestamp: new Date().toISOString(),
       environment: {
-        supabaseServiceRoleKey: hasSupabaseServiceKey ? "configured" : "missing",
-        geminiApiKey: hasGeminiKey ? "configured" : "missing",
         platform: process.env.VERCEL ? "vercel" : "server"
       }
     });

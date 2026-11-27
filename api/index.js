@@ -4411,14 +4411,10 @@ function createApiApp(options) {
   apiRouter.use(cacheControlMiddleware);
   apiRouter.use("/gemini", apiLimiter);
   const healthHandler = (req, res) => {
-    const hasSupabaseServiceKey = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY);
-    const hasGeminiKey = Boolean(process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY);
     res.json({
       status: "ok",
       timestamp: (/* @__PURE__ */ new Date()).toISOString(),
       environment: {
-        supabaseServiceRoleKey: hasSupabaseServiceKey ? "configured" : "missing",
-        geminiApiKey: hasGeminiKey ? "configured" : "missing",
         platform: process.env.VERCEL ? "vercel" : "server"
       }
     });

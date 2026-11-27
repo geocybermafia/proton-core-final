@@ -79,15 +79,17 @@ describe('Vercel API Adapter & Shared ServerApp Suite', () => {
     });
   }
 
-  it('1. GET /api/health returns 200 OK with non-sensitive key diagnostic', async () => {
+  it('1. GET /api/health returns 200 OK without exposing server secret configuration indicators', async () => {
     const res = await makeRequest(app, { method: 'GET', path: '/api/health' });
     assert.strictEqual(res.status, 200);
     assert.strictEqual(res.body.status, 'ok');
     assert.ok(res.body.timestamp);
     assert.ok(res.body.environment);
-    // Keys status must only be 'configured' or 'missing', never leaking strings
-    assert.ok(['configured', 'missing'].includes(res.body.environment.supabaseServiceRoleKey));
-    assert.ok(['configured', 'missing'].includes(res.body.environment.geminiApiKey));
+    assert.ok(['vercel', 'server'].includes(res.body.environment.platform));
+    assert.strictEqual('supabaseServiceRoleKey' in res.body.environment, false);
+    assert.strictEqual('geminiApiKey' in res.body.environment, false);
+    assert.strictEqual(res.body.environment.supabaseServiceRoleKey, undefined);
+    assert.strictEqual(res.body.environment.geminiApiKey, undefined);
     // Verify no secret value is leaked
     const jsonStr = JSON.stringify(res.body);
     assert.strictEqual(jsonStr.includes('eyJ'), false);
