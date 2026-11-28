@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   signInWithPopup, 
   createUserWithEmailAndPassword, 
@@ -13,6 +13,31 @@ import { motion } from 'framer-motion';
 import { Zap, Loader2, ChevronLeft } from 'lucide-react';
 import { trackEvent } from '../utils/analytics';
 import { beginAuthVisitorLinkIntent, cancelAuthVisitorLinkIntent } from '../utils/marketAnalyticsClient';
+
+export const EMAIL_REGISTRATION_SUCCESS_DELAY_MS = 1000;
+
+export function getEmailRegistrationSuccessMessage(language: 'en' | 'ka'): string {
+  return language === 'ka'
+    ? 'რეგისტრაცია წარმატებით დასრულდა!'
+    : 'Registration completed successfully!';
+}
+
+export function canSubmitAuthForm(loading: boolean, registrationSucceeded: boolean): boolean {
+  return !loading && !registrationSucceeded;
+}
+
+export async function executeEmailSignup(params: {
+  register: () => Promise<void>;
+  language: 'en' | 'ka';
+  onSuccess: (message: string) => void;
+  onScheduleClose: (delayMs: number) => void;
+  delayMs?: number;
+}): Promise<boolean> {
+  await params.register();
+  params.onSuccess(getEmailRegistrationSuccessMessage(params.language));
+  params.onScheduleClose(params.delayMs ?? EMAIL_REGISTRATION_SUCCESS_DELAY_MS);
+  return true;
+}
 
 interface AuthFlowProps {
   onGoogleSignIn: () => void;
@@ -29,8 +54,32 @@ export const AuthFlow = ({ onGoogleSignIn, onBack, language }: AuthFlowProps) =>
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [subscribeNews, setSubscribeNews] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [registrationSucceeded, setRegistrationSucceeded] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onBackRef = useRef(onBack);
+
+  useEffect(() => {
+    onBackRef.current = onBack;
+  }, [onBack]);
+
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current !== null) {
+        clearTimeout(closeTimerRef.current);
+        closeTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  const handleCloseModal = () => {
+    if (closeTimerRef.current !== null) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+    onBackRef.current?.();
+  };
   
   const currentLang = (language === 'ka' || language === 'en') ? language : 'en';
   const t = translations[currentLang].auth;
@@ -47,6 +96,9 @@ export const AuthFlow = ({ onGoogleSignIn, onBack, language }: AuthFlowProps) =>
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canSubmitAuthForm(loading, registrationSucceeded)) {
+      return;
+    }
     setError('');
     setSuccess('');
     
@@ -88,23 +140,43 @@ export const AuthFlow = ({ onGoogleSignIn, onBack, language }: AuthFlowProps) =>
         beginAuthVisitorLinkIntent('email_password', auth.currentUser?.uid);
         await signInWithEmailAndPassword(auth, email, password);
       } else {
-        beginAuthVisitorLinkIntent('email_signup', auth.currentUser?.uid);
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const userDocRef = doc(db, 'users', userCredential.user.uid);
-        await setDoc(userDocRef, {
-          uid: userCredential.user.uid,
-          email: userCredential.user.email,
-          displayName: userCredential.user.email?.split('@')[0] || 'User',
-          agreedToTerms: agreeTerms,
-          subscribedToNews: subscribeNews,
-          agreedToTermsAt: new Date().toISOString(),
-          subscribedToNewsAt: subscribeNews ? new Date().toISOString() : null,
-          language: language
-        }, { merge: true });
-        trackEvent('sign_up');
+        await executeEmailSignup({
+          register: async () => {
+            beginAuthVisitorLinkIntent('email_signup', auth.currentUser?.uid);
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const userDocRef = doc(db, 'users', userCredential.user.uid);
+            await setDoc(userDocRef, {
+              uid: userCredential.user.uid,
+              email: userCredential.user.email,
+              displayName: userCredential.user.email?.split('@')[0] || 'User',
+              agreedToTerms: agreeTerms,
+              subscribedToNews: subscribeNews,
+              agreedToTermsAt: new Date().toISOString(),
+              subscribedToNewsAt: subscribeNews ? new Date().toISOString() : null,
+              language: language
+            }, { merge: true });
+            trackEvent('sign_up');
+          },
+          language: currentLang,
+          onSuccess: (message) => {
+            setRegistrationSucceeded(true);
+            setSuccess(message);
+          },
+          onScheduleClose: (delayMs) => {
+            if (closeTimerRef.current !== null) {
+              clearTimeout(closeTimerRef.current);
+            }
+            closeTimerRef.current = setTimeout(() => {
+              closeTimerRef.current = null;
+              onBackRef.current?.();
+            }, delayMs);
+          },
+        });
       }
     } catch (err: any) {
       cancelAuthVisitorLinkIntent();
+      setRegistrationSucceeded(false);
+      setSuccess('');
       setError(err.message);
     } finally {
       setLoading(false);
@@ -115,7 +187,7 @@ export const AuthFlow = ({ onGoogleSignIn, onBack, language }: AuthFlowProps) =>
     <div className="min-h-screen flex items-center justify-center bg-proton-bg p-4 relative">
       {onBack && (
         <button 
-          onClick={onBack}
+          onClick={handleCloseModal}
           className="absolute top-8 left-8 p-3 rounded-xl bg-proton-card border border-proton-border text-proton-muted hover:text-proton-text transition-all flex items-center gap-2 text-xs font-black uppercase tracking-widest"
         >
           <ChevronLeft size={16} />
@@ -224,11 +296,19 @@ export const AuthFlow = ({ onGoogleSignIn, onBack, language }: AuthFlowProps) =>
           )}
 
           {error && <div className="p-3 bg-red-500/10 text-red-500 rounded-lg text-sm border border-red-500/20">{error}</div>}
-          {success && <div className="p-3 bg-green-500/10 text-green-500 rounded-lg text-sm border border-green-500/20">{success}</div>}
+          {success && (
+            <div
+              role="status"
+              aria-live="polite"
+              className="p-3 bg-green-500/10 text-green-500 rounded-lg text-sm border border-green-500/20"
+            >
+              {success}
+            </div>
+          )}
 
           <button 
             type="submit"
-            disabled={loading}
+            disabled={!canSubmitAuthForm(loading, registrationSucceeded)}
             className="w-full py-2.5 bg-proton-accent text-proton-on-accent rounded-lg font-semibold hover:bg-proton-accent/90 transition-colors disabled:opacity-50"
           >
             {loading ? <Loader2 className="animate-spin mx-auto" size={20} /> : (isResetting ? t.send_reset_link : (isLogin ? t.login : t.signup))}
@@ -259,11 +339,14 @@ export const AuthFlow = ({ onGoogleSignIn, onBack, language }: AuthFlowProps) =>
 
         <div className="mt-8 text-center">
           <button 
+            type="button"
+            disabled={!canSubmitAuthForm(loading, registrationSucceeded)}
             onClick={() => {
+              if (!canSubmitAuthForm(loading, registrationSucceeded)) return;
               if (isResetting) setIsResetting(false);
               else setIsLogin(!isLogin);
             }}
-            className="text-sm text-proton-muted hover:text-proton-accent transition-colors"
+            className="text-sm text-proton-muted hover:text-proton-accent transition-colors disabled:opacity-50"
           >
             {isResetting ? t.back_to_login : (isLogin ? t.dont_have_account : t.already_have_account)}
           </button>
