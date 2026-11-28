@@ -410,11 +410,18 @@ service cloud.firestore {
             && getAfter(/databases/$(database)/documents/listings/$(incoming().listingId)).data.sellerId == incoming().sellerId
           )
           ||
-          // 3. Physical product listings MUST start as 'pending' and have orderType == 'product' (or omitted orderType defaulting to product)
+          // 3. Physical product listings MUST start as 'pending', have orderType == 'product' (or omitted orderType defaulting to product),
+          // and atomically lock the listing as 'sold' in the same transaction
           (
             (!('orderType' in incoming()) || incoming().orderType == 'product')
             && !isUniqueDigitalAssetListingData(get(/databases/$(database)/documents/listings/$(incoming().listingId)).data)
+            && (!('activeOrderId' in get(/databases/$(database)/documents/listings/$(incoming().listingId)).data) || get(/databases/$(database)/documents/listings/$(incoming().listingId)).data.activeOrderId == null || get(/databases/$(database)/documents/listings/$(incoming().listingId)).data.activeOrderId == '')
             && incoming().status == 'pending'
+            && existsAfter(/databases/$(database)/documents/listings/$(incoming().listingId))
+            && getAfter(/databases/$(database)/documents/listings/$(incoming().listingId)).data.status == 'sold'
+            && getAfter(/databases/$(database)/documents/listings/$(incoming().listingId)).data.isSold == true
+            && getAfter(/databases/$(database)/documents/listings/$(incoming().listingId)).data.activeOrderId == orderId
+            && getAfter(/databases/$(database)/documents/listings/$(incoming().listingId)).data.sellerId == incoming().sellerId
           )
         );
         
