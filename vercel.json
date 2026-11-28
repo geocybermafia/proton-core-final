@@ -24,6 +24,38 @@
       "includeFiles": "dist/**"
     }
   },
+  "redirects": [
+    {
+      "source": "/market",
+      "destination": "/market-hub",
+      "statusCode": 301
+    },
+    {
+      "source": "/market/",
+      "destination": "/market-hub",
+      "statusCode": 301
+    },
+    {
+      "source": "/market/:path*",
+      "destination": "/market-hub/:path*",
+      "statusCode": 301
+    },
+    {
+      "source": "/reels",
+      "destination": "/clips",
+      "statusCode": 301
+    },
+    {
+      "source": "/reels/",
+      "destination": "/clips",
+      "statusCode": 301
+    },
+    {
+      "source": "/reels/:path*",
+      "destination": "/clips/:path*",
+      "statusCode": 301
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/(.*)",
@@ -41,26 +73,6 @@
     },
     {
       "source": "/market-hub/",
-      "has": [
-        {
-          "type": "query",
-          "key": "listingId"
-        }
-      ],
-      "destination": "/api?path=/market-preview"
-    },
-    {
-      "source": "/market",
-      "has": [
-        {
-          "type": "query",
-          "key": "listingId"
-        }
-      ],
-      "destination": "/api?path=/market-preview"
-    },
-    {
-      "source": "/market/",
       "has": [
         {
           "type": "query",

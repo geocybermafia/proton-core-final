@@ -110,6 +110,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from './lib/utils';
 import { safeStorage } from './lib/safeStorage';
+import { applyRouteSeoMetadataToDom, getClientCanonicalBaseUrl, resolveLegacyPublicRedirect } from './lib/seo';
 import { taskSyncService } from './lib/taskSyncService';
 import { projectSyncService } from './lib/projectSyncService';
 import { translations } from './translations';
@@ -1383,12 +1384,17 @@ export default function App() {
     setActiveView('organizer');
   }, [handleModeChange, setActiveView]);
 
-  // Synchronize persona ID from deep-linking URL (/personas/:id) & auto-redirect disabled routes (/personas, /finance)
+  // Synchronize persona ID from deep-linking URL (/personas/:id) & auto-redirect disabled or legacy routes
   useEffect(() => {
+    const legacyTarget = resolveLegacyPublicRedirect(`${location.pathname}${location.search}${location.hash}`);
+    if (legacyTarget) {
+      navigate(legacyTarget, { replace: true });
+      return;
+    }
     if (location.pathname.startsWith('/personas') || location.pathname.startsWith('/finance')) {
       navigate('/dashboard', { replace: true });
     }
-  }, [location.pathname, navigate]);
+  }, [location.pathname, location.search, location.hash, navigate]);
 
   // Route Persistence: Save last valid non-root route to sessionStorage
   useEffect(() => {
@@ -1438,25 +1444,15 @@ export default function App() {
     }
   }, [activeView]);
 
-  // Route-based SEO & dynamic meta robots updates
+  // Route-based SEO, canonical URL, and dynamic meta robots updates
   useEffect(() => {
-    const isLanding = activeView === 'landing';
-    const robotsMeta = document.querySelector('meta[name="robots"]');
-    if (robotsMeta) {
-      robotsMeta.setAttribute('content', isLanding ? 'index, follow' : 'noindex, nofollow');
-    } else {
-      const meta = document.createElement('meta');
-      meta.name = 'robots';
-      meta.content = isLanding ? 'index, follow' : 'noindex, nofollow';
-      document.head.appendChild(meta);
-    }
-
-    if (isLanding) {
-      document.title = 'Proton — ციფრული სახლი და AI სისტემების ჰაბი / Digital House & AI Hub';
-    } else {
-      document.title = 'Proton Workspace';
-    }
-  }, [activeView]);
+    applyRouteSeoMetadataToDom({
+      pathname: location.pathname,
+      search: location.search,
+      language: language === 'ka' ? 'ka' : 'en',
+      baseUrl: getClientCanonicalBaseUrl(),
+    });
+  }, [location.pathname, location.search, language]);
 
   // Mobile Navigation scroll-direction & delta visibility tracker
   const [isMobileNavVisible, setIsMobileNavVisible] = useState(true);
@@ -3136,6 +3132,7 @@ export default function App() {
               </div>
             }>
               <MarketHub 
+                isActive={(activeView as string) === 'market-hub' || (activeView as string) === 'market'}
                 language={userProfile.language} 
                 preferredCurrency={userProfile.preferredCurrency || 'USD'}
                 onCurrencyChange={handlePreferredCurrencyChange}

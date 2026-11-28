@@ -4197,6 +4197,70 @@ function validateAndNormalizeListingPrice(input) {
   return { valid: true, price: parsed, priceUnspecified: false };
 }
 
+// src/lib/seo.ts
+var DEFAULT_PRODUCTION_ORIGIN = "https://proton-core-final.vercel.app";
+var EPHEMERAL_HOST_PATTERNS = [
+  /^localhost(?::\d+)?$/i,
+  /^127\.0\.0\.1(?::\d+)?$/i,
+  /^0\.0\.0\.0(?::\d+)?$/i,
+  /\.run\.app$/i,
+  /\.local$/i
+];
+function isEphemeralHost(hostnameOrHost) {
+  const cleanHost = hostnameOrHost.trim().replace(/:\d+$/, "");
+  if (!cleanHost) return true;
+  return EPHEMERAL_HOST_PATTERNS.some((pattern) => pattern.test(cleanHost));
+}
+function normalizeOriginCandidate(candidate) {
+  if (!candidate || typeof candidate !== "string") return null;
+  const trimmed = candidate.trim().replace(/\/+$/, "");
+  if (!trimmed) return null;
+  try {
+    const parsed = new URL(trimmed.startsWith("http://") || trimmed.startsWith("https://") ? trimmed : `https://${trimmed}`);
+    if (isEphemeralHost(parsed.hostname)) {
+      return null;
+    }
+    return `${parsed.protocol}//${parsed.host}`;
+  } catch {
+    return null;
+  }
+}
+function resolveCanonicalOrigin(options) {
+  const configured = normalizeOriginCandidate(options?.configuredOrigin);
+  if (configured) return configured;
+  const runtime = normalizeOriginCandidate(options?.runtimeOrigin);
+  if (runtime) return runtime;
+  return DEFAULT_PRODUCTION_ORIGIN;
+}
+function resolveLegacyPublicRedirect(rawUrl) {
+  if (!rawUrl || typeof rawUrl !== "string") return null;
+  if (rawUrl.startsWith("//")) return null;
+  let parsed;
+  try {
+    parsed = new URL(rawUrl, "http://localhost");
+  } catch {
+    return null;
+  }
+  const pathname = parsed.pathname;
+  const search = parsed.search || "";
+  const hash = parsed.hash || "";
+  if (pathname === "/market" || pathname === "/market/") {
+    return `/market-hub${search}${hash}`;
+  }
+  if (pathname.startsWith("/market/")) {
+    const rest = pathname.slice("/market".length).replace(/\/+$/, "");
+    return `/market-hub${rest || ""}${search}${hash}`;
+  }
+  if (pathname === "/reels" || pathname === "/reels/") {
+    return `/clips${search}${hash}`;
+  }
+  if (pathname.startsWith("/reels/")) {
+    const rest = pathname.slice("/reels".length).replace(/\/+$/, "");
+    return `/clips${rest || ""}${search}${hash}`;
+  }
+  return null;
+}
+
 // src/serverApp.ts
 dotenv.config();
 var _adminAuthMap = /* @__PURE__ */ new Map();
@@ -4401,6 +4465,16 @@ function createApiApp(options) {
     }
   });
   app2.use(express.json({ limit: "10mb" }));
+  app2.use((req, res, next) => {
+    if (req.method !== "GET" && req.method !== "HEAD") {
+      return next();
+    }
+    const target = resolveLegacyPublicRedirect(req.originalUrl || req.url || req.path);
+    if (target) {
+      return res.redirect(301, target);
+    }
+    return next();
+  });
   const cacheControlMiddleware = (req, res, next) => {
     res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
     res.setHeader("Pragma", "no-cache");
@@ -5653,9 +5727,13 @@ function createApiApp(options) {
     try {
       const listing = listingId ? await fetchListingPreviewData(listingId) : null;
       const baseHtml = loadBaseHtml();
-      const host = req.get("x-forwarded-host") || req.get("host") || "proton-core-final.vercel.app";
-      const cleanHost = host.includes("localhost") || host.includes("127.0.0.1") ? "proton-core-final.vercel.app" : host;
-      const canonicalUrl = listingId ? `https://${cleanHost}/market-hub?listingId=${encodeURIComponent(listingId)}` : `https://${cleanHost}/market-hub`;
+      const host = req.get("x-forwarded-host") || req.get("host") || "";
+      const runtimeOrigin = host ? `https://${host}` : void 0;
+      const canonicalOrigin = resolveCanonicalOrigin({
+        configuredOrigin: process.env.PUBLIC_SITE_URL,
+        runtimeOrigin
+      });
+      const canonicalUrl = listingId ? `${canonicalOrigin}/market-hub?listingId=${encodeURIComponent(listingId)}` : `${canonicalOrigin}/market-hub`;
       const html = injectListingMetaToHtml({
         baseHtml,
         listing,
@@ -5677,9 +5755,7 @@ function createApiApp(options) {
   };
   apiRouter.get("/market-preview", handleMarketPreview);
   apiRouter.get("/market-hub", handleMarketPreview);
-  apiRouter.get("/market", handleMarketPreview);
   apiRouter.get("/market-hub/:listingId", handleMarketPreview);
-  apiRouter.get("/market/:listingId", handleMarketPreview);
   app2.use("/api", apiRouter);
   app2.use(apiRouter);
   app2.use("/api", (req, res) => {

@@ -574,46 +574,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [metaTags, setMetaTags] = useState(getHeadMeta());
   const [activeSEOView, setActiveSEOView] = useState<'visual' | 'code'>('visual');
 
-  // Dynamically replace hardcoded placeholders with the actual active domain URL in the DOM
+  // Read-only synchronization of live head metadata for SEO diagnostic panel (never mutates canonical/og:url/twitter:url)
   useEffect(() => {
-    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-      const currentOrigin = window.location.origin;
-      
-      // Sync Canonical Link
-      const canonicalEl = document.querySelector('link[rel="canonical"]');
-      if (canonicalEl) {
-        canonicalEl.setAttribute('href', currentOrigin);
-      }
-      
-      // Sync Open Graph URL
-      const ogUrlEl = document.querySelector('meta[property="og:url"]');
-      if (ogUrlEl) {
-        ogUrlEl.setAttribute('content', currentOrigin);
-      }
-      
-      // Sync Twitter URL
-      const twitterUrlEl = document.querySelector('meta[name="twitter:url"]');
-      if (twitterUrlEl) {
-        twitterUrlEl.setAttribute('content', currentOrigin);
-      } else {
-        const meta = document.createElement('meta');
-        meta.name = 'twitter:url';
-        meta.content = currentOrigin;
-        document.head.appendChild(meta);
-      }
-      
+    if (typeof document !== 'undefined') {
       setMetaTags(getHeadMeta());
     }
   }, [activeTab]);
 
   const refreshMetaTags = () => {
-    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-      const currentOrigin = window.location.origin;
-      const canonicalEl = document.querySelector('link[rel="canonical"]');
-      if (canonicalEl) canonicalEl.setAttribute('href', currentOrigin);
-      const ogUrlEl = document.querySelector('meta[property="og:url"]');
-      if (ogUrlEl) ogUrlEl.setAttribute('content', currentOrigin);
-    }
     setMetaTags(getHeadMeta());
     showToast(
       language === 'ka' ? 'მეტა ტეგები წარმატებით განახლდა DOM-იდან!' : 'Successfully synchronized live meta tags from document head!',

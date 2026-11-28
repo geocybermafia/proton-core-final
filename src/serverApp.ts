@@ -35,6 +35,7 @@ import {
 import { inferListingType, normalizeExplicitListingType } from "./lib/listingClassification.js";
 import { MAX_LISTING_PHOTOS, resolveListingPrimaryAndGalleryImages } from "./lib/listingPhotos.js";
 import { validateAndNormalizeListingPrice } from "./lib/listingPricing.js";
+import { resolveCanonicalOrigin, resolveLegacyPublicRedirect } from "./lib/seo.js";
 
 // Lazy dynamic initialization of Firebase Admin for server-side token authentication
 const _adminAuthMap = new Map<string, any>();
@@ -327,6 +328,19 @@ export function createApiApp(options?: CreateApiAppOptions): express.Express {
 
   // Accept up to 10 MB payload for base64 image uploads (max 5 MB binary file)
   app.use(express.json({ limit: '10mb' }));
+
+  // 3. Server-side 301 Permanent Redirects for legacy public routes (/market -> /market-hub, /reels -> /clips)
+  // Registered directly on `app` before `apiRouter` so `/api/market/*` endpoints are never intercepted.
+  app.use((req, res, next) => {
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      return next();
+    }
+    const target = resolveLegacyPublicRedirect(req.originalUrl || req.url || req.path);
+    if (target) {
+      return res.redirect(301, target);
+    }
+    return next();
+  });
 
   // Middleware to disable caching for all API routes & ensure dynamic rendering
   const cacheControlMiddleware: express.RequestHandler = (req, res, next) => {
@@ -1844,13 +1858,15 @@ export function createApiApp(options?: CreateApiAppOptions): express.Express {
       const listing = listingId ? await fetchListingPreviewData(listingId) : null;
       const baseHtml = loadBaseHtml();
 
-      const host = req.get('x-forwarded-host') || req.get('host') || 'proton-core-final.vercel.app';
-      const cleanHost = host.includes('localhost') || host.includes('127.0.0.1')
-        ? 'proton-core-final.vercel.app'
-        : host;
+      const host = req.get('x-forwarded-host') || req.get('host') || '';
+      const runtimeOrigin = host ? `https://${host}` : undefined;
+      const canonicalOrigin = resolveCanonicalOrigin({
+        configuredOrigin: process.env.PUBLIC_SITE_URL,
+        runtimeOrigin,
+      });
       const canonicalUrl = listingId
-        ? `https://${cleanHost}/market-hub?listingId=${encodeURIComponent(listingId)}`
-        : `https://${cleanHost}/market-hub`;
+        ? `${canonicalOrigin}/market-hub?listingId=${encodeURIComponent(listingId)}`
+        : `${canonicalOrigin}/market-hub`;
 
       const html = injectListingMetaToHtml({
         baseHtml,
@@ -1875,9 +1891,7 @@ export function createApiApp(options?: CreateApiAppOptions): express.Express {
 
   apiRouter.get('/market-preview', handleMarketPreview);
   apiRouter.get('/market-hub', handleMarketPreview);
-  apiRouter.get('/market', handleMarketPreview);
   apiRouter.get('/market-hub/:listingId', handleMarketPreview);
-  apiRouter.get('/market/:listingId', handleMarketPreview);
 
   // Mount apiRouter both with and without "/api" prefix for seamless routing
   // whether called as /api/xxx or rewritten directly to /xxx

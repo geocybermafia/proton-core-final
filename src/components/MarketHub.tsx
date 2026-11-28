@@ -78,9 +78,11 @@ import { uploadProductImage, deleteListingImagesFromStorage, validateListingImag
 import { translations } from '../translations';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { getListingPriceValidationMessage, validateAndNormalizeListingPrice } from '../lib/listingPricing';
+import { applyListingSeoMetadataToDom, applyRouteSeoMetadataToDom } from '../lib/seo';
 import 'leaflet/dist/leaflet.css';
 
 interface MarketHubProps {
+  isActive?: boolean;
   language: 'en' | 'ka';
   preferredCurrency?: SupportedCurrency;
   onCurrencyChange?: (currency: SupportedCurrency) => void;
@@ -205,7 +207,7 @@ export interface ActiveChatContext {
   orderId?: string | null;
 }
 
-export const MarketHub = React.memo(function MarketHub({ language, preferredCurrency, onCurrencyChange, t: propT, themeId: propThemeId, onBack, onOpenAuthModal, onMobileOverlayChange, isAdmin: propIsAdmin }: MarketHubProps) {
+export const MarketHub = React.memo(function MarketHub({ isActive = true, language, preferredCurrency, onCurrencyChange, t: propT, themeId: propThemeId, onBack, onOpenAuthModal, onMobileOverlayChange, isAdmin: propIsAdmin }: MarketHubProps) {
   const t = propT || translations[language];
   const themeId = propThemeId || 'proton';
   const { user, loading: authLoading } = useAuth();
@@ -1004,34 +1006,31 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
   };
 
   useEffect(() => {
-    let originalTitle = t.market.seo_title || "PROTON — პროფესიონალური ეკოსისტემა";
-    let originalMetaDesc = document.querySelector('meta[name="description"]')?.getAttribute('content') || '';
+    if (!isActive || typeof window === 'undefined') return;
     const activeInspectListing = checkoutItem || selectedListing;
 
     if (activeInspectListing) {
       const activeTitle = getListingTitle(activeInspectListing, language);
-      const activeDesc = language === 'ka' ? (activeInspectListing.descriptionGe || activeInspectListing.description) : activeInspectListing.description;
-      document.title = `${activeTitle} | ${language === 'ka' ? 'მარკეტი' : 'Market'} — PROTON`;
-      
-      let metaDescNode = document.querySelector('meta[name="description"]');
-      if (!metaDescNode) {
-        metaDescNode = document.createElement('meta');
-        metaDescNode.setAttribute('name', 'description');
-        document.head.appendChild(metaDescNode);
-      }
-      metaDescNode.setAttribute('content', activeDesc?.substring(0, 160) || '');
-    } else {
-      document.title = originalTitle;
+      const activeDesc = language === 'ka'
+        ? (activeInspectListing.descriptionGe || activeInspectListing.description || '')
+        : (activeInspectListing.description || '');
+      applyListingSeoMetadataToDom({
+        listingId: activeInspectListing.id,
+        title: `${activeTitle} | PROTON Market Hub`,
+        description: activeDesc,
+      });
+      return;
     }
 
-    return () => {
-      document.title = originalTitle;
-      const metaDescNode = document.querySelector('meta[name="description"]');
-      if (metaDescNode && originalMetaDesc) {
-        metaDescNode.setAttribute('content', originalMetaDesc);
-      }
-    };
-  }, [t, language, checkoutItem, selectedListing]);
+    const urlParams = new URLSearchParams(window.location.search);
+    if (!urlParams.get('listingId')) {
+      applyRouteSeoMetadataToDom({
+        pathname: '/market-hub',
+        search: window.location.search,
+        language,
+      });
+    }
+  }, [isActive, language, checkoutItem, selectedListing]);
   const [profileSubMode, setProfileSubMode] = useState<'selling' | 'buying'>('selling');
   const { sellerOrders = [], buyerOrders = [], publishListing } = useSeller();
   const [sellerOrderFilter, setSellerOrderFilter] = useState<SellerOrderFilter>('all');
